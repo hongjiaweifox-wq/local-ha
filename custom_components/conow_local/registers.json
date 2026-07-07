@@ -1,0 +1,558 @@
+{
+  "version": 1,
+  "blocks": {
+    "monitoring": { "start": 10000 },
+    "control": { "start": 10100 }
+  },
+  "sequences": {
+    "force_mode": {
+      "registers": [
+        "target_charge_discharge_power",
+        "charge_discharge_direction",
+        "charge_discharge_cutoff_soc"
+      ],
+      "idle_register": "charge_discharge_direction",
+      "idle_value": 0
+    }
+  },
+  "registers": [
+    {
+      "code": "system_status",
+      "address": 10000,
+      "block": "monitoring",
+      "dtype": "uint16",
+      "decode": "bitmask"
+    },
+    { "code": "fault_code", "address": 10001, "block": "monitoring", "dtype": "uint16" },
+    {
+      "code": "battery_voltage",
+      "address": 10002,
+      "block": "monitoring",
+      "dtype": "uint16",
+      "scale": 0.01,
+      "unit": "V"
+    },
+    {
+      "code": "battery_soc",
+      "address": 10003,
+      "block": "monitoring",
+      "dtype": "uint16",
+      "scale": 1,
+      "unit": "%"
+    },
+    {
+      "code": "battery_design_capacity",
+      "address": 10004,
+      "block": "monitoring",
+      "dtype": "uint16",
+      "scale": 0.001,
+      "unit": "kWh"
+    },
+    {
+      "code": "cell_temp_max",
+      "address": 10005,
+      "block": "monitoring",
+      "dtype": "uint16",
+      "scale": 0.1,
+      "offset": 500,
+      "unit": "°C"
+    },
+    {
+      "code": "cell_temp_min",
+      "address": 10006,
+      "block": "monitoring",
+      "dtype": "uint16",
+      "scale": 0.1,
+      "offset": 500,
+      "unit": "°C"
+    },
+    {
+      "code": "battery_cumulative_charge_energy",
+      "address": 10007,
+      "block": "monitoring",
+      "dtype": "uint32",
+      "scale": 0.01,
+      "unit": "kWh"
+    },
+    {
+      "code": "battery_cumulative_discharge_energy",
+      "address": 10009,
+      "block": "monitoring",
+      "dtype": "uint32",
+      "scale": 0.01,
+      "unit": "kWh"
+    },
+    {
+      "code": "grid_active_power",
+      "address": 10011,
+      "block": "monitoring",
+      "dtype": "int16",
+      "scale": 1,
+      "unit": "W"
+    },
+    {
+      "code": "grid_frequency",
+      "address": 10012,
+      "block": "monitoring",
+      "dtype": "uint16",
+      "scale": 0.01,
+      "unit": "Hz"
+    },
+    {
+      "code": "cumulative_grid_import_energy",
+      "address": 10013,
+      "block": "monitoring",
+      "dtype": "uint32",
+      "scale": 0.01,
+      "unit": "kWh"
+    },
+    {
+      "code": "cumulative_grid_export_energy",
+      "address": 10015,
+      "block": "monitoring",
+      "dtype": "uint32",
+      "scale": 0.01,
+      "unit": "kWh"
+    },
+    {
+      "code": "bypass_power",
+      "address": 10017,
+      "block": "monitoring",
+      "dtype": "int16",
+      "scale": 1,
+      "unit": "W"
+    },
+    {
+      "code": "bypass_cumulative_output_energy",
+      "address": 10018,
+      "block": "monitoring",
+      "dtype": "uint32",
+      "scale": 0.01,
+      "unit": "kWh"
+    },
+    {
+      "code": "bypass_cumulative_input_energy",
+      "address": 10020,
+      "block": "monitoring",
+      "dtype": "uint32",
+      "scale": 0.01,
+      "unit": "kWh"
+    },
+    {
+      "code": "pv_total_input_power",
+      "address": 10022,
+      "block": "monitoring",
+      "dtype": "uint16",
+      "scale": 1,
+      "unit": "W"
+    },
+    {
+      "code": "pv_cumulative_total_energy",
+      "address": 10023,
+      "block": "monitoring",
+      "dtype": "uint32",
+      "scale": 0.01,
+      "unit": "kWh"
+    },
+    {
+      "code": "pv1_input_power",
+      "address": 10025,
+      "block": "monitoring",
+      "dtype": "uint16",
+      "scale": 1,
+      "unit": "W"
+    },
+    {
+      "code": "pv1_cumulative_energy",
+      "address": 10026,
+      "block": "monitoring",
+      "dtype": "uint32",
+      "scale": 0.01,
+      "unit": "kWh"
+    },
+    {
+      "code": "pv2_input_power",
+      "address": 10028,
+      "block": "monitoring",
+      "dtype": "uint16",
+      "scale": 1,
+      "unit": "W"
+    },
+    {
+      "code": "pv2_cumulative_energy",
+      "address": 10029,
+      "block": "monitoring",
+      "dtype": "uint32",
+      "scale": 0.01,
+      "unit": "kWh"
+    },
+    {
+      "code": "pv3_input_power",
+      "address": 10031,
+      "block": "monitoring",
+      "dtype": "uint16",
+      "scale": 1,
+      "unit": "W"
+    },
+    {
+      "code": "pv3_cumulative_energy",
+      "address": 10032,
+      "block": "monitoring",
+      "dtype": "uint32",
+      "scale": 0.01,
+      "unit": "kWh"
+    },
+    {
+      "code": "pv4_input_power",
+      "address": 10034,
+      "block": "monitoring",
+      "dtype": "uint16",
+      "scale": 1,
+      "unit": "W"
+    },
+    {
+      "code": "pv4_cumulative_energy",
+      "address": 10035,
+      "block": "monitoring",
+      "dtype": "uint32",
+      "scale": 0.01,
+      "unit": "kWh"
+    },
+    {
+      "code": "ac_charge_power_limit",
+      "address": 10100,
+      "block": "control",
+      "dtype": "uint16",
+      "scale": 1,
+      "unit": "W",
+      "writable": true
+    },
+    {
+      "code": "discharge_power_limit",
+      "address": 10101,
+      "block": "control",
+      "dtype": "uint16",
+      "scale": 1,
+      "unit": "W",
+      "writable": true
+    },
+    {
+      "code": "backup_soc",
+      "address": 10102,
+      "block": "control",
+      "dtype": "uint16",
+      "scale": 1,
+      "unit": "%",
+      "writable": true
+    },
+    {
+      "code": "off_grid_output_switch",
+      "address": 10103,
+      "block": "control",
+      "dtype": "uint16",
+      "writable": true
+    },
+    {
+      "code": "pv_curtailment_switch",
+      "address": 10104,
+      "block": "control",
+      "dtype": "uint16",
+      "writable": true
+    },
+    {
+      "code": "charge_discharge_direction",
+      "address": 10105,
+      "block": "control",
+      "dtype": "uint16",
+      "writable": true
+    },
+    {
+      "code": "target_charge_discharge_power",
+      "address": 10106,
+      "block": "control",
+      "dtype": "uint16",
+      "scale": 1,
+      "unit": "W",
+      "writable": true
+    },
+    {
+      "code": "charge_discharge_cutoff_soc",
+      "address": 10107,
+      "block": "control",
+      "dtype": "uint16",
+      "scale": 1,
+      "unit": "%",
+      "writable": true
+    }
+  ],
+  "entities": [
+    {
+      "code": "fault_code",
+      "platform": "sensor",
+      "register": "fault_code",
+      "entity_category": "diagnostic"
+    },
+    {
+      "code": "battery_voltage",
+      "platform": "sensor",
+      "register": "battery_voltage",
+      "device_class": "voltage"
+    },
+    {
+      "code": "battery_soc",
+      "platform": "sensor",
+      "register": "battery_soc",
+      "device_class": "battery"
+    },
+    {
+      "code": "battery_design_capacity",
+      "platform": "sensor",
+      "register": "battery_design_capacity",
+      "device_class": "energy"
+    },
+    {
+      "code": "cell_temp_max",
+      "platform": "sensor",
+      "register": "cell_temp_max",
+      "device_class": "temperature"
+    },
+    {
+      "code": "cell_temp_min",
+      "platform": "sensor",
+      "register": "cell_temp_min",
+      "device_class": "temperature"
+    },
+    {
+      "code": "battery_cumulative_charge_energy",
+      "platform": "sensor",
+      "register": "battery_cumulative_charge_energy",
+      "device_class": "energy",
+      "state_class": "total_increasing",
+      "suggested_display_precision": 3
+    },
+    {
+      "code": "battery_cumulative_discharge_energy",
+      "platform": "sensor",
+      "register": "battery_cumulative_discharge_energy",
+      "device_class": "energy",
+      "state_class": "total_increasing",
+      "suggested_display_precision": 3
+    },
+    {
+      "code": "grid_active_power",
+      "platform": "sensor",
+      "register": "grid_active_power",
+      "device_class": "power"
+    },
+    {
+      "code": "grid_frequency",
+      "platform": "sensor",
+      "register": "grid_frequency",
+      "device_class": "frequency"
+    },
+    {
+      "code": "cumulative_grid_import_energy",
+      "platform": "sensor",
+      "register": "cumulative_grid_import_energy",
+      "device_class": "energy",
+      "state_class": "total_increasing",
+      "suggested_display_precision": 3
+    },
+    {
+      "code": "cumulative_grid_export_energy",
+      "platform": "sensor",
+      "register": "cumulative_grid_export_energy",
+      "device_class": "energy",
+      "state_class": "total_increasing",
+      "suggested_display_precision": 3
+    },
+    {
+      "code": "bypass_power",
+      "platform": "sensor",
+      "register": "bypass_power",
+      "device_class": "power"
+    },
+    {
+      "code": "bypass_cumulative_output_energy",
+      "platform": "sensor",
+      "register": "bypass_cumulative_output_energy",
+      "device_class": "energy",
+      "state_class": "total_increasing",
+      "suggested_display_precision": 3
+    },
+    {
+      "code": "bypass_cumulative_input_energy",
+      "platform": "sensor",
+      "register": "bypass_cumulative_input_energy",
+      "device_class": "energy",
+      "state_class": "total_increasing",
+      "suggested_display_precision": 3
+    },
+    {
+      "code": "pv_total_input_power",
+      "platform": "sensor",
+      "register": "pv_total_input_power",
+      "device_class": "power"
+    },
+    {
+      "code": "pv_cumulative_total_energy",
+      "platform": "sensor",
+      "register": "pv_cumulative_total_energy",
+      "device_class": "energy",
+      "state_class": "total_increasing",
+      "suggested_display_precision": 3
+    },
+    {
+      "code": "pv1_input_power",
+      "platform": "sensor",
+      "register": "pv1_input_power",
+      "device_class": "power"
+    },
+    {
+      "code": "pv1_cumulative_energy",
+      "platform": "sensor",
+      "register": "pv1_cumulative_energy",
+      "device_class": "energy",
+      "state_class": "total_increasing",
+      "suggested_display_precision": 3
+    },
+    {
+      "code": "pv2_input_power",
+      "platform": "sensor",
+      "register": "pv2_input_power",
+      "device_class": "power"
+    },
+    {
+      "code": "pv2_cumulative_energy",
+      "platform": "sensor",
+      "register": "pv2_cumulative_energy",
+      "device_class": "energy",
+      "state_class": "total_increasing",
+      "suggested_display_precision": 3
+    },
+    {
+      "code": "pv3_input_power",
+      "platform": "sensor",
+      "register": "pv3_input_power",
+      "device_class": "power"
+    },
+    {
+      "code": "pv3_cumulative_energy",
+      "platform": "sensor",
+      "register": "pv3_cumulative_energy",
+      "device_class": "energy",
+      "state_class": "total_increasing",
+      "suggested_display_precision": 3
+    },
+    {
+      "code": "pv4_input_power",
+      "platform": "sensor",
+      "register": "pv4_input_power",
+      "device_class": "power"
+    },
+    {
+      "code": "pv4_cumulative_energy",
+      "platform": "sensor",
+      "register": "pv4_cumulative_energy",
+      "device_class": "energy",
+      "state_class": "total_increasing",
+      "suggested_display_precision": 3
+    },
+    {
+      "code": "standby",
+      "platform": "binary_sensor",
+      "register": "system_status",
+      "bit": 0,
+      "device_class": "running"
+    },
+    {
+      "code": "running",
+      "platform": "binary_sensor",
+      "register": "system_status",
+      "bit": 1,
+      "device_class": "running"
+    },
+    {
+      "code": "fault",
+      "platform": "binary_sensor",
+      "register": "system_status",
+      "bit": 2,
+      "device_class": "problem"
+    },
+    {
+      "code": "charging",
+      "platform": "binary_sensor",
+      "register": "system_status",
+      "bit": 3,
+      "device_class": "battery_charging"
+    },
+    {
+      "code": "discharging",
+      "platform": "binary_sensor",
+      "register": "system_status",
+      "bit": 4,
+      "device_class": "battery_charging"
+    },
+    {
+      "code": "ac_charge_power_limit",
+      "platform": "number",
+      "register": "ac_charge_power_limit",
+      "min": 0,
+      "max": 30000,
+      "step": 1
+    },
+    {
+      "code": "discharge_power_limit",
+      "platform": "number",
+      "register": "discharge_power_limit",
+      "min": 0,
+      "max": 30000,
+      "step": 1
+    },
+    {
+      "code": "backup_soc",
+      "platform": "number",
+      "register": "backup_soc",
+      "min": 0,
+      "max": 100,
+      "step": 1
+    },
+    {
+      "code": "target_charge_discharge_power",
+      "platform": "number",
+      "register": "target_charge_discharge_power",
+      "min": 0,
+      "max": 30000,
+      "step": 1
+    },
+    {
+      "code": "charge_discharge_cutoff_soc",
+      "platform": "number",
+      "register": "charge_discharge_cutoff_soc",
+      "min": 0,
+      "max": 100,
+      "step": 1
+    },
+    {
+      "code": "off_grid_output_switch",
+      "platform": "switch",
+      "register": "off_grid_output_switch"
+    },
+    {
+      "code": "pv_curtailment_switch",
+      "platform": "switch",
+      "register": "pv_curtailment_switch"
+    },
+    {
+      "code": "charge_discharge_direction",
+      "platform": "select",
+      "register": "charge_discharge_direction",
+      "options": {
+        "idle": 0,
+        "force_charge": 1,
+        "force_discharge": 2
+      },
+      "write_handler": "force_mode"
+    }
+  ]
+}

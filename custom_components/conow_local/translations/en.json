@@ -1,0 +1,83 @@
+{
+  "exceptions": {
+    "force_mode_power_required": {
+      "message": "Set target charge/discharge power above 0 W before force charge or discharge."
+    },
+    "force_mode_cutoff_required": {
+      "message": "Set charge/discharge cutoff SOC between 1 and 100 before force charge or discharge."
+    }
+  },
+  "config": {
+    "error": {
+      "cannot_connect": "Unable to connect over Modbus RTU. Check serial port, wiring, DIY/external control mode, and slave address."
+    },
+    "step": {
+      "user": {
+        "data": {
+          "device_name": "Device name",
+          "modbus_port": "Serial port",
+          "modbus_slave": "Slave address",
+          "modbus_baudrate": "Baud rate"
+        },
+        "description": "Connect over RS-485 with **38400 8N1** by default (slave **0xA0**). Enable **DIY Mode** or **External Control** in the Conow app before continuing."
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "fault_code": { "name": "Fault code" },
+      "battery_voltage": { "name": "Battery voltage" },
+      "battery_soc": { "name": "Battery SOC" },
+      "battery_design_capacity": { "name": "Battery design capacity" },
+      "cell_temp_max": { "name": "Cell temp max" },
+      "cell_temp_min": { "name": "Cell temp min" },
+      "battery_cumulative_charge_energy": { "name": "Battery cumulative charge energy" },
+      "battery_cumulative_discharge_energy": { "name": "Battery cumulative discharge energy" },
+      "grid_active_power": { "name": "Grid active power" },
+      "grid_frequency": { "name": "Grid frequency" },
+      "cumulative_grid_import_energy": { "name": "Cumulative grid import energy" },
+      "cumulative_grid_export_energy": { "name": "Cumulative grid export energy" },
+      "bypass_power": { "name": "Bypass power" },
+      "bypass_cumulative_output_energy": { "name": "Bypass cumulative output energy" },
+      "bypass_cumulative_input_energy": { "name": "Bypass cumulative input energy" },
+      "pv_total_input_power": { "name": "PV total input power" },
+      "pv_cumulative_total_energy": { "name": "PV cumulative total energy" },
+      "pv1_input_power": { "name": "PV1 input power" },
+      "pv1_cumulative_energy": { "name": "PV1 cumulative energy" },
+      "pv2_input_power": { "name": "PV2 input power" },
+      "pv2_cumulative_energy": { "name": "PV2 cumulative energy" },
+      "pv3_input_power": { "name": "PV3 input power" },
+      "pv3_cumulative_energy": { "name": "PV3 cumulative energy" },
+      "pv4_input_power": { "name": "PV4 input power" },
+      "pv4_cumulative_energy": { "name": "PV4 cumulative energy" }
+    },
+    "binary_sensor": {
+      "standby": { "name": "Standby" },
+      "running": { "name": "Running" },
+      "fault": { "name": "Fault" },
+      "charging": { "name": "Charging" },
+      "discharging": { "name": "Discharging" }
+    },
+    "number": {
+      "ac_charge_power_limit": { "name": "AC charge power limit" },
+      "discharge_power_limit": { "name": "Discharge power limit" },
+      "backup_soc": { "name": "Backup SOC" },
+      "target_charge_discharge_power": { "name": "Target charge discharge power" },
+      "charge_discharge_cutoff_soc": { "name": "Charge discharge cutoff SOC" }
+    },
+    "switch": {
+      "off_grid_output_switch": { "name": "Off grid output switch" },
+      "pv_curtailment_switch": { "name": "PV curtailment switch" }
+    },
+    "select": {
+      "charge_discharge_direction": {
+        "name": "Charge discharge direction",
+        "state": {
+          "idle": "Idle",
+          "force_charge": "Force charge",
+          "force_discharge": "Force discharge"
+        }
+      }
+    }
+  }
+}
