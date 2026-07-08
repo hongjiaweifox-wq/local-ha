@@ -113,9 +113,10 @@ logger:
     custom_components.conow_local: info
 ```
 
-For read-request hex dumps (background poll), also set:
+For Modbus **read** hex dumps (scheduled poll and post-write read-back), also set:
 
 ```yaml
+    custom_components.conow_local: debug
     custom_components.conow_local.client: debug
 ```
 
@@ -125,14 +126,15 @@ View logs: **Settings → System → Logs**, then filter by `conow_local` or `Mo
 
 | Level | Message | When |
 |-------|---------|------|
-| INFO | `Coordinator: executing Modbus write then read-back` | You change a control entity |
 | INFO | `Control write <name>: addr=... physical=... raw=...` | Before FC `0x06` |
 | INFO | `Modbus write TX (FC 0x06): A0 06 ...` | **Outgoing RTU frame** (hex) |
 | INFO | `Modbus write OK: ... expected RX echo: ...` | Device acknowledged the write |
 | ERROR | `Modbus write failed: ... TX=...` | No reply or Modbus error |
 | ERROR | `Read failed after 3 attempts ...` | Poll or read-back failed |
-| INFO | `Modbus read OK: ... RX=...` | Read response RTU frame (hex) + decoded registers |
-| DEBUG | `Modbus read TX (FC 0x03): A0 03 ...` | Scheduled poll read request |
+| DEBUG | `Coordinator: executing Modbus write then read-back` | You change a control entity |
+| DEBUG | `Modbus read TX (FC 0x03): A0 03 ...` | Read request (poll or read-back) |
+| DEBUG | `Modbus read OK: ... RX=...` | Read response RTU frame (hex) + decoded registers |
+| DEBUG | `Coordinator: read-back control snapshot ...` | Control registers after a write |
 
 ### Example write frame (discharge power limit 700 W → register 10101)
 
@@ -147,8 +149,6 @@ A0 06 27 75 02 BC 8B 04
 ```
 
 On success, the device normally **echoes the same 8 bytes** as the response.
-
-Register map (Excel): [docs/register-map.xlsx](docs/register-map.xlsx)
 
 ## Adding registers & entities
 
@@ -206,11 +206,27 @@ Add `"new_metric": { "name": "..." }` under `entity.sensor` in all three transla
 | `switch` | — (writes `0` / `1`) |
 | `select` | `options` (`"label": raw_value`), optional `write_handler`: `"force_mode"` |
 
-## Related
+## Q&A
 
-- Cloud integration (Tuya / Energy API): [conow-labs/home-assistant](https://github.com/conow-labs/home-assistant)
-- Modbus protocol & register map: [developer-docs/modbus](https://github.com/conow-labs/developer-docs/tree/main/modbus)
-- Standalone CLI for field testing: [developer-docs/examples/python](https://github.com/conow-labs/developer-docs/tree/main/examples/python)
+### Why do App DIY settings seem to have no effect while Home Assistant is connected?
+
+The firmware runs **two independent control paths** that are **not merged**:
+
+| Path | Description |
+|------|-------------|
+| **Modbus real-time control** | Registers **10100–10107** (and related monitoring reads). Used by this integration and other EMS hosts over RS-485. |
+| **5003–5007 target-driven logic** | Platform / App **DIY** schedule and target parameters (cloud or App-side strategy). |
+
+**Modbus priority rule (firmware behaviour):**
+
+- While **Modbus communication is active**, the device **only follows Modbus commands**. Platform/App **DIY instructions are not applied**.
+- After **Modbus communication ends** (serial unplugged, host stopped polling, or bus idle long enough for the firmware to drop the link), the device **falls back to DIY self-consumption mode** by default.
+
+**Practical implications for `conow_local` users:**
+
+1. Keep **DIY Mode** or **External Control** enabled in the App (required for Modbus to work at all), but expect **runtime control** to come from Home Assistant while the integration is polling.
+2. To let the App / cloud strategy drive the device again, **stop Home Assistant from holding the serial port** (disable/reload the integration, or disconnect RS-485).
+3. Do not assume App slider changes and Modbus writes “add up” — only one path is active at a time.
 
 ## License
 

@@ -145,17 +145,14 @@ class ConowModbusClient:
         """Disconnect on context exit."""
         self.close()
 
-    def read_holding_registers(
-        self, address: int, count: int, *, log_info: bool = False
-    ) -> list[int]:
+    def read_holding_registers(self, address: int, count: int) -> list[int]:
         """Read holding registers (FC 0x03) with retry."""
-        log = _LOGGER.info if log_info else _LOGGER.debug
         last_error: Exception | None = None
         for attempt in range(1, MAX_RETRIES + 1):
             try:
                 self._flush_input_buffer()
                 tx_frame = _read_holding_request_frame(self._slave, address, count)
-                log(
+                _LOGGER.debug(
                     "Modbus read TX (FC 0x03): %s",
                     _format_rtu_hex(tx_frame),
                 )
@@ -170,7 +167,7 @@ class ConowModbusClient:
                     raise ConowModbusError(str(response))
                 registers = list(response.registers)
                 rx_frame = _read_holding_response_frame(self._slave, registers)
-                log(
+                _LOGGER.debug(
                     "Modbus read OK addr=%s count=%s RX=%s registers=%s",
                     address,
                     count,
@@ -306,25 +303,21 @@ class ConowModbusClient:
             index += defn.register_count
         return result
 
-    def read_monitoring(self, *, log_info: bool = False) -> dict[str, Any]:
+    def read_monitoring(self) -> dict[str, Any]:
         """Read real-time status block (registers 10000–10036)."""
-        registers = self.read_holding_registers(
-            MONITORING_START, MONITORING_COUNT, log_info=log_info
-        )
+        registers = self.read_holding_registers(MONITORING_START, MONITORING_COUNT)
         return self.decode_block(MONITORING_REGISTERS, MONITORING_START, registers)
 
-    def read_control(self, *, log_info: bool = False) -> dict[str, Any]:
+    def read_control(self) -> dict[str, Any]:
         """Read parameter / control block (registers 10100–10107)."""
-        registers = self.read_holding_registers(
-            CONTROL_START, CONTROL_COUNT, log_info=log_info
-        )
+        registers = self.read_holding_registers(CONTROL_START, CONTROL_COUNT)
         return self.decode_block(CONTROL_REGISTERS, CONTROL_START, registers)
 
-    def read_all(self, *, log_info: bool = False) -> dict[str, Any]:
+    def read_all(self) -> dict[str, Any]:
         """Read monitoring and control blocks."""
-        monitoring = self.read_monitoring(log_info=log_info)
+        monitoring = self.read_monitoring()
         time.sleep(INTER_FRAME_DELAY_S)
-        control = self.read_control(log_info=log_info)
+        control = self.read_control()
         return {
             "monitoring": monitoring,
             "control": control,

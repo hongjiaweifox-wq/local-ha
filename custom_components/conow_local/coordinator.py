@@ -92,16 +92,16 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Write then read back in one locked serial session."""
 
         def _operation(client: ConowModbusClient) -> dict[str, Any]:
-            LOGGER.info("Coordinator: executing Modbus write then read-back")
+            LOGGER.debug("Coordinator: executing Modbus write then read-back")
             write_op(client)
             time.sleep(POST_WRITE_DELAY_S)
-            LOGGER.info("Coordinator: read-back after write (monitoring + control)")
-            data = client.read_all(log_info=True)
+            LOGGER.debug("Coordinator: read-back after write (monitoring + control)")
+            data = client.read_all()
             control = data.get("control", {})
             direction = control.get("charge_discharge_direction", {})
             power = control.get("target_charge_discharge_power", {})
             cutoff = control.get("charge_discharge_cutoff_soc", {})
-            LOGGER.info(
+            LOGGER.debug(
                 "Coordinator: read-back control snapshot direction=%s power=%s cutoff_soc=%s",
                 direction.get("raw"),
                 power.get("raw"),
