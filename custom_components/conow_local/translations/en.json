@@ -56,7 +56,13 @@
       "running": { "name": "Running" },
       "fault": { "name": "Fault" },
       "charging": { "name": "Charging" },
-      "discharging": { "name": "Discharging" }
+      "discharging": {
+        "name": "Discharging",
+        "state": {
+          "on": "Discharging",
+          "off": "Not discharging"
+        }
+      }
     },
     "number": {
       "ac_charge_power_limit": { "name": "AC charge power limit" },

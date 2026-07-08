@@ -56,7 +56,13 @@
       "running": { "name": "运行中" },
       "fault": { "name": "故障" },
       "charging": { "name": "充电中" },
-      "discharging": { "name": "放电中" }
+      "discharging": {
+        "name": "放电中",
+        "state": {
+          "on": "放电中",
+          "off": "未放电"
+        }
+      }
     },
     "number": {
       "ac_charge_power_limit": { "name": "交流充电功率限制" },

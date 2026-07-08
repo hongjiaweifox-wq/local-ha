@@ -1,8 +1,12 @@
 {
   "version": 1,
   "blocks": {
-    "monitoring": { "start": 10000 },
-    "control": { "start": 10100 }
+    "monitoring": {
+      "start": 10000
+    },
+    "control": {
+      "start": 10100
+    }
   },
   "sequences": {
     "force_mode": {
@@ -23,7 +27,12 @@
       "dtype": "uint16",
       "decode": "bitmask"
     },
-    { "code": "fault_code", "address": 10001, "block": "monitoring", "dtype": "uint16" },
+    {
+      "code": "fault_code",
+      "address": 10001,
+      "block": "monitoring",
+      "dtype": "uint16"
+    },
     {
       "code": "battery_voltage",
       "address": 10002,
@@ -490,8 +499,7 @@
       "code": "discharging",
       "platform": "binary_sensor",
       "register": "system_status",
-      "bit": 4,
-      "device_class": "battery_charging"
+      "bit": 4
     },
     {
       "code": "ac_charge_power_limit",
