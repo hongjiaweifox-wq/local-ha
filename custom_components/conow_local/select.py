@@ -63,13 +63,13 @@ class ConowModbusDirectionSelect(
         if self._entity.write_handler == "force_mode":
             power = int(
                 self.coordinator.get_register_value(
-                    "control", "target_charge_discharge_power"
+                    "control", "battery_target_power"
                 )
                 or 0
             )
             cutoff = int(
                 self.coordinator.get_register_value(
-                    "control", "charge_discharge_cutoff_soc"
+                    "control", "battery_cutoff_soc"
                 )
                 or 0
             )

@@ -52,8 +52,6 @@ def build_sensor_description(
         kwargs["device_class"] = entity.device_class
     if entity.state_class:
         kwargs["state_class"] = entity.state_class
-    if entity.suggested_display_precision is not None:
-        kwargs["suggested_display_precision"] = entity.suggested_display_precision
     if entity.entity_category:
         kwargs["entity_category"] = ENTITY_CATEGORIES[entity.entity_category]
     unit = _unit_for_register(register)

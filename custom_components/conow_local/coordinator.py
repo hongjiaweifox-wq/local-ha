@@ -99,8 +99,8 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             data = client.read_all()
             control = data.get("control", {})
             direction = control.get("charge_discharge_direction", {})
-            power = control.get("target_charge_discharge_power", {})
-            cutoff = control.get("charge_discharge_cutoff_soc", {})
+            power = control.get("battery_target_power", {})
+            cutoff = control.get("battery_cutoff_soc", {})
             LOGGER.debug(
                 "Coordinator: read-back control snapshot direction=%s power=%s cutoff_soc=%s",
                 direction.get("raw"),

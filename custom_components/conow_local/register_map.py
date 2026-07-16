@@ -48,7 +48,6 @@ class EntityDef:
     device_class: str | None = None
     state_class: str | None = None
     entity_category: str | None = None
-    suggested_display_precision: int | None = None
     min_value: float | None = None
     max_value: float | None = None
     step: float | None = None
@@ -122,7 +121,6 @@ def _build_entities() -> tuple[list[EntityDef], dict[str, list[EntityDef]]]:
                 device_class=item.get("device_class"),
                 state_class=item.get("state_class"),
                 entity_category=item.get("entity_category"),
-                suggested_display_precision=item.get("suggested_display_precision"),
                 min_value=item.get("min"),
                 max_value=item.get("max"),
                 step=item.get("step"),

@@ -37,10 +37,10 @@
       "battery_design_capacity": {
         "name": "Battery design capacity"
       },
-      "cell_temp_max": {
+      "battery_cell_temp_max": {
         "name": "Cell temp max"
       },
-      "cell_temp_min": {
+      "battery_cell_temp_min": {
         "name": "Cell temp min"
       },
       "battery_cumulative_charge_energy": {
@@ -55,46 +55,46 @@
       "grid_frequency": {
         "name": "Grid frequency"
       },
-      "cumulative_grid_import_energy": {
+      "grid_cumulative_import_energy": {
         "name": "Cumulative grid import energy"
       },
-      "cumulative_grid_export_energy": {
+      "grid_cumulative_export_energy": {
         "name": "Cumulative grid export energy"
       },
-      "bypass_power": {
+      "backup_load_power": {
         "name": "Bypass power"
       },
-      "bypass_cumulative_output_energy": {
+      "backup_load_cumulative_export_energy": {
         "name": "Bypass cumulative output energy"
       },
-      "bypass_cumulative_input_energy": {
+      "backup_load_cumulative_import_energy": {
         "name": "Bypass cumulative input energy"
       },
-      "pv_total_input_power": {
+      "pv_total_power": {
         "name": "PV total input power"
       },
-      "pv_cumulative_total_energy": {
+      "pv_total_cumulative_energy": {
         "name": "PV cumulative total energy"
       },
-      "pv1_input_power": {
+      "pv1_power": {
         "name": "PV1 input power"
       },
       "pv1_cumulative_energy": {
         "name": "PV1 cumulative energy"
       },
-      "pv2_input_power": {
+      "pv2_power": {
         "name": "PV2 input power"
       },
       "pv2_cumulative_energy": {
         "name": "PV2 cumulative energy"
       },
-      "pv3_input_power": {
+      "pv3_power": {
         "name": "PV3 input power"
       },
       "pv3_cumulative_energy": {
         "name": "PV3 cumulative energy"
       },
-      "pv4_input_power": {
+      "pv4_power": {
         "name": "PV4 input power"
       },
       "pv4_cumulative_energy": {
@@ -102,19 +102,16 @@
       }
     },
     "binary_sensor": {
-      "standby": {
+      "system_status_standby": {
         "name": "Standby"
       },
-      "running": {
-        "name": "Running"
-      },
-      "fault": {
+      "system_status_fault": {
         "name": "Fault"
       },
-      "charging": {
+      "system_status_charging": {
         "name": "Charging"
       },
-      "discharging": {
+      "system_status_discharging": {
         "name": "Discharging",
         "state": {
           "on": "Discharging",
@@ -123,27 +120,27 @@
       }
     },
     "number": {
-      "ac_charge_power_limit": {
+      "grid_charge_power_limit": {
         "name": "AC charge power limit"
       },
-      "discharge_power_limit": {
+      "battery_discharge_power_limit": {
         "name": "Discharge power limit"
       },
       "backup_soc": {
         "name": "Backup SOC"
       },
-      "target_charge_discharge_power": {
+      "battery_target_power": {
         "name": "Target charge discharge power"
       },
-      "charge_discharge_cutoff_soc": {
+      "battery_cutoff_soc": {
         "name": "Charge discharge cutoff SOC"
       }
     },
     "switch": {
-      "off_grid_output_switch": {
+      "off_grid_output_enable": {
         "name": "Off grid output switch"
       },
-      "pv_curtailment_switch": {
+      "pv_curtailment_enable": {
         "name": "PV curtailment switch"
       }
     },
@@ -151,8 +148,8 @@
       "charge_discharge_direction": {
         "name": "Charge discharge direction",
         "state": {
-          "idle": "Idle",
           "force_charge": "Force charge",
+          "idle": "Idle",
           "force_discharge": "Force discharge"
         }
       }
