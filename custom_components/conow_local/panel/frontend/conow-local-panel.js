@@ -1,0 +1,1785 @@
+/**
+ * Conow Local grouping panel.
+ *
+ * Renders the grouped October protocol map (`panel_registers.json`) with live
+ * values read over Modbus by the integration. Writable registers are edited
+ * with Home Assistant form controls and sent per group with one batch write.
+ */
+
+const PANEL_STYLE = `
+  :host {
+    display: block;
+    padding: 16px;
+    color: var(--primary-text-color, #e0e0e0);
+    background: var(--primary-background-color, #111);
+    min-height: 100%;
+    box-sizing: border-box;
+    font-family: var(--ha-font-family-body, Roboto, sans-serif);
+  }
+  h1 { margin: 0 0 4px; font-size: 1.5rem; font-weight: 500; }
+  .banner {
+    border: 1px solid var(--warning-color, #ffa600);
+    background: color-mix(in srgb, var(--warning-color, #ffa600) 12%, transparent);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 0.85rem;
+    line-height: 1.45;
+  }
+  .toolbar {
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 16px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .toolbar .combo { position: relative; flex: none; }
+  .toolbar .combo[data-field="device"] { width: 260px; }
+  .toolbar .combo[data-field="group"] { width: 220px; }
+  .toolbar .combo[data-field="entity"] { width: 320px; }
+  .toolbar .combo[data-field="access"] { width: 120px; }
+  .toolbar .combo-input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding-right: 34px;
+    text-overflow: ellipsis;
+    user-select: text;
+    -webkit-user-select: text;
+  }
+  .toolbar .combo > ha-icon {
+    position: absolute; right: 10px; top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    opacity: 0.7;
+    --mdc-icon-size: 20px;
+  }
+  .combo-menu {
+    position: absolute;
+    z-index: 40;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 4px;
+    background: var(--card-background-color, #1c1c1c);
+    border: 1px solid var(--divider-color, #333);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .combo-menu[hidden] { display: none; }
+  .combo-option {
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .combo-option:hover,
+  .combo-option.active { background: var(--secondary-background-color, #2a2a2a); }
+  .combo-option.selected { color: var(--primary-color, #03a9f4); }
+  .combo-heading {
+    padding: 8px 10px 4px;
+    font-size: 0.75rem;
+    opacity: 0.6;
+  }
+  .combo-empty { padding: 8px 10px; opacity: 0.6; font-size: 0.85rem; }
+  .toolbar .icon-btn {
+    margin-left: auto;
+    width: 40px; height: 40px; padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--divider-color, #444);
+    background: transparent;
+    color: inherit;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex: none;
+  }
+  .toolbar .icon-btn:hover { background: var(--secondary-background-color, #1c1c1c); }
+  .toolbar .icon-btn ha-icon { --mdc-icon-size: 22px; }
+  .toolbar .icon-btn.spinning ha-icon { animation: conow-spin 1s linear infinite; }
+  @keyframes conow-spin { to { transform: rotate(360deg); } }
+  select, input[type="text"] {
+    background: var(--card-background-color, #1c1c1c);
+    color: inherit;
+    border: 1px solid var(--divider-color, #333);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.95rem;
+    min-width: 200px;
+  }
+  button {
+    background: var(--primary-color, #03a9f4);
+    color: var(--text-primary-color, #fff);
+    border: none; border-radius: 8px;
+    padding: 10px 16px; cursor: pointer; font-size: 0.9rem;
+  }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .group {
+    background: var(--card-background-color, #1c1c1c);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    border: 1px solid var(--divider-color, #2a2a2a);
+  }
+  .group-header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--divider-color, #2a2a2a);
+    background: var(--secondary-background-color, #181818);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .group-header:focus-visible {
+    outline: 2px solid var(--primary-color, #03a9f4);
+    outline-offset: -2px;
+  }
+  .group-header .group-toggle {
+    --mdc-icon-size: 20px;
+    color: inherit;
+    opacity: 0.7;
+    transition: transform 0.2s ease;
+  }
+  .group.collapsed .group-toggle { transform: rotate(-90deg); }
+  .group.collapsed .group-body { display: none; }
+  .group-header ha-icon { color: var(--primary-color, #03a9f4); --mdc-icon-size: 22px; }
+  .group-title { font-weight: 600; font-size: 1rem; }
+  .group-meta { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    font-size: 0.72rem;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--divider-color, #3a3a3a);
+    opacity: 0.85;
+    white-space: nowrap;
+  }
+  .chip.atomic { border-color: var(--success-color, #4caf50); color: var(--success-color, #4caf50); }
+  .rows-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    column-gap: 24px;
+  }
+  .register-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--divider-color, #222);
+    font-size: 0.9rem;
+    min-width: 0;
+  }
+  .register-row:last-child { border-bottom: none; }
+  .register-row.linkable { cursor: pointer; }
+  .register-row.linkable:hover { background: var(--secondary-background-color, #1c1c1c); }
+  .subgroup {
+    margin: 10px 12px;
+    border: 1px solid var(--divider-color, #2a2a2a);
+    border-radius: 10px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--secondary-background-color, #181818) 55%, transparent);
+  }
+  .subgroup-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    background: var(--secondary-background-color, #181818);
+    border-bottom: 1px solid var(--divider-color, #2a2a2a);
+  }
+  .subgroup-header .chip { margin-left: auto; font-weight: 400; }
+  .subgroup .register-row { padding: 8px 14px; }
+  .subgroup .register-row:last-child { border-bottom: none; }
+  .reg-name { display: flex; gap: 10px; align-items: center; line-height: 1.35; min-width: 0; flex: 0 1 auto; }
+  .reg-name ha-icon { flex: none; color: var(--primary-color, #03a9f4); --ha-icon-size: 20px; }
+  .reg-name-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .reg-code { display: block; font-size: 0.75rem; opacity: 0.55; margin-top: 2px; }
+  .reg-warning {
+    color: var(--error-color, #f44336);
+    font-size: 0.76rem;
+    white-space: nowrap;
+  }
+  .register-row.invalid-time .reg-name ha-icon { color: var(--error-color, #f44336); }
+  .empty, .error, .loading { padding: 24px; text-align: center; opacity: 0.8; }
+  .hint {
+    border: 1px solid var(--error-color, #f44336);
+    background: color-mix(in srgb, var(--error-color, #f44336) 10%, transparent);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 0.85rem;
+    line-height: 1.45;
+  }
+  .error { color: var(--error-color, #f44336); }
+  .group-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 16px 16px;
+    border-top: 1px solid var(--divider-color, #2a2a2a);
+    background: var(--secondary-background-color, #181818);
+  }
+  .group-hint { flex: 1 1 auto; min-width: 0; font-size: 0.8rem; opacity: 0.65; line-height: 1.45; }
+  .group-apply { flex: 0 0 auto; margin-left: auto;
+    padding: 8px 18px;
+    border-radius: 999px;
+    border: 1px solid var(--primary-color, #03a9f4);
+    background: var(--primary-color, #03a9f4);
+    color: var(--text-primary-color, #fff);
+    font-size: 0.88rem;
+  }
+  .group-apply:disabled {
+    background: transparent;
+    border-color: var(--divider-color, #3a3a3a);
+    color: inherit;
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .notice {
+    border: 1px solid var(--success-color, #4caf50);
+    background: color-mix(in srgb, var(--success-color, #4caf50) 12%, transparent);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 0.85rem;
+  }
+  .notice.error {
+    border-color: var(--error-color, #f44336);
+    background: color-mix(in srgb, var(--error-color, #f44336) 10%, transparent);
+  }
+  .reg-control {
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 8px; min-width: 0; flex: 0 0 auto;
+  }
+  .reg-control ha-input,
+  .reg-control ha-select { flex: 0 1 160px; min-width: 96px; }
+  .reg-control ha-slider { flex: 1 1 auto; min-width: 40px; }
+  .reg-control ha-time-input { flex: 0 1 auto; min-width: 132px; }
+  .reg-control ha-switch { flex: 0 0 auto; }
+  .reg-control.has-slider { flex: 0 1 240px; }
+  .reg-control.has-slider ha-input { flex: 0 1 88px; min-width: 64px; }
+  .reg-control ha-input::part(wa-input) { text-align: end; }
+  .reg-value {
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding-left: 12px;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
+  }
+  .reg-value.empty { opacity: 0.45; }
+  @media (max-width: 720px) {
+    .register-row { flex-wrap: wrap; gap: 8px; }
+    .reg-name { flex: 1 1 100%; }
+    .group-meta { margin-left: 0; }
+    .group-footer { flex-direction: column; align-items: stretch; }
+  }
+`;
+
+class ConowLocalPanel extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._hass = null;
+    this._deviceId = null;
+    this._devices = [];
+    this._state = null;
+    this._mapState = null;
+    this._groupFilter = "";
+    this._entityFilter = "";
+    this._accessFilter = "all";
+    this._collapsed = new Set();
+    this._loading = false;
+    this._error = null;
+    this._drafts = {};
+    this._pendingGroups = new Set();
+    this._notice = null;
+    this._timeLoader = null;
+    this._invalidNotified = null;
+    this._lastNotice = null;
+    this._lastNoticeAt = 0;
+    this._styleEl = document.createElement("style");
+    this._styleEl.textContent = PANEL_STYLE;
+    this._root = document.createElement("div");
+    this.shadowRoot.append(this._styleEl, this._root);
+  }
+
+  set hass(hass) {
+    const first = !this._hass;
+    this._hass = hass;
+    if (first) {
+      if (!this._deviceId) {
+        this._readDeviceFromUrl();
+      }
+      this._loadMap();
+      this._loadDevices();
+    }
+  }
+
+  async _loadMap() {
+    try {
+      this._mapState = await this._callWS("conow_local/get_panel_map");
+      this._render();
+    } catch (err) {
+      this._error = this._errorText(err);
+      this._render();
+    }
+  }
+
+  get hass() {
+    return this._hass;
+  }
+
+  set deviceId(deviceId) {
+    this._deviceId = deviceId || null;
+    if (this._hass) {
+      this._loadFunctions();
+    }
+  }
+
+  get deviceId() {
+    return this._deviceId;
+  }
+
+  _readDeviceFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const deviceId = params.get("device_id");
+    if (deviceId) {
+      this._deviceId = deviceId;
+    }
+  }
+
+  _syncUrl() {
+    const url = new URL(window.location.href);
+    if (this._deviceId) {
+      url.searchParams.set("device_id", this._deviceId);
+    } else {
+      url.searchParams.delete("device_id");
+    }
+    window.history.replaceState(null, "", url);
+  }
+
+  async _callWS(type, extra = {}) {
+    return this._hass.callWS({ type, ...extra });
+  }
+
+  async _loadDevices() {
+    this._loading = true;
+    this._error = null;
+    this._render();
+    try {
+      const result = await this._callWS("conow_local/get_panel_devices");
+      this._devices = result.devices || [];
+      const current = this._deviceId
+        ? this._devices.find(
+            (device) =>
+              device.device_id === this._deviceId ||
+              device.entry_id === this._deviceId
+          )
+        : null;
+      if (current && current.device_id !== this._deviceId) {
+        // The URL can carry a config entry id; the selector uses device ids.
+        this._deviceId = current.device_id;
+        this._syncUrl();
+      }
+      if (!this._deviceId) {
+        // Prefer a device we know is reachable, then a loaded entry, so the
+        // page shows values as soon as it opens; the selector switches device.
+        const preferred =
+          this._devices.find((device) => device.online) ||
+          this._devices.find((device) => device.loaded) ||
+          this._devices.find((device) => device.mode === "tcp") ||
+          this._devices[0] ||
+          null;
+        if (preferred) {
+          this._deviceId = preferred.device_id;
+          this._syncUrl();
+        }
+      }
+      if (this._deviceId) {
+        await this._loadFunctions();
+      } else {
+        this._loading = false;
+        this._render();
+      }
+    } catch (err) {
+      this._loading = false;
+      this._error = this._errorText(err);
+      this._render();
+    }
+  }
+
+  async _loadFunctions() {
+    if (!this._deviceId) {
+      return;
+    }
+    const hadState = Boolean(this._state);
+    this._error = null;
+    if (hadState) {
+      // Refresh in place: keep the current rows visible and only spin the
+      // icon, so a manual refresh never blanks the page.
+      this._setRefreshSpinning(true);
+    } else {
+      this._loading = true;
+      this._render();
+    }
+    try {
+      const state = await this._callWS("conow_local/get_panel_functions", {
+        device_id: this._deviceId,
+      });
+      this._state = state;
+      this._drafts = {};
+      this._pendingGroups.clear();
+      this._notice = null;
+      this._error = null;
+      this._notifyInvalidTimes();
+    } catch (err) {
+      this._state = null;
+      this._error = this._errorText(err);
+    } finally {
+      this._loading = false;
+      this._setRefreshSpinning(false);
+      this._render();
+    }
+  }
+
+  _errorText(err) {
+    const message = err?.message || String(err);
+    if (message.includes("not_found")) {
+      return "设备不存在或集成未加载。";
+    }
+    if (message.includes("Unknown command") || message.includes("unknown_command")) {
+      return "面板 WebSocket 命令未注册 —— 请重启 Home Assistant 后再打开本页。";
+    }
+    return message;
+  }
+
+  _escape(text) {
+    return String(text ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  _renderRegister(register, group) {
+    const invalidTime = this._timeInvalid(register);
+    const hints = [];
+    // Address/type details stay available on hover instead of taking a column.
+    hints.push(
+      `地址 ${register.address}（${register.address_hex}）· ${register.dtype}${
+        register.length > 1 ? ` ×${register.length}` : ""
+      } · ${register.writable ? "可写" : "只读"}`
+    );
+    if (invalidTime) {
+      hints.push(
+        `设备读数 ${this._rawHex(register)} 不是合法的时分（范围 00:00–23:59），已隐藏，请重新设置后下发`
+      );
+    }
+    if (register.note) {
+      hints.push(register.note);
+    }
+    if (register.entity_id) {
+      hints.push(`点击查看 ${register.entity_id} 的实体详情`);
+    }
+    const title = ` title="${this._escape(hints.join("\n"))}"`;
+    // Prefer the mapped entity's own icon (battery, grid, …) so read-only
+    // rows look like the entity list; fall back to a control-type icon.
+    const entityIcon =
+      register.entity_id &&
+      this._hass?.states?.[register.entity_id]?.attributes?.icon;
+    const icon =
+      invalidTime
+        ? "mdi:alert-outline"
+        : entityIcon ||
+          (register.control === "time"
+            ? "mdi:clock-outline"
+            : register.control === "switch"
+              ? "mdi:toggle-switch-outline"
+              : register.control === "enum"
+                ? "mdi:format-list-bulleted"
+                : register.control === "text"
+                  ? "mdi:form-textbox"
+                  : "mdi:tune-variant");
+    const slider = this._sliderEnabled(register) ? " has-slider" : "";
+    const value = this._controlValue(group.id, register);
+    const editable = Boolean(register.writable && this._state?.map_readable);
+    const entity = register.entity_id
+      ? ` data-entity="${this._escape(register.entity_id)}"`
+      : "";
+    const control = editable
+      ? `<div class="reg-control${slider}" data-group="${group.id}" data-code="${register.code}" data-value="${this._escape(value)}" data-editable="1">${this._renderControl(register, group.id)}</div>`
+      : this._renderReadonlyValue(register);
+    return `
+      <div class="register-row${register.entity_id ? " linkable" : ""}${
+        invalidTime ? " invalid-time" : ""
+      }"${entity}${title}>
+        <div class="reg-name">
+          <ha-icon icon="${icon}"></ha-icon>
+          <div class="reg-name-text">
+            ${this._escape(register.name)}
+            <span class="reg-code">${this._escape(register.code)}</span>
+          </div>
+        </div>
+        ${control}
+      </div>
+    `;
+  }
+
+  _renderReadonlyValue(register) {
+    const text = this._timeInvalid(register)
+      ? ""
+      : this._formatRegisterValue(register, this._currentValue(register));
+    return `<div class="reg-value${text ? "" : " empty"}">${this._escape(
+      text
+    )}</div>`;
+  }
+
+  _accessMatches(register) {
+    // Toolbar access filter: "rw" = 可写 only, "ro" = 只读 only.
+    if (this._accessFilter === "rw") {
+      return Boolean(register.writable);
+    }
+    if (this._accessFilter === "ro") {
+      return !register.writable;
+    }
+    return true;
+  }
+
+  _slotLimit(group) {
+    // Groups whose slots are numbered by a count register (时段数 / 策略数)
+    // only render that many slot sections.
+    const code = group?.count_register;
+    if (!code) {
+      return null;
+    }
+    const register = (group.members || []).find((item) => item.code === code);
+    if (!register) {
+      return null;
+    }
+    const raw = this._draftValue(group.id, register);
+    if (raw === "" || raw === null || raw === undefined) {
+      return null;
+    }
+    const count = Number(raw);
+    if (!Number.isFinite(count)) {
+      return null;
+    }
+    return Math.max(0, Math.min(count, (group.subgroups || []).length));
+  }
+
+  _syncSlotVisibility(groupId) {
+    const group = this._state?.groups?.[groupId];
+    if (!group?.count_register) {
+      return;
+    }
+    const limit = this._slotLimit(group);
+    this._root
+      .querySelectorAll(`section.subgroup[data-group="${groupId}"]`)
+      .forEach((section) => {
+        const hidden =
+          !this._entityFilter &&
+          limit !== null &&
+          Number(section.dataset.slot) > limit;
+        section.style.display = hidden ? "none" : "";
+      });
+  }
+
+  _syncAllSlotVisibility() {
+    for (const groupId of Object.keys(this._state?.groups || {})) {
+      this._syncSlotVisibility(groupId);
+    }
+  }
+
+  _renderMemberRows(group) {
+    const members = (group.members || []).filter(
+      (item) =>
+        this._accessMatches(item) &&
+        (!this._entityFilter || item.code === this._entityFilter)
+    );
+    const subgroups = group.subgroups || [];
+    const subgroupIndex = new Map();
+    subgroups.forEach((subgroup, index) => {
+      subgroup.members.forEach((code) => {
+        if (!subgroupIndex.has(code)) {
+          subgroupIndex.set(code, index);
+        }
+      });
+    });
+    const byCode = new Map(members.map((item) => [item.code, item]));
+    const emitted = new Set();
+    const limit = this._slotLimit(group);
+    let html = "";
+    // Rows flow in a responsive grid so several registers share one line;
+    // every run of plain rows between subgroups becomes its own grid.
+    let pending = [];
+    const flush = () => {
+      if (!pending.length) {
+        return;
+      }
+      html += `<div class="rows-grid">${pending.join("")}</div>`;
+      pending = [];
+    };
+    for (const register of members) {
+      const index = subgroupIndex.get(register.code);
+      if (index === undefined) {
+        pending.push(this._renderRegister(register, group));
+        continue;
+      }
+      if (emitted.has(index)) {
+        continue;
+      }
+      emitted.add(index);
+      const subgroup = subgroups[index];
+      const rows = subgroup.members
+        .map((code) => byCode.get(code))
+        .filter(Boolean);
+      if (!rows.length) {
+        continue;
+      }
+      // The count register ("时段数" / "策略数") decides how many slot
+      // sections are active; _syncSlotVisibility() keeps this live while the
+      // user edits the count.
+      const slot = index + 1;
+      // An explicitly picked entity is always shown, even when its slot lies
+      // past the device's slot count.
+      const hidden =
+        !this._entityFilter && limit !== null && slot > limit;
+      flush();
+      html += `
+        <section class="subgroup" data-group="${this._escape(group.id)}"
+          data-slot="${slot}"${hidden ? ' style="display: none;"' : ""}>
+          <div class="subgroup-header">
+            <span class="subgroup-title">${this._escape(subgroup.label)}</span>
+          </div>
+          <div class="rows-grid">
+            ${rows.map((item) => this._renderRegister(item, group)).join("")}
+          </div>
+        </section>
+      `;
+    }
+    flush();
+    return html;
+  }
+
+  _controlValue(groupId, register) {
+    const editable = Boolean(register.writable && this._state?.map_readable);
+    let value;
+    if (editable) {
+      value = this._draftValue(groupId, register);
+    } else if (
+      register.control === "enum" ||
+      register.control === "switch"
+    ) {
+      value = register.raw;
+    } else {
+      value = register.display;
+    }
+    if (this._timeInvalid(register)) {
+      // Never show (or seed an editor with) an impossible time.
+      value = "";
+    }
+    return value === null || value === undefined ? "" : String(value);
+  }
+
+  _sliderEnabled(register) {
+    if (
+      register.control !== "number" ||
+      register.unit !== "%" ||
+      !register.writable ||
+      !this._state?.map_readable ||
+      !Array.isArray(register.bounds)
+    ) {
+      return false;
+    }
+    const [min, max] = register.bounds;
+    return Number.isFinite(Number(min)) && Number.isFinite(Number(max));
+  }
+
+  _findRegister(groupId, code) {
+    const group = this._state?.groups?.[groupId];
+    return (group?.members || []).find((item) => item.code === code);
+  }
+
+  _draftValue(groupId, register) {
+    const draft = this._drafts[groupId];
+    if (draft && draft[register.code] !== undefined) {
+      return draft[register.code];
+    }
+    if (this._timeInvalid(register)) {
+      // Leave the editor empty so the user has to supply a valid time.
+      return "";
+    }
+    return register.values ? register.raw : register.value;
+  }
+
+  _currentValue(register) {
+    return register.values ? register.raw : register.value;
+  }
+
+  _changedRegisters(group) {
+    return (group.members || []).filter((register) => {
+      if (!register.writable) {
+        return false;
+      }
+      const draft = this._draftValue(group.id, register);
+      const current = this._currentValue(register);
+      return String(draft ?? "") !== String(current ?? "");
+    });
+  }
+
+  _isDirty(group) {
+    return this._changedRegisters(group).length > 0;
+  }
+
+  _formatRegisterValue(register, value) {
+    if (value === null || value === undefined || value === "") {
+      return "—";
+    }
+    if (register.control === "switch") {
+      return String(value) === "1" || value === true ? "开" : "关";
+    }
+    if (register.control === "enum") {
+      const label = (register.values || {})[String(value)];
+      return label !== undefined ? String(label) : String(value);
+    }
+    if (register.control === "time") {
+      return this._normalizeTime(value) || String(value);
+    }
+    const numeric = Number(value);
+    const text =
+      Number.isFinite(numeric) && String(value).trim() !== ""
+        ? Number(numeric.toFixed(4)).toLocaleString(undefined, {
+            maximumFractionDigits: 4,
+          })
+        : String(value);
+    const unit = register.unit || "";
+    // Percent stays attached ("50%"); power/energy/voltage read better with a
+    // space ("6,000 W").
+    return `${text}${unit && unit !== "%" ? ` ${unit}` : unit}`;
+  }
+
+  _changedSummary(group) {
+    // One "从旧值到新值" entry per staged register, so the footer says what
+    // the batch write will actually change.
+    return this._changedRegisters(group)
+      .map(
+        (register) =>
+          `${register.name}：从 ${this._formatRegisterValue(
+            register,
+            this._currentValue(register)
+          )} 到 ${this._formatRegisterValue(
+            register,
+            this._draftValue(group.id, register)
+          )}`
+      )
+      .join("；");
+  }
+
+  _normalizeTime(value) {
+    if (value === undefined || value === null) {
+      return "";
+    }
+    const parts = String(value).split(":");
+    if (parts.length < 2) {
+      return "";
+    }
+    const hour = Number(parts[0]);
+    const minute = Number(parts[1]);
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) {
+      return "";
+    }
+    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  }
+
+  _clampTime(value) {
+    // Registers hold 00:00–23:59; the time widget lets users type past that.
+    const normalized = this._normalizeTime(value);
+    if (!normalized) {
+      return "";
+    }
+    const [hour, minute] = normalized.split(":").map(Number);
+    const clampedHour = Math.min(23, Math.max(0, hour));
+    const clampedMinute = Math.min(59, Math.max(0, minute));
+    return `${String(clampedHour).padStart(2, "0")}:${String(
+      clampedMinute
+    ).padStart(2, "0")}`;
+  }
+
+  _rawHex(register) {
+    const raw = Number(register.raw);
+    if (!Number.isFinite(raw)) {
+      return "";
+    }
+    return `0x${(raw & 0xffff).toString(16).toUpperCase().padStart(4, "0")}`;
+  }
+
+  _timeInvalid(register) {
+    // The device can return anything in a time register (e.g. 0xAA16); only
+    // high byte 00–23 / low byte 00–59 is a real HH:MM.
+    if (register?.control !== "time") {
+      return false;
+    }
+    const raw = Number(register.raw);
+    if (!Number.isFinite(raw)) {
+      return false;
+    }
+    return ((raw >> 8) & 0xff) > 23 || (raw & 0xff) > 59;
+  }
+
+  _invalidTimeCodes() {
+    const codes = new Set();
+    for (const group of Object.values(this._state?.groups || {})) {
+      for (const register of group.members || []) {
+        if (this._timeInvalid(register)) {
+          codes.add(register.code);
+        }
+      }
+    }
+    return [...codes];
+  }
+
+  _groupInvalidTimes(group) {
+    // Registers the user still has to fix: invalid on the device and no valid
+    // draft typed in yet.
+    return (group.members || [])
+      .filter(
+        (register) =>
+          register.writable &&
+          this._timeInvalid(register) &&
+          this._draftValue(group.id, register) === ""
+      )
+      .map((register) => register.code);
+  }
+
+  _groupOutOfRange(group) {
+    return (group.members || [])
+      .filter((register) => {
+        if (
+          !register.writable ||
+          register.control !== "number" ||
+          !Array.isArray(register.bounds)
+        ) {
+          return false;
+        }
+        const value = this._draftValue(group.id, register);
+        if (value === "" || value === null || value === undefined) {
+          return false;
+        }
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) {
+          return false;
+        }
+        const [min, max] = register.bounds;
+        return numeric < min || numeric > max;
+      })
+      .map((register) => register.code);
+  }
+
+  _groupHint(group, valid, dirty) {
+    const invalid = this._groupInvalidTimes(group);
+    if (invalid.length) {
+      return `时间读数非法，请重新设置：${invalid.join("、")}`;
+    }
+    const outOfRange = this._groupOutOfRange(group);
+    if (outOfRange.length) {
+      return `超出允许范围，请调整：${outOfRange.join("、")}`;
+    }
+    if (!valid) {
+      return "请填写完整所有可写字段";
+    }
+    return dirty ? this._changedSummary(group) : "无改动";
+  }
+
+  _notify(message, duration = 5000) {
+    // Home Assistant's notification manager listens for this event and shows
+    // a toast, so panel-side warnings surface as a real popup.
+    const now = Date.now();
+    if (message === this._lastNotice && now - this._lastNoticeAt < 2000) {
+      return;
+    }
+    this._lastNotice = message;
+    this._lastNoticeAt = now;
+    this.dispatchEvent(
+      new CustomEvent("hass-notification", {
+        detail: { message, duration },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _notifyInvalidTimes() {
+    const codes = this._invalidTimeCodes().sort();
+    if (!codes.length) {
+      this._invalidNotified = null;
+      return;
+    }
+    const key = codes.join(",");
+    if (key === this._invalidNotified) {
+      return;
+    }
+    this._invalidNotified = key;
+    const preview = codes.slice(0, 3).join("、");
+    this._notify(
+      `检测到 ${codes.length} 个时间寄存器读数非法（${preview}${
+        codes.length > 3 ? " 等" : ""
+      }），已隐藏原值；请在对应分组重新设置时间后再下发。`,
+      10000
+    );
+  }
+
+  _isValid(group) {
+    return (group.members || [])
+      .filter((register) => register.writable)
+      .every((register) => {
+        const value = this._draftValue(group.id, register);
+        if (value === "" || value === null || value === undefined) {
+          return false;
+        }
+        if (register.control === "time") {
+          return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(value));
+        }
+        if (register.control === "number") {
+          const numeric = Number(value);
+          if (!Number.isFinite(numeric)) {
+            return false;
+          }
+          if (register.bounds) {
+            const [min, max] = register.bounds;
+            if (numeric < min || numeric > max) {
+              return false;
+            }
+          }
+        }
+        if (register.control === "enum") {
+          const options = Object.keys(register.values || {}).map(String);
+          if (!options.includes(String(value))) {
+            return false;
+          }
+        }
+        return true;
+      });
+  }
+
+  _renderControl(register, groupId) {
+    const editable = Boolean(register.writable && this._state?.map_readable);
+    const pending = this._pendingGroups.has(groupId);
+    const unit = register.unit
+      ? `<span slot="end">${this._escape(register.unit)}</span>`
+      : "";
+    if (register.control === "enum") {
+      // ha-select receives its options as a JS property in _syncControls.
+      return `<ha-select ${editable && !pending ? "" : "disabled"}></ha-select>`;
+    }
+    if (register.control === "switch") {
+      // On/off registers use Home Assistant's native toggle.
+      return `<ha-switch ${
+        editable && !pending ? "" : "disabled"
+      }></ha-switch>`;
+    }
+    if (register.control === "time") {
+      // ha-time-input is HA's native time selector (HH:MM fields).
+      const warning = this._timeInvalid(register)
+        ? `<span class="reg-warning">读数非法，请重新设置</span>`
+        : "";
+      return `<ha-time-input ${
+        editable && !pending ? "" : "disabled"
+      }></ha-time-input>${warning}`;
+    }
+    const [min, max, step] = register.bounds || [];
+    const bounds = [
+      min !== undefined ? `min="${min}"` : "",
+      max !== undefined ? `max="${max}"` : "",
+      step !== undefined ? `step="${step}"` : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const state = editable ? (pending ? "disabled" : "") : "readonly";
+    const slider = this._sliderEnabled(register)
+      ? `<ha-slider labeled ${bounds} ${
+          editable ? (pending ? "disabled" : "") : "disabled"
+        }></ha-slider>`
+      : "";
+    const type = register.control === "number" ? 'type="number"' : "";
+    return `${slider}<ha-input ${type} ${bounds} ${state}>${unit}</ha-input>`;
+  }
+
+  _ensureTimeInput() {
+    if (customElements.get("ha-time-input") || this._timeLoader) {
+      return;
+    }
+    // ha-time-input lives in a lazily loaded chunk. An ha-selector wired to
+    // the time selector pulls that chunk in so our own elements can upgrade.
+    const loader = document.createElement("ha-selector");
+    loader.selector = { time: {} };
+    loader.hass = this.hass;
+    loader.style.display = "none";
+    this._timeLoader = loader;
+    // Keep it outside _root: _render() replaces _root's innerHTML.
+    this.shadowRoot.appendChild(loader);
+    const check = () => {
+      if (customElements.get("ha-time-input")) {
+        loader.remove();
+        this._timeLoader = null;
+        this._syncControls();
+        return;
+      }
+      setTimeout(check, 200);
+    };
+    setTimeout(check, 200);
+  }
+
+  _syncControls() {
+    this._ensureTimeInput();
+    const apply = (attempt = 0) => {
+      let waiting = false;
+      this._root
+        .querySelectorAll(".reg-control[data-code]")
+        .forEach((control) => {
+          if (control.dataset.synced) {
+            return;
+          }
+          const slider = control.querySelector("ha-slider");
+          const time = control.querySelector("ha-time-input");
+          if (
+            (slider && !customElements.get("ha-slider")) ||
+            (time && !customElements.get("ha-time-input"))
+          ) {
+            // These elements are loaded lazily; wait for the upgrade.
+            waiting = true;
+            return;
+          }
+          const value = control.getAttribute("data-value") || "";
+          const toggle = control.querySelector("ha-switch");
+          if (toggle) {
+            toggle.checked = String(value) === "1";
+          }
+          const select = control.querySelector("ha-select");
+          if (select) {
+            const register = this._findRegister(
+              control.dataset.group,
+              control.dataset.code
+            );
+            const options = Object.entries(register?.values || {}).map(
+              ([raw, label]) => ({ value: raw, label })
+            );
+            if (options.length) {
+              select.options = options;
+              select.value = options.some(
+                (option) => String(option.value) === value
+              )
+                ? value
+                : undefined;
+            }
+          }
+          const input = control.querySelector("ha-input");
+          if (input) {
+            input.value = value;
+            input.placeholder = value === "" ? "—" : "";
+          }
+          if (slider) {
+            const numeric = Number(value);
+            if (value !== "" && Number.isFinite(numeric)) {
+              slider.value = numeric;
+            }
+          }
+          if (time) {
+            // ha-time-input reads its display format from the locale object.
+            time.locale = this.hass?.locale;
+            if (value !== "") {
+              time.value = this._normalizeTime(value);
+            }
+          }
+          control.dataset.synced = "1";
+        });
+      if (waiting && attempt < 40) {
+        setTimeout(() => apply(attempt + 1), 150);
+      }
+    };
+    apply();
+    requestAnimationFrame(() => apply());
+    setTimeout(() => apply(), 250);
+  }
+
+  _bindEditing() {
+    this._root
+      .querySelectorAll("section.group > .group-header")
+      .forEach((header) => {
+        header.addEventListener("click", () => this._toggleGroup(header));
+        header.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            this._toggleGroup(header);
+          }
+        });
+      });
+
+    this._root
+      .querySelectorAll(".register-row[data-entity]")
+      .forEach((row) => {
+        row.addEventListener("click", (event) => {
+          if (event.target.closest("ha-input, ha-select, ha-slider, ha-time-input, ha-switch")) {
+            return;
+          }
+          this.dispatchEvent(
+            new CustomEvent("hass-more-info", {
+              detail: { entityId: row.dataset.entity },
+              bubbles: true,
+              composed: true,
+            })
+          );
+        });
+      });
+
+    this._root
+      .querySelectorAll(".reg-control[data-editable]")
+      .forEach((control) => {
+        const groupId = control.dataset.group;
+        const code = control.dataset.code;
+        const select = control.querySelector("ha-select");
+        const input = control.querySelector("ha-input");
+        const slider = control.querySelector("ha-slider");
+        const time = control.querySelector("ha-time-input");
+        const toggle = control.querySelector("ha-switch");
+        const register = this._findRegister(groupId, code);
+        const handle = (raw) => {
+          let value = raw === undefined || raw === null ? "" : raw;
+          if (
+            register?.control === "number" &&
+            Array.isArray(register.bounds) &&
+            String(value).trim() !== ""
+          ) {
+            const numeric = Number(value);
+            if (Number.isFinite(numeric)) {
+              const [min, max] = register.bounds;
+              const clamped = Math.min(Math.max(numeric, min), max);
+              if (clamped !== numeric) {
+                value = String(clamped);
+                this._notify(
+                  `${register.name} 已限制为 ${clamped}（${min}–${max}）`,
+                  3000
+                );
+              }
+            }
+          }
+          this._drafts[groupId] = this._drafts[groupId] || {};
+          this._drafts[groupId][code] = value;
+          if (select && select.value !== value) {
+            select.value = value;
+          }
+          if (input && input.value !== String(value)) {
+            input.value = value;
+          }
+          if (time && this._normalizeTime(time.value) !== String(value)) {
+            time.value = value;
+          }
+          if (toggle) {
+            const on = String(value) === "1" || value === true;
+            if (toggle.checked !== on) {
+              toggle.checked = on;
+            }
+          }
+          const numeric = Number(value);
+          if (
+            slider &&
+            value !== "" &&
+            Number.isFinite(numeric) &&
+            slider.value !== numeric
+          ) {
+            slider.value = numeric;
+          }
+          if (code === this._state?.groups?.[groupId]?.count_register) {
+            this._syncSlotVisibility(groupId);
+          }
+          this._refreshApply(groupId);
+        };
+        select?.addEventListener("selected", (event) =>
+          handle(event.detail?.value)
+        );
+        slider?.addEventListener("change", (event) => handle(event.target.value));
+        input?.addEventListener("input", (event) => handle(event.target.value));
+        input?.addEventListener("change", (event) => handle(event.target.value));
+        toggle?.addEventListener("change", (event) =>
+          handle(event.target.checked ? 1 : 0)
+        );
+        // ha-time-input reports "HH:MM:SS"; the register only holds HH:MM.
+        time?.addEventListener("value-changed", (event) => {
+          const raw = event.detail?.value ?? "";
+          const normalized = this._normalizeTime(raw);
+          const clamped = this._clampTime(raw);
+          if (normalized && normalized !== clamped) {
+            this._notify(`时间已限制为 ${clamped}（有效范围 00:00–23:59）`, 3000);
+          }
+          handle(clamped);
+        });
+      });
+
+    this._root.querySelectorAll(".group-apply").forEach((button) => {
+      button.addEventListener("click", () => this._applyGroup(button.dataset.group));
+    });
+
+    this._syncAllSlotVisibility();
+    this._syncControls();
+  }
+
+  _refreshApply(groupId) {
+    const group = this._state?.groups?.[groupId];
+    const button = this._root.querySelector(
+      `.group-apply[data-group="${groupId}"]`
+    );
+    if (!group || !button) {
+      return;
+    }
+    const pending = this._pendingGroups.has(groupId);
+    const valid = this._isValid(group);
+    const dirty = this._isDirty(group);
+    button.disabled = !valid || pending;
+    const hint = button.parentElement?.querySelector(".group-hint");
+    if (hint) {
+      hint.textContent = this._groupHint(group, valid, dirty);
+    }
+  }
+
+  async _applyGroup(groupId) {
+    const group = this._state?.groups?.[groupId];
+    if (!group || this._pendingGroups.has(groupId) || !this._state?.map_readable) {
+      return;
+    }
+    const values = {};
+    for (const register of group.members || []) {
+      if (register.writable) {
+        values[register.code] = this._draftValue(groupId, register);
+      }
+    }
+    const preview = Object.entries(values)
+      .map(([code, value]) => `${code}=${value}`)
+      .join("，");
+    if (!window.confirm(`确认把分组「${group.label}」写入设备？\n\n${preview}`)) {
+      return;
+    }
+    this._pendingGroups.add(groupId);
+    this._notice = null;
+    this._render();
+    try {
+      this._state = await this._callWS("conow_local/set_panel_group", {
+        device_id: this._deviceId,
+        group_id: groupId,
+        values,
+      });
+      this._drafts[groupId] = {};
+      this._notice = { ok: true, text: `${group.label}：已下发` };
+    } catch (err) {
+      this._notice = { ok: false, text: `${group.label}：${err.message || String(err)}` };
+    } finally {
+      this._pendingGroups.delete(groupId);
+      this._render();
+    }
+  }
+
+  _willMerge(group) {
+    const writable = (group.members || []).filter((item) => item.writable);
+    if (writable.length < 2) {
+      return false;
+    }
+    let expected = writable[0].address;
+    for (const item of writable) {
+      if (item.address !== expected) {
+        return false;
+      }
+      expected += item.length || 1;
+    }
+    return true;
+  }
+
+  _renderGroup(group) {
+    const writable = (group.members || []).filter((item) => item.writable);
+    const writeChip =
+      writable.length > 1
+        ? this._willMerge(group)
+          ? `<span class="chip atomic">整组原子写入</span>`
+          : `<span class="chip">逐条写入</span>`
+        : "";
+    const rows = this._renderMemberRows(group);
+    const hasWritable = writable.length > 0;
+    // In the read-only view the editable rows are hidden, so hide the footer
+    // too (it would otherwise validate/stage registers the user cannot see).
+    const editableHere = this._accessFilter !== "ro";
+    let footer = "";
+    if (hasWritable && this._state?.map_readable && editableHere) {
+      const pending = this._pendingGroups.has(group.id);
+      const valid = this._isValid(group);
+      const dirty = this._isDirty(group);
+      const hint = this._groupHint(group, valid, dirty);
+      footer = `
+        <div class="group-footer">
+          <span class="group-hint">${hint}</span>
+          <button type="button" class="group-apply" data-group="${group.id}"
+            ${valid && !pending ? "" : "disabled"}>
+            ${pending ? "下发中…" : "批量下发"}
+          </button>
+        </div>
+      `;
+    }
+    const collapsed = this._collapsed.has(group.id);
+    return `
+      <section class="group${collapsed ? " collapsed" : ""}" data-group="${this._escape(
+        group.id
+      )}">
+        <div class="group-header" role="button" tabindex="0"
+          aria-expanded="${collapsed ? "false" : "true"}"
+          title="${collapsed ? "展开分组" : "折叠分组"}">
+          <ha-icon icon="${this._escape(group.icon || "mdi:view-grid-outline")}"></ha-icon>
+          <span class="group-title">${this._escape(group.label)}</span>
+          <span class="group-meta">
+            ${writeChip}
+          </span>
+          <ha-icon class="group-toggle" icon="mdi:chevron-down"></ha-icon>
+        </div>
+        <div class="group-body">
+          ${rows}
+          ${footer}
+        </div>
+      </section>
+    `;
+  }
+
+  _groupIdForEntity(code) {
+    if (!code) {
+      return null;
+    }
+    const groups = Object.values(
+      this._state?.groups || this._mapState?.groups || {}
+    );
+    const group = groups.find((item) =>
+      (item.members || []).some((member) => member.code === code)
+    );
+    return group ? group.id : null;
+  }
+
+  _toggleGroup(header) {
+    const section = header.closest("section.group");
+    if (!section) {
+      return;
+    }
+    const collapsed = section.classList.toggle("collapsed");
+    const id = section.dataset.group;
+    if (collapsed) {
+      this._collapsed.add(id);
+    } else {
+      this._collapsed.delete(id);
+    }
+    header.setAttribute("aria-expanded", String(!collapsed));
+  }
+
+  _mapMismatchHint() {
+    if (!this._state || this._state.map_readable !== false) {
+      return "";
+    }
+    return `<div class="hint">设备有 Modbus 响应，但 10 月映射的地址全部读不到 —— 多半仍在 v1 协议
+      （10000–10036 / 10100–10107）。请选择配置为 v2 的条目，或把该条目指向提供 10 月映射的服务端。</div>`;
+  }
+
+  _renderGroups() {
+    const groups = Object.values(this._state?.groups || this._mapState?.groups || {});
+    const visible = groups.filter((group) => {
+      const members = group.members || [];
+      if (this._groupFilter && group.id !== this._groupFilter) {
+        return false;
+      }
+      if (
+        this._entityFilter &&
+        !members.some((item) => item.code === this._entityFilter)
+      ) {
+        return false;
+      }
+      return members.some((item) => this._accessMatches(item));
+    });
+    if (!visible.length) {
+      return `<div class="empty">没有匹配的分组。</div>`;
+    }
+    const notice = this._notice
+      ? `<div class="notice ${this._notice.ok ? "" : "error"}">${this._escape(
+          this._notice.text
+        )}</div>`
+      : "";
+    return (
+      this._mapMismatchHint() +
+      notice +
+      visible.map((group) => this._renderGroup(group)).join("")
+    );
+  }
+
+  _setRefreshSpinning(on) {
+    const button = this._root.querySelector("#refresh-btn");
+    if (button) {
+      button.classList.toggle("spinning", Boolean(on));
+    }
+  }
+
+  _refreshGroupsBody() {
+    // Re-render only the group list so filters don't reset the toolbar/device.
+    const host = this._root.querySelector("#groups-body");
+    if (!host) {
+      return;
+    }
+    host.innerHTML = this._renderGroups();
+    this._bindEditing();
+  }
+
+  _bindEvents() {
+    this._bindToolbar();
+    this._bindEditing();
+  }
+
+  _bindToolbar() {
+    const bind = (field, handler) => {
+      const combo = this._root.querySelector(`.combo[data-field="${field}"]`);
+      if (combo) {
+        this._bindCombo(combo, handler);
+      }
+    };
+
+    bind("device", (value) => {
+      this._deviceId = value || null;
+      this._state = null;
+      this._drafts = {};
+      this._pendingGroups.clear();
+      this._notice = null;
+      this._groupFilter = "";
+      this._entityFilter = "";
+      this._syncUrl();
+      if (this._deviceId) {
+        this._loadFunctions();
+      } else {
+        this._render();
+      }
+    });
+
+    bind("group", (value) => {
+      this._groupFilter = value || "";
+      // Show the group the user just picked, even if it was collapsed.
+      if (this._groupFilter) {
+        this._collapsed.delete(this._groupFilter);
+      }
+      // A new group narrows the entity list; drop an entity from another group.
+      this._refreshToolbar();
+      this._refreshGroupsBody();
+    });
+
+    bind("entity", (value) => {
+      this._entityFilter = value || "";
+      const groupId = this._groupIdForEntity(this._entityFilter);
+      if (groupId) {
+        this._collapsed.delete(groupId);
+      }
+      this._refreshGroupsBody();
+    });
+
+    bind("access", (value) => {
+      this._accessFilter = value || "all";
+      this._refreshToolbar();
+      this._refreshGroupsBody();
+    });
+
+    const refresh = this._root.querySelector("#refresh-btn");
+    if (refresh) {
+      refresh.addEventListener("click", () => this._loadFunctions());
+    }
+  }
+
+  _bindCombo(combo, onSelect) {
+    const input = combo.querySelector(".combo-input");
+    const menu = combo.querySelector(".combo-menu");
+    const empty = menu.querySelector(".combo-empty");
+    const allOptions = () => [...menu.querySelectorAll(".combo-option")];
+    const shownOptions = () =>
+      allOptions().filter((option) => option.style.display !== "none");
+
+    const choose = (option) => {
+      combo.dataset.value = option.dataset.value;
+      combo.dataset.label = option.dataset.label;
+      input.value = option.dataset.label;
+      allOptions().forEach((item) => item.classList.remove("selected"));
+      option.classList.add("selected");
+      menu.hidden = true;
+      onSelect(option.dataset.value);
+    };
+
+    const filterMenu = (rawQuery) => {
+      const query = String(rawQuery ?? input.value).trim().toLowerCase();
+      let visible = 0;
+      allOptions().forEach((option) => {
+        const hit =
+          !query ||
+          option.dataset.label.toLowerCase().includes(query) ||
+          option.dataset.value.toLowerCase().includes(query);
+        option.style.display = hit ? "" : "none";
+        option.classList.remove("active");
+        if (hit) {
+          visible += 1;
+        }
+      });
+      // Hide section headings that lost all their options.
+      menu.querySelectorAll(".combo-heading").forEach((heading) => {
+        let node = heading.nextElementSibling;
+        let any = false;
+        while (node && !node.classList.contains("combo-heading")) {
+          if (
+            node.classList.contains("combo-option") &&
+            node.style.display !== "none"
+          ) {
+            any = true;
+            break;
+          }
+          node = node.nextElementSibling;
+        }
+        heading.style.display = any ? "" : "none";
+      });
+      empty.hidden = visible > 0;
+      const selected = shownOptions().find(
+        (option) => option.dataset.value === combo.dataset.value
+      );
+      if (selected) {
+        selected.classList.add("active");
+        selected.scrollIntoView({ block: "nearest" });
+      }
+    };
+
+    const open = () => {
+      // Only one menu is open at a time.
+      this._root.querySelectorAll(".combo-menu").forEach((other) => {
+        if (other !== menu) {
+          other.hidden = true;
+        }
+      });
+      // Focusing a combo shows every option; a typed query filters.
+      filterMenu(input.value === combo.dataset.label ? "" : input.value);
+      menu.hidden = false;
+    };
+
+    const close = () => {
+      menu.hidden = true;
+      input.value = combo.dataset.label;
+    };
+
+    input.addEventListener("focus", () => {
+      input.select();
+      open();
+    });
+    input.addEventListener("input", () => {
+      filterMenu();
+      if (menu.hidden) {
+        menu.hidden = false;
+      }
+    });
+    input.addEventListener("keydown", (event) => {
+      const items = shownOptions();
+      let index = items.findIndex((item) => item.classList.contains("active"));
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        if (menu.hidden) {
+          open();
+          return;
+        }
+        const delta = event.key === "ArrowDown" ? 1 : -1;
+        index = index < 0 ? 0 : index + delta;
+        index = Math.max(0, Math.min(items.length - 1, index));
+        items.forEach((item) => item.classList.remove("active"));
+        if (items[index]) {
+          items[index].classList.add("active");
+          items[index].scrollIntoView({ block: "nearest" });
+        }
+      } else if (event.key === "Enter") {
+        if (!menu.hidden && items[index < 0 ? 0 : index]) {
+          event.preventDefault();
+          choose(items[index < 0 ? 0 : index]);
+        }
+      } else if (event.key === "Escape") {
+        close();
+        input.blur();
+      }
+    });
+    input.addEventListener("blur", () => {
+      // Let a click on an option land before restoring the label.
+      setTimeout(() => {
+        if (!menu.hidden) {
+          close();
+        }
+      }, 140);
+    });
+    // Keep focus in the search box while an option is pressed.
+    menu.addEventListener("mousedown", (event) => {
+      if (event.target.closest(".combo-option")) {
+        event.preventDefault();
+      }
+    });
+    menu.addEventListener("click", (event) => {
+      const option = event.target.closest(".combo-option");
+      if (option) {
+        choose(option);
+      }
+    });
+  }
+
+  _combo(field, placeholder, items, selectedValue) {
+    const itemsHtml = items
+      .map((item) =>
+        item.heading
+          ? `<div class="combo-heading">${this._escape(item.heading)}</div>`
+          : `<div class="combo-option${
+              item.value === selectedValue ? " selected" : ""
+            }" data-value="${this._escape(item.value)}" data-label="${this._escape(
+              item.label
+            )}" title="${this._escape(item.label)}">${this._escape(item.label)}</div>`
+      )
+      .join("");
+    const selected = items.find(
+      (item) => !item.heading && item.value === selectedValue
+    );
+    const label = selected ? selected.label : placeholder;
+    return `
+      <div class="combo" data-field="${field}" data-value="${this._escape(
+        selectedValue || ""
+      )}" data-label="${this._escape(label)}">
+        <input class="combo-input" type="text" value="${this._escape(
+          label
+        )}" placeholder="${this._escape(
+          placeholder
+        )}" autocomplete="off" spellcheck="false" aria-label="${this._escape(
+          placeholder
+        )}" />
+        <ha-icon icon="mdi:chevron-down"></ha-icon>
+        <div class="combo-menu" hidden>
+          ${itemsHtml}
+          <div class="combo-empty" hidden>没有匹配项</div>
+        </div>
+      </div>
+    `;
+  }
+
+  _refreshToolbar() {
+    const toolbar = this._root.querySelector("#toolbar");
+    if (!toolbar) {
+      return;
+    }
+    toolbar.innerHTML = this._renderToolbar();
+    this._bindToolbar();
+  }
+
+  _renderToolbar() {
+    const groupsSource = this._state?.groups || this._mapState?.groups || {};
+    const groups = Object.values(groupsSource);
+    if (
+      this._groupFilter &&
+      !groups.some((group) => group.id === this._groupFilter)
+    ) {
+      this._groupFilter = "";
+    }
+
+    const deviceItems = this._devices.map((device) => {
+      const mode = String(device.mode || "").toUpperCase();
+      // Unloaded TCP entries are read directly over TCP, so "未加载" would
+      // contradict the reachability shown once the read succeeds; only RTU
+      // entries depend on the integration being loaded.
+      const state = device.online
+        ? ""
+        : device.mode === "tcp" && !device.loaded
+          ? ""
+          : device.loaded
+            ? "（离线）"
+            : "（未加载）";
+      return {
+        value: device.device_id,
+        label: `${device.name}${mode ? ` · ${mode}` : ""}${state}`,
+      };
+    });
+
+    const groupItems = [
+      { value: "", label: "全部分组" },
+      ...groups.map((group) => ({ value: group.id, label: group.label })),
+    ];
+
+    // Entity choices follow the group and read/write filters; without a
+    // group they are grouped by their section label.
+    const entityCodes = new Set();
+    const entityItems = [{ value: "", label: "全部实体" }];
+    groups
+      .filter((group) => !this._groupFilter || group.id === this._groupFilter)
+      .forEach((group) => {
+        const members = (group.members || []).filter((item) =>
+          this._accessMatches(item)
+        );
+        members.forEach((item) => entityCodes.add(item.code));
+        if (!members.length) {
+          return;
+        }
+        if (!this._groupFilter) {
+          entityItems.push({ heading: group.label });
+        }
+        members.forEach((item) => {
+          entityItems.push({
+            value: item.code,
+            label: `${item.name}（${item.code}）`,
+          });
+        });
+      });
+    if (this._entityFilter && !entityCodes.has(this._entityFilter)) {
+      this._entityFilter = "";
+    }
+
+    const accessItems = [
+      { value: "all", label: "全部读写" },
+      { value: "rw", label: "仅可写" },
+      { value: "ro", label: "仅只读" },
+    ];
+
+    return `
+      ${this._combo("device", "选择设备…", deviceItems, this._deviceId || "")}
+      ${this._combo("group", "全部分组", groupItems, this._groupFilter)}
+      ${this._combo("entity", "全部实体", entityItems, this._entityFilter)}
+      ${this._combo("access", "全部读写", accessItems, this._accessFilter)}
+      <button id="refresh-btn" class="icon-btn${this._loading ? " spinning" : ""}"
+        type="button" title="刷新" aria-label="刷新">
+        <ha-icon icon="mdi:refresh"></ha-icon>
+      </button>
+    `;
+  }
+
+  _render() {
+    const map = this._state?.map || this._mapState?.map || {};
+    const groupsSource = this._state?.groups || this._mapState?.groups || {};
+    const groupCount = Object.keys(groupsSource).length;
+
+    let body = "";
+    if (this._loading) {
+      body = `<div class="loading">读取设备寄存器…</div>`;
+    } else if (this._error) {
+      body = `<div class="error">${this._escape(this._error)}</div>`;
+    } else if (!groupCount) {
+      body = `<div class="loading">加载分组表…</div>`;
+    } else {
+      body = this._renderGroups();
+    }
+
+    this._root.innerHTML = `
+      <h1>Conow Local 分组面板</h1>
+      <div class="banner">
+        本页渲染的是《10月技术文档》的 Modbus 编址（<code>registers.json</code> v${map.version ?? 2}）。
+        可写寄存器使用 Home Assistant 控件编辑，修改后点击分组底部<b>批量下发</b>，该组会合并成尽量少的写入帧一次发出。
+        表内状态仍为「待确定」，下发到真实设备前请再次核对地址。
+      </div>
+      <div class="toolbar" id="toolbar">${this._renderToolbar()}</div>
+      <div id="groups-body">${body}</div>
+    `;
+    this._bindEvents();
+  }
+}
+
+if (!customElements.get("conow-local-panel")) {
+  customElements.define("conow-local-panel", ConowLocalPanel);
+}

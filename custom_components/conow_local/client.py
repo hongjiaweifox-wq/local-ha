@@ -84,6 +84,15 @@ def _write_register_request_frame(slave: int, address: int, value: int) -> bytes
     return _build_rtu_frame(slave, 0x06, payload)
 
 
+def _write_registers_request_frame(
+    slave: int, address: int, values: list[int]
+) -> bytes:
+    """Build FC 0x10 write multiple registers request frame."""
+    payload = struct.pack(">HHB", address, len(values), len(values) * 2)
+    payload += b"".join(struct.pack(">H", value & 0xFFFF) for value in values)
+    return _build_rtu_frame(slave, 0x10, payload)
+
+
 def _build_tcp_frame(transaction_id: int, slave: int, function_code: int, payload: bytes) -> bytes:
     """Build a Modbus TCP frame (MBAP header + PDU, no CRC)."""
     header = struct.pack(">HHHB", transaction_id, 0, len(payload) + 2, slave & 0xFF)
@@ -98,6 +107,15 @@ def _read_holding_request_tcp_frame(slave: int, address: int, count: int) -> byt
 def _write_register_request_tcp_frame(slave: int, address: int, value: int) -> bytes:
     """Build FC 0x06 write single register TCP request (indicative TX log)."""
     return _build_tcp_frame(0, slave, 0x06, struct.pack(">HH", address, value & 0xFFFF))
+
+
+def _write_registers_request_tcp_frame(
+    slave: int, address: int, values: list[int]
+) -> bytes:
+    """Build FC 0x10 write multiple registers TCP request (indicative TX log)."""
+    payload = struct.pack(">HHB", address, len(values), len(values) * 2)
+    payload += b"".join(struct.pack(">H", value & 0xFFFF) for value in values)
+    return _build_tcp_frame(0, slave, 0x10, payload)
 
 
 class ConowModbusError(Exception):
@@ -230,7 +248,7 @@ class ConowModbusClient:
                     registers,
                 )
                 return registers
-            except (ModbusException, ConowModbusError) as exc:
+            except (ModbusException, ConowModbusError, OSError) as exc:
                 last_error = exc
                 _LOGGER.debug(
                     "Read failed (attempt %s/%s) addr=%s: %s",
@@ -290,7 +308,7 @@ class ConowModbusClient:
                     _format_rtu_hex(tx_frame),
                 )
                 return
-            except (ModbusException, ConowModbusError) as exc:
+            except (ModbusException, ConowModbusError, OSError) as exc:
                 last_error = exc
                 _LOGGER.debug(
                     "Write failed (attempt %s/%s) addr=%s: %s",
@@ -312,6 +330,67 @@ class ConowModbusClient:
             address,
             value,
             _format_rtu_hex(err_frame),
+            last_error,
+        )
+        raise ConowModbusError(
+            f"Write failed after {MAX_RETRIES} attempts: {last_error}"
+        ) from last_error
+
+    def write_registers(self, address: int, values: list[int]) -> None:
+        """Write consecutive holding registers (FC 0x10) with retry.
+
+        Devices that reject single-register writes for a coupled group require
+        this function code; 32-bit values are written as one atomic frame.
+        """
+        if not values:
+            raise ConowModbusError("write_registers requires at least one value")
+        last_error: Exception | None = None
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                self._flush_input_buffer()
+                if self._mode == MODBUS_MODE_TCP:
+                    tx_frame = _write_registers_request_tcp_frame(
+                        self._slave, address, values
+                    )
+                else:
+                    tx_frame = _write_registers_request_frame(
+                        self._slave, address, values
+                    )
+                _LOGGER.info("Modbus write TX (FC 0x10): %s", _format_rtu_hex(tx_frame))
+                response = self._client.write_registers(
+                    address,
+                    values,
+                    device_id=self._slave,
+                )
+                if response is None:
+                    raise ConowModbusError("No response from device")
+                if response.isError():
+                    raise ConowModbusError(str(response))
+                _LOGGER.info(
+                    "Modbus write OK: slave=%s addr=%s count=%s values=%s",
+                    self._slave,
+                    address,
+                    len(values),
+                    values,
+                )
+                return
+            except (ModbusException, ConowModbusError, OSError) as exc:
+                last_error = exc
+                _LOGGER.debug(
+                    "Write failed (attempt %s/%s) addr=%s: %s",
+                    attempt,
+                    MAX_RETRIES,
+                    address,
+                    exc,
+                )
+                if attempt < MAX_RETRIES:
+                    self._reconnect_after_error()
+        _LOGGER.error(
+            "Modbus FC 0x10 write failed: slave=%s endpoint=%s addr=%s values=%s err=%s",
+            self._slave,
+            self._endpoint,
+            address,
+            values,
             last_error,
         )
         raise ConowModbusError(

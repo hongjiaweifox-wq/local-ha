@@ -12,7 +12,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .client import POST_WRITE_DELAY_S, ConowModbusClient, ConowModbusError
+from . import panel_map
+from .client import INTER_FRAME_DELAY_S, POST_WRITE_DELAY_S, ConowModbusClient, ConowModbusError
 from .register_map import DEFAULT_BAUDRATE
 from .const import (
     CONF_MODBUS_BAUDRATE,
@@ -101,6 +102,48 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return await self.hass.async_add_executor_job(self._read_device)
         except ConowModbusError as err:
             raise UpdateFailed(str(err)) from err
+
+    def _read_panel_blocks(self) -> dict[str, list[int] | None]:
+        """Read the October map blocks for the grouping panel."""
+
+        def _operation(client: ConowModbusClient) -> dict[str, list[int] | None]:
+            blocks: dict[str, list[int] | None] = {}
+            for index, (block, (start, count)) in enumerate(
+                panel_map.get_block_spans().items()
+            ):
+                if index:
+                    time.sleep(INTER_FRAME_DELAY_S)
+                try:
+                    blocks[block] = client.read_holding_registers(start, count)
+                except ConowModbusError:
+                    LOGGER.debug("Panel: block %s read failed", block)
+                    blocks[block] = None
+            return blocks
+
+        return self._run_locked(_operation)
+
+    async def async_read_panel_blocks(self) -> dict[str, list[int] | None]:
+        """Read the grouping-panel map without touching coordinator data."""
+        return await self.hass.async_add_executor_job(self._read_panel_blocks)
+
+    def _write_panel_ops(self, ops: list[tuple[int, list[int]]]) -> None:
+        """Write grouping-panel registers under the shared Modbus lock."""
+
+        def _operation(client: ConowModbusClient) -> None:
+            for index, (address, words) in enumerate(ops):
+                if index:
+                    time.sleep(INTER_FRAME_DELAY_S)
+                if len(words) == 1:
+                    client.write_register(address, words[0])
+                else:
+                    client.write_registers(address, words)
+                time.sleep(POST_WRITE_DELAY_S)
+
+        self._run_locked(_operation)
+
+    async def async_write_panel_ops(self, ops: list[tuple[int, list[int]]]) -> None:
+        """Write grouping-panel registers without disturbing entity polling."""
+        await self.hass.async_add_executor_job(self._write_panel_ops, ops)
 
     def _write_and_read(
         self, write_op: Callable[[ConowModbusClient], None]

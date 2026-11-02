@@ -1,0 +1,3193 @@
+{
+  "version": 2,
+  "meta": {
+    "source": "10月技术文档.xlsx",
+    "sheets": [
+      "Modbus寄存器编址总表",
+      "DP52新增地址"
+    ],
+    "generated": "2026-10-29",
+    "status": "协议总表所有行状态均为『待确定』，字段类型/倍率/枚举以固件确认为准",
+    "scale_default": 1,
+    "byte_order": "big-endian，32 位高字在前"
+  },
+  "protocol": {
+    "unit_id_register": 9984,
+    "default_unit_id": 160,
+    "unit_id_range": [
+      128,
+      176
+    ],
+    "function_codes": {
+      "read": "0x03",
+      "write_single": "0x06",
+      "write_multi": "0x10"
+    },
+    "max_group_registers": 8,
+    "area": {
+      "unit_id": {
+        "start": 9984,
+        "length": 1
+      },
+      "read_only_input": {
+        "start": 10000,
+        "length": 103,
+        "fc": [
+          "0x03"
+        ]
+      },
+      "read_write_holding": {
+        "start": 10103,
+        "length": 113,
+        "fc": [
+          "0x03",
+          "0x06",
+          "0x10"
+        ]
+      }
+    }
+  },
+  "blocks": {
+    "system": {
+      "start": 9984
+    },
+    "monitoring": {
+      "start": 10000
+    },
+    "control": {
+      "start": 10103
+    },
+    "dp52_module": {
+      "start": 16471
+    }
+  },
+  "registers": [
+    {
+      "code": "modbus_slave_address",
+      "name": "Modbus地址",
+      "address": 9984,
+      "address_hex": "0x2700",
+      "block": "system",
+      "category": "Modbus地址",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "从机地址默认 A0(160)，可设 0x80–0xB0(128–176)，本地保存；TCP 的 Unit ID 跟随该值"
+    },
+    {
+      "code": "device_status",
+      "name": "设备状态",
+      "address": 10000,
+      "address_hex": "0x2710",
+      "block": "monitoring",
+      "category": "实时监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "note": "位字段，位定义待确认"
+    },
+    {
+      "code": "device_fault_code",
+      "name": "设备故障码",
+      "address": 10001,
+      "address_hex": "0x2711",
+      "block": "monitoring",
+      "category": "实时监控数据",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10002
+    },
+    {
+      "code": "system_soc",
+      "name": "系统当前 SOC",
+      "address": 10003,
+      "address_hex": "0x2713",
+      "block": "monitoring",
+      "category": "实时监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "unit": "%"
+    },
+    {
+      "code": "meter_connection_state",
+      "name": "电表连接状态",
+      "address": 10004,
+      "address_hex": "0x2714",
+      "block": "monitoring",
+      "category": "实时监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "values": {
+        "0": "已配对已连接",
+        "1": "已配对未连接",
+        "2": "未配对未连接"
+      },
+      "note": "0=已配对已连接 / 1=已配对未连接 / 2=未配对未连接"
+    },
+    {
+      "code": "meter_total_power",
+      "name": "电表总功率",
+      "address": 10005,
+      "address_hex": "0x2715",
+      "block": "monitoring",
+      "category": "实时监控数据",
+      "dtype": "int32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10006,
+      "unit": "W",
+      "note": "正=从电网取电，负=向电网馈电"
+    },
+    {
+      "code": "grid_active_power",
+      "name": "电网有功功率",
+      "address": 10007,
+      "address_hex": "0x2717",
+      "block": "monitoring",
+      "category": "实时监控数据",
+      "dtype": "int32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10008,
+      "unit": "W",
+      "note": "正=向电网馈电 / 电池放电，负=从电网取电 / 电池充电"
+    },
+    {
+      "code": "pv_total_power",
+      "name": "PV 总功率",
+      "address": 10009,
+      "address_hex": "0x2719",
+      "block": "monitoring",
+      "category": "实时监控数据",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10010,
+      "unit": "W"
+    },
+    {
+      "code": "battery_work_state",
+      "name": "电池工作状态",
+      "address": 10011,
+      "address_hex": "0x271B",
+      "block": "monitoring",
+      "category": "实时监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "values": {
+        "0": "idle",
+        "1": "chg",
+        "2": "dchg"
+      },
+      "note": "0=idle／1=chg／2=dchg；反映电池当前实际状态"
+    },
+    {
+      "code": "battery_power",
+      "name": "电池功率",
+      "address": 10012,
+      "address_hex": "0x271C",
+      "block": "monitoring",
+      "category": "实时监控数据",
+      "dtype": "int32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10013,
+      "unit": "W",
+      "note": "正=充电，负=放电"
+    },
+    {
+      "code": "bypass_switch_state",
+      "name": "旁路口开关状态",
+      "address": 10014,
+      "address_hex": "0x271E",
+      "block": "monitoring",
+      "category": "实时监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "values": {
+        "0": "off",
+        "1": "on"
+      },
+      "note": "0=off／1=on",
+      "boolean": true
+    },
+    {
+      "code": "bypass_power",
+      "name": "旁路口功率",
+      "address": 10015,
+      "address_hex": "0x271F",
+      "block": "monitoring",
+      "category": "实时监控数据",
+      "dtype": "int32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10016,
+      "unit": "W",
+      "note": "正=从电池放电，负=向电池充电"
+    },
+    {
+      "code": "grid_voltage",
+      "name": "电网电压",
+      "address": 10017,
+      "address_hex": "0x2721",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "scale": 0.1,
+      "unit": "V",
+      "note": "单相电压（三相机型为 A 相）"
+    },
+    {
+      "code": "grid_current",
+      "name": "电网电流",
+      "address": 10018,
+      "address_hex": "0x2722",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "int16",
+      "length": 1,
+      "writable": false,
+      "scale": 0.1,
+      "unit": "A",
+      "note": "正=馈电"
+    },
+    {
+      "code": "grid_frequency",
+      "name": "电网频率",
+      "address": 10019,
+      "address_hex": "0x2723",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "scale": 0.01,
+      "unit": "Hz"
+    },
+    {
+      "code": "phase_a_power",
+      "name": "A 相功率",
+      "address": 10020,
+      "address_hex": "0x2724",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "int32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10021,
+      "unit": "W"
+    },
+    {
+      "code": "phase_b_power",
+      "name": "B 相功率",
+      "address": 10022,
+      "address_hex": "0x2726",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "int32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10023,
+      "unit": "W"
+    },
+    {
+      "code": "phase_c_power",
+      "name": "C 相功率",
+      "address": 10024,
+      "address_hex": "0x2728",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "int32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10025,
+      "unit": "W"
+    },
+    {
+      "code": "pv_string_count",
+      "name": "PV 路数",
+      "address": 10026,
+      "address_hex": "0x272A",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "note": "读出 N 路即支持 N 路，不支持的路数返回 0"
+    },
+    {
+      "code": "pv1_voltage",
+      "name": "PV1 电压",
+      "address": 10027,
+      "address_hex": "0x272B",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "scale": 0.1,
+      "unit": "V"
+    },
+    {
+      "code": "pv1_current",
+      "name": "PV1 电流",
+      "address": 10028,
+      "address_hex": "0x272C",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "scale": 0.1,
+      "unit": "A"
+    },
+    {
+      "code": "pv1_energy",
+      "name": "PV1 电量",
+      "address": 10029,
+      "address_hex": "0x272D",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10030,
+      "scale": 0.01,
+      "unit": "kWh",
+      "note": "高位在前"
+    },
+    {
+      "code": "pv2_voltage",
+      "name": "PV2 电压",
+      "address": 10031,
+      "address_hex": "0x272F",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "scale": 0.1,
+      "unit": "V"
+    },
+    {
+      "code": "pv2_current",
+      "name": "PV2 电流",
+      "address": 10032,
+      "address_hex": "0x2730",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "scale": 0.1,
+      "unit": "A"
+    },
+    {
+      "code": "pv2_energy",
+      "name": "PV2 电量",
+      "address": 10033,
+      "address_hex": "0x2731",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10034,
+      "scale": 0.01,
+      "unit": "kWh",
+      "note": "高位在前"
+    },
+    {
+      "code": "pv3_voltage",
+      "name": "PV3 电压",
+      "address": 10035,
+      "address_hex": "0x2733",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "scale": 0.1,
+      "unit": "V"
+    },
+    {
+      "code": "pv3_current",
+      "name": "PV3 电流",
+      "address": 10036,
+      "address_hex": "0x2734",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "scale": 0.1,
+      "unit": "A"
+    },
+    {
+      "code": "pv3_energy",
+      "name": "PV3 电量",
+      "address": 10037,
+      "address_hex": "0x2735",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10038,
+      "scale": 0.01,
+      "unit": "kWh",
+      "note": "高位在前"
+    },
+    {
+      "code": "pv4_voltage",
+      "name": "PV4 电压",
+      "address": 10039,
+      "address_hex": "0x2737",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "scale": 0.1,
+      "unit": "V"
+    },
+    {
+      "code": "pv4_current",
+      "name": "PV4 电流",
+      "address": 10040,
+      "address_hex": "0x2738",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "scale": 0.1,
+      "unit": "A"
+    },
+    {
+      "code": "pv4_energy",
+      "name": "PV4 电量",
+      "address": 10041,
+      "address_hex": "0x2739",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10042,
+      "scale": 0.01,
+      "unit": "kWh",
+      "note": "高位在前"
+    },
+    {
+      "code": "battery_voltage",
+      "name": "电池电压",
+      "address": 10043,
+      "address_hex": "0x273B",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "scale": 0.01,
+      "unit": "V",
+      "note": "直流母线电压"
+    },
+    {
+      "code": "battery_current",
+      "name": "电池电流",
+      "address": 10044,
+      "address_hex": "0x273C",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "int16",
+      "length": 1,
+      "writable": false,
+      "scale": 0.1,
+      "unit": "A",
+      "note": "正=充电，负=放电"
+    },
+    {
+      "code": "cell_temp_max",
+      "name": "最高电芯温度",
+      "address": 10045,
+      "address_hex": "0x273D",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "int16",
+      "length": 1,
+      "writable": false,
+      "scale": 0.1,
+      "unit": "℃"
+    },
+    {
+      "code": "cell_temp_min",
+      "name": "最低电芯温度",
+      "address": 10046,
+      "address_hex": "0x273E",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "int16",
+      "length": 1,
+      "writable": false,
+      "scale": 0.1,
+      "unit": "℃"
+    },
+    {
+      "code": "battery_max_charge_power",
+      "name": "当前电池允许最大充电功率",
+      "address": 10047,
+      "address_hex": "0x273F",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10048,
+      "unit": "W",
+      "note": "因温度 / SoC而导致当前电池充电功率小于设定值"
+    },
+    {
+      "code": "battery_max_discharge_power",
+      "name": "当前电池允许最大放电功率",
+      "address": 10049,
+      "address_hex": "0x2741",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10050,
+      "unit": "W",
+      "note": "因温度 / SoC而导致当前电池放电功率小于设定值"
+    },
+    {
+      "code": "bypass_voltage",
+      "name": "旁路口电压",
+      "address": 10051,
+      "address_hex": "0x2743",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "scale": 0.1,
+      "unit": "V"
+    },
+    {
+      "code": "bypass_current",
+      "name": "旁路口电流",
+      "address": 10052,
+      "address_hex": "0x2744",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "scale": 0.1,
+      "unit": "A"
+    },
+    {
+      "code": "bypass_frequency",
+      "name": "旁路口频率",
+      "address": 10053,
+      "address_hex": "0x2745",
+      "block": "monitoring",
+      "category": "详细监控数据",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "scale": 0.01,
+      "unit": "Hz"
+    },
+    {
+      "code": "design_capacity",
+      "name": "设计容量",
+      "address": 10054,
+      "address_hex": "0x2746",
+      "block": "monitoring",
+      "category": "运行参数与设备信息",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10055,
+      "scale": 0.01,
+      "unit": "kWh"
+    },
+    {
+      "code": "remaining_capacity",
+      "name": "剩余容量",
+      "address": 10056,
+      "address_hex": "0x2748",
+      "block": "monitoring",
+      "category": "运行参数与设备信息",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10057,
+      "scale": 0.01,
+      "unit": "kWh"
+    },
+    {
+      "code": "system_backup_soc",
+      "name": "系统备用 SoC",
+      "address": 10058,
+      "address_hex": "0x274A",
+      "block": "monitoring",
+      "category": "运行参数与设备信息",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "unit": "%",
+      "note": "等于“安全 SoC”写入值"
+    },
+    {
+      "code": "soh",
+      "name": "SOH",
+      "address": 10059,
+      "address_hex": "0x274B",
+      "block": "monitoring",
+      "category": "运行参数与设备信息",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "unit": "%",
+      "note": "0–100%"
+    },
+    {
+      "code": "hardware_max_ac_charge_power",
+      "name": "硬件最大 AC 充电功率",
+      "address": 10060,
+      "address_hex": "0x274C",
+      "block": "monitoring",
+      "category": "运行参数与设备信息",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10061,
+      "unit": "W",
+      "note": "设备硬件能力上限"
+    },
+    {
+      "code": "hardware_max_ac_discharge_power",
+      "name": "硬件最大 AC 放电功率",
+      "address": 10062,
+      "address_hex": "0x274E",
+      "block": "monitoring",
+      "category": "运行参数与设备信息",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10063,
+      "unit": "W",
+      "note": "设备硬件能力上限"
+    },
+    {
+      "code": "grid_code_export_limit",
+      "name": "并网输出法规上限",
+      "address": 10064,
+      "address_hex": "0x2750",
+      "block": "monitoring",
+      "category": "运行参数与设备信息",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10065,
+      "unit": "W",
+      "note": "未解锁时等于法规并网上限，App 解锁后等于硬件最大 AC 放电功率；未解锁时对应 AC 放电功率上限 10102–10103 的默认法规值；App 解锁后对应硬件最大 AC 放电功率 10054–10055；仅可在 App 解锁"
+    },
+    {
+      "code": "global_ac_charge_power_limit",
+      "name": "全局 AC 最大充电功率",
+      "address": 10066,
+      "address_hex": "0x2752",
+      "block": "monitoring",
+      "category": "运行参数与设备信息",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10067,
+      "unit": "W",
+      "note": "等于 AC 充电功率的写入值"
+    },
+    {
+      "code": "global_ac_discharge_power_limit",
+      "name": "全局 AC 最大放电功率",
+      "address": 10068,
+      "address_hex": "0x2754",
+      "block": "monitoring",
+      "category": "运行参数与设备信息",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10069,
+      "unit": "W",
+      "note": "等于 AC 放电功率的写入值"
+    },
+    {
+      "code": "wifi_signal",
+      "name": "Wi-Fi 信号强度",
+      "address": 10070,
+      "address_hex": "0x2756",
+      "block": "monitoring",
+      "category": "运行参数与设备信息",
+      "dtype": "int16",
+      "length": 1,
+      "writable": false,
+      "unit": "dBm",
+      "note": "负值，例如 −60 dBm"
+    },
+    {
+      "code": "device_serial",
+      "name": "设备 SN",
+      "address": 10071,
+      "address_hex": "0x2757",
+      "block": "monitoring",
+      "category": "运行参数与设备信息",
+      "dtype": "string",
+      "length": 12,
+      "writable": false,
+      "end_address": 10082,
+      "note": "24 字节 ASCII，占用 12 个寄存器"
+    },
+    {
+      "code": "firmware_version",
+      "name": "固件版本",
+      "address": 10083,
+      "address_hex": "0x2763",
+      "block": "monitoring",
+      "category": "运行参数与设备信息",
+      "dtype": "string",
+      "length": 2,
+      "writable": false,
+      "end_address": 10084,
+      "note": "4 字节 ASCII，主控版本，占用 2 个寄存器"
+    },
+    {
+      "code": "grid_import_energy_total",
+      "name": "电网累计买电量",
+      "address": 10085,
+      "address_hex": "0x2765",
+      "block": "monitoring",
+      "category": "累计电量",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10086,
+      "scale": 0.01,
+      "unit": "kWh",
+      "note": "高位在前"
+    },
+    {
+      "code": "grid_export_energy_total",
+      "name": "电网累计馈电量",
+      "address": 10087,
+      "address_hex": "0x2767",
+      "block": "monitoring",
+      "category": "累计电量",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10088,
+      "scale": 0.01,
+      "unit": "kWh",
+      "note": "高位在前"
+    },
+    {
+      "code": "meter_import_energy_total",
+      "name": "电表三相累计导入电量",
+      "address": 10089,
+      "address_hex": "0x2769",
+      "block": "monitoring",
+      "category": "累计电量",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10090,
+      "scale": 0.01,
+      "unit": "kWh",
+      "note": "高位在前"
+    },
+    {
+      "code": "meter_export_energy_total",
+      "name": "电表三相累计导出电量",
+      "address": 10091,
+      "address_hex": "0x276B",
+      "block": "monitoring",
+      "category": "累计电量",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10092,
+      "scale": 0.01,
+      "unit": "kWh",
+      "note": "高位在前"
+    },
+    {
+      "code": "pv_energy_total",
+      "name": "PV 总发电量",
+      "address": 10093,
+      "address_hex": "0x276D",
+      "block": "monitoring",
+      "category": "累计电量",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10094,
+      "scale": 0.01,
+      "unit": "kWh",
+      "note": "高位在前"
+    },
+    {
+      "code": "battery_charge_energy_total",
+      "name": "电池累计充电量",
+      "address": 10095,
+      "address_hex": "0x276F",
+      "block": "monitoring",
+      "category": "累计电量",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10096,
+      "scale": 0.01,
+      "unit": "kWh",
+      "note": "高字在前"
+    },
+    {
+      "code": "battery_discharge_energy_total",
+      "name": "电池累计放电量",
+      "address": 10097,
+      "address_hex": "0x2771",
+      "block": "monitoring",
+      "category": "累计电量",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10098,
+      "scale": 0.01,
+      "unit": "kWh",
+      "note": "高字在前"
+    },
+    {
+      "code": "bypass_output_energy_total",
+      "name": "旁路口输出总电量",
+      "address": 10099,
+      "address_hex": "0x2773",
+      "block": "monitoring",
+      "category": "累计电量",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10100,
+      "scale": 0.01,
+      "unit": "kWh",
+      "note": "高位在前"
+    },
+    {
+      "code": "bypass_input_energy_total",
+      "name": "旁路口输入总电量",
+      "address": 10101,
+      "address_hex": "0x2775",
+      "block": "monitoring",
+      "category": "累计电量",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10102,
+      "scale": 0.01,
+      "unit": "kWh",
+      "note": "高位在前"
+    },
+    {
+      "code": "ac_charge_power_limit",
+      "name": "AC 充电功率上限",
+      "address": 10103,
+      "address_hex": "0x2777",
+      "block": "control",
+      "category": "功率与 SoC 设置",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": true,
+      "end_address": 10104,
+      "unit": "W",
+      "note": "默认 800 W，可写范围 [50W, 设备硬件能力上限];掉电保存,不在范围返回错误"
+    },
+    {
+      "code": "ac_discharge_power_limit",
+      "name": "AC 放电功率上限",
+      "address": 10105,
+      "address_hex": "0x2779",
+      "block": "control",
+      "category": "功率与 SoC 设置",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": true,
+      "end_address": 10106,
+      "unit": "W",
+      "note": "未解锁时可写上限为当地法规并网输出值；App 解锁后上限为硬件能力上限，掉电保存 不在范围返回错误"
+    },
+    {
+      "code": "safety_soc",
+      "name": "安全 SoC",
+      "address": 10107,
+      "address_hex": "0x277B",
+      "block": "control",
+      "category": "功率与 SoC 设置",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "%",
+      "note": "10–100%，默认 20%；超范围异常 0x03，掉电保存"
+    },
+    {
+      "code": "charge_discharge_direction",
+      "name": "充放电方向",
+      "address": 10108,
+      "address_hex": "0x277C",
+      "block": "control",
+      "category": "实时控制",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "idle",
+        "1": "chg",
+        "2": "dchg"
+      },
+      "write_fc10_only": true,
+      "note": "源文 0=idle／1=chg／2=dchg，掉电不保存，不支持单寄存器写"
+    },
+    {
+      "code": "battery_target_power",
+      "name": "目标充放电功率",
+      "address": 10109,
+      "address_hex": "0x277D",
+      "block": "control",
+      "category": "实时控制",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "W",
+      "write_fc10_only": true,
+      "note": "可写上限受到 AC 充放电功率限制，不支持单寄存器写，掉电不保存"
+    },
+    {
+      "code": "charge_discharge_cutoff_soc",
+      "name": "充放电截止 SoC",
+      "address": 10110,
+      "address_hex": "0x277E",
+      "block": "control",
+      "category": "实时控制",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "%",
+      "write_fc10_only": true,
+      "note": "可写范围：[安全 SoC, 100%]，不支持单寄存器写，掉电不保存"
+    },
+    {
+      "code": "charge_discharge_duration",
+      "name": "充放电控制时长",
+      "address": 10111,
+      "address_hex": "0x277F",
+      "block": "control",
+      "category": "实时控制",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "min",
+      "write_fc10_only": true,
+      "note": "控制时长和截止 SoC 任意条件到达本次指令结束，不支持单寄存器写，掉电不保存"
+    },
+    {
+      "code": "work_mode",
+      "name": "工作模式",
+      "address": 10112,
+      "address_hex": "0x2780",
+      "block": "control",
+      "category": "工作策略",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "1": "自发自用",
+        "2": "备电优先",
+        "3": "馈网优先",
+        "4": "手动时段"
+      },
+      "note": "1=自发自用／2=备电优先／3=馈网优先／4=手动时段，上电后先读后写。当有电表是按照电表功率执行，当无电表/电表连接异常时按照基础负载值输出，掉电保存"
+    },
+    {
+      "code": "base_load_setpoint",
+      "name": "基础负载",
+      "address": 10113,
+      "address_hex": "0x2781",
+      "block": "control",
+      "category": "工作策略",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": true,
+      "end_address": 10114,
+      "unit": "W",
+      "note": "默认200W，范围[100，3000W]，无电表/电表连接异常时，未设置的时段按照该寄存器值运行，掉电保存"
+    },
+    {
+      "code": "backup_soc",
+      "name": "备电 SoC",
+      "address": 10115,
+      "address_hex": "0x2783",
+      "block": "control",
+      "category": "工作策略",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "%",
+      "note": "[安全 SoC，100%]、默认 80%、掉电保存"
+    },
+    {
+      "code": "allow_reverse_power",
+      "name": "允许逆流功率",
+      "address": 10116,
+      "address_hex": "0x2784",
+      "block": "control",
+      "category": "工作策略",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": true,
+      "end_address": 10117,
+      "unit": "W",
+      "note": "0=禁止逆流；>0=允许的最大逆流功率；电表未连接时可写入但不生效，掉电保存"
+    },
+    {
+      "code": "allow_battery_export",
+      "name": "允许电池逆流",
+      "address": 10118,
+      "address_hex": "0x2786",
+      "block": "control",
+      "category": "工作策略",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "禁止电池馈网",
+        "1": "允许电池馈网"
+      },
+      "note": "0=禁止电池馈网 / 1=允许电池馈网；电表未连接时可写入但不生效，掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "bypass_enable",
+      "name": "Bypass 开关",
+      "address": 10119,
+      "address_hex": "0x2787",
+      "block": "control",
+      "category": "工作策略",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "disable",
+        "1": "enable"
+      },
+      "note": "0=disable／1=enable、默认关、掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "off_grid_output_enable",
+      "name": "离网口开关",
+      "address": 10120,
+      "address_hex": "0x2788",
+      "block": "control",
+      "category": "工作策略",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "disable",
+        "1": "enable"
+      },
+      "note": "0=disable／1=enable、默认关、掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "pv_curtailment_enable",
+      "name": "弃光开关",
+      "address": 10121,
+      "address_hex": "0x2789",
+      "block": "control",
+      "category": "工作策略",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "disable",
+        "1": "enable"
+      },
+      "note": "预留，0=disable／1=enable、默认关、掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "modbus_timeout",
+      "name": "ModBus 超时时长",
+      "address": 10122,
+      "address_hex": "0x278A",
+      "block": "control",
+      "category": "工作策略",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": true,
+      "end_address": 10123,
+      "unit": "s",
+      "note": "0=禁用、范围 0–3600 s\n只针对实时控制指令， =0，按照实时控制指令继续运行，否则超时后回退到模式，掉电保存"
+    },
+    {
+      "code": "generator_enable",
+      "name": "柴发开关",
+      "address": 10124,
+      "address_hex": "0x278C",
+      "block": "control",
+      "category": "柴发与 DO",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "disable",
+        "1": "enable"
+      },
+      "note": "0=disable／1=enable、默认关、掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "generator_start_time",
+      "name": "开始时间",
+      "address": 10125,
+      "address_hex": "0x278D",
+      "block": "control",
+      "category": "柴发与 DO",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "min",
+      "note": "时间编码待确认（高字节时、低字节分）；掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "generator_end_time",
+      "name": "结束时间",
+      "address": 10126,
+      "address_hex": "0x278E",
+      "block": "control",
+      "category": "柴发与 DO",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "min",
+      "note": "时间编码待确认（高字节时、低字节分）；掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "generator_power",
+      "name": "柴发功率",
+      "address": 10127,
+      "address_hex": "0x278F",
+      "block": "control",
+      "category": "柴发与 DO",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": true,
+      "end_address": 10128,
+      "unit": "W",
+      "note": "掉电保存"
+    },
+    {
+      "code": "generator_start_soc",
+      "name": "柴发开始充电 SoC",
+      "address": 10129,
+      "address_hex": "0x2791",
+      "block": "control",
+      "category": "柴发与 DO",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "%",
+      "note": "掉电保存"
+    },
+    {
+      "code": "generator_stop_soc",
+      "name": "柴发截止 SoC",
+      "address": 10130,
+      "address_hex": "0x2792",
+      "block": "control",
+      "category": "柴发与 DO",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "%",
+      "note": "掉电保存"
+    },
+    {
+      "code": "do1_state",
+      "name": "DO1 控制",
+      "address": 10131,
+      "address_hex": "0x2793",
+      "block": "control",
+      "category": "柴发与 DO",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "off",
+        "1": "on"
+      },
+      "note": "0=off／1=on、掉电不保存",
+      "boolean": true
+    },
+    {
+      "code": "do2_state",
+      "name": "DO2 控制",
+      "address": 10132,
+      "address_hex": "0x2794",
+      "block": "control",
+      "category": "柴发与 DO",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "off",
+        "1": "on"
+      },
+      "note": "0=off／1=on、掉电不保存",
+      "boolean": true
+    },
+    {
+      "code": "base_load_power",
+      "name": "基础负载",
+      "address": 10133,
+      "address_hex": "0x2795",
+      "block": "control",
+      "category": "基础负载",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "与 10113–10114 基础负载同名，类型/单位待确认"
+    },
+    {
+      "code": "base_load_slot_count",
+      "name": "基础负载时段数",
+      "address": 10134,
+      "address_hex": "0x2796",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "min": 0,
+      "max": 8,
+      "note": "最大 8 段，掉电保存；最大8 掉电保存"
+    },
+    {
+      "code": "base_load_slot1_start",
+      "name": "基础负载时段1-开始时间",
+      "address": 10135,
+      "address_hex": "0x2797",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "base_load_slot1_end",
+      "name": "基础负载时段1-结束时间",
+      "address": 10136,
+      "address_hex": "0x2798",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "base_load_slot1_power",
+      "name": "基础负载时段1-负载功率",
+      "address": 10137,
+      "address_hex": "0x2799",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "W",
+      "note": "掉电保存"
+    },
+    {
+      "code": "base_load_slot2_start",
+      "name": "基础负载时段2-开始时间",
+      "address": 10138,
+      "address_hex": "0x279A",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "base_load_slot2_end",
+      "name": "基础负载时段2-结束时间",
+      "address": 10139,
+      "address_hex": "0x279B",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "base_load_slot2_power",
+      "name": "基础负载时段2-负载功率",
+      "address": 10140,
+      "address_hex": "0x279C",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "W",
+      "note": "掉电保存"
+    },
+    {
+      "code": "base_load_slot3_start",
+      "name": "基础负载时段3-开始时间",
+      "address": 10141,
+      "address_hex": "0x279D",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "base_load_slot3_end",
+      "name": "基础负载时段3-结束时间",
+      "address": 10142,
+      "address_hex": "0x279E",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "base_load_slot3_power",
+      "name": "基础负载时段3-负载功率",
+      "address": 10143,
+      "address_hex": "0x279F",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "W",
+      "note": "掉电保存"
+    },
+    {
+      "code": "base_load_slot4_start",
+      "name": "基础负载时段4-开始时间",
+      "address": 10144,
+      "address_hex": "0x27A0",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "base_load_slot4_end",
+      "name": "基础负载时段4-结束时间",
+      "address": 10145,
+      "address_hex": "0x27A1",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "base_load_slot4_power",
+      "name": "基础负载时段4-负载功率",
+      "address": 10146,
+      "address_hex": "0x27A2",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "W",
+      "note": "掉电保存"
+    },
+    {
+      "code": "base_load_slot5_start",
+      "name": "基础负载时段5-开始时间",
+      "address": 10147,
+      "address_hex": "0x27A3",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "base_load_slot5_end",
+      "name": "基础负载时段5-结束时间",
+      "address": 10148,
+      "address_hex": "0x27A4",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "base_load_slot5_power",
+      "name": "基础负载时段5-负载功率",
+      "address": 10149,
+      "address_hex": "0x27A5",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "W",
+      "note": "掉电保存"
+    },
+    {
+      "code": "base_load_slot6_start",
+      "name": "基础负载时段6-开始时间",
+      "address": 10150,
+      "address_hex": "0x27A6",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "base_load_slot6_end",
+      "name": "基础负载时段6-结束时间",
+      "address": 10151,
+      "address_hex": "0x27A7",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "base_load_slot6_power",
+      "name": "基础负载时段6-负载功率",
+      "address": 10152,
+      "address_hex": "0x27A8",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "W",
+      "note": "掉电保存"
+    },
+    {
+      "code": "base_load_slot7_start",
+      "name": "基础负载时段7-开始时间",
+      "address": 10153,
+      "address_hex": "0x27A9",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "base_load_slot7_end",
+      "name": "基础负载时段7-结束时间",
+      "address": 10154,
+      "address_hex": "0x27AA",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "base_load_slot7_power",
+      "name": "基础负载时段7-负载功率",
+      "address": 10155,
+      "address_hex": "0x27AB",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "W",
+      "note": "掉电保存"
+    },
+    {
+      "code": "base_load_slot8_start",
+      "name": "基础负载时段8-开始时间",
+      "address": 10156,
+      "address_hex": "0x27AC",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "base_load_slot8_end",
+      "name": "基础负载时段8-结束时间",
+      "address": 10157,
+      "address_hex": "0x27AD",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "base_load_slot8_power",
+      "name": "基础负载时段8-负载功率",
+      "address": 10158,
+      "address_hex": "0x27AE",
+      "block": "control",
+      "category": "基础负载计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "W",
+      "note": "掉电保存"
+    },
+    {
+      "code": "tou_slot_count",
+      "name": "TOU时段数",
+      "address": 10159,
+      "address_hex": "0x27AF",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "min": 0,
+      "max": 8,
+      "note": "最大 8 段，掉电保存；最大8 掉电保存"
+    },
+    {
+      "code": "tou_slot1_start",
+      "name": "用户手动充放电策略1-开始时间",
+      "address": 10160,
+      "address_hex": "0x27B0",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "tou_slot1_end",
+      "name": "用户手动充放电策略1-结束时间",
+      "address": 10161,
+      "address_hex": "0x27B1",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "tou_slot1_mode",
+      "name": "用户手动充放电策略1-工作模式",
+      "address": 10162,
+      "address_hex": "0x27B2",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "充电",
+        "1": "放电"
+      },
+      "note": "0充电 1放电 掉电保存"
+    },
+    {
+      "code": "tou_slot1_target_soc",
+      "name": "用户手动充放电策略1-目标SOC",
+      "address": 10163,
+      "address_hex": "0x27B3",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "%",
+      "note": "掉电保存"
+    },
+    {
+      "code": "tou_slot1_power",
+      "name": "用户手动充放电策略1-放电功率",
+      "address": 10164,
+      "address_hex": "0x27B4",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "W",
+      "note": "掉电保存"
+    },
+    {
+      "code": "tou_slot1_curtail",
+      "name": "用户手动充放电策略1-弃光",
+      "address": 10165,
+      "address_hex": "0x27B5",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "关闭",
+        "1": "开启"
+      },
+      "note": "1：开启 0：关闭 掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "tou_slot1_ignore_export",
+      "name": "用户手动充放电策略1-忽略防逆流",
+      "address": 10166,
+      "address_hex": "0x27B6",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "关闭",
+        "1": "使能"
+      },
+      "note": "1：使能 0：关闭 掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "tou_slot2_start",
+      "name": "用户手动充放电策略2-开始时间",
+      "address": 10167,
+      "address_hex": "0x27B7",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "tou_slot2_end",
+      "name": "用户手动充放电策略2-结束时间",
+      "address": 10168,
+      "address_hex": "0x27B8",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "tou_slot2_mode",
+      "name": "用户手动充放电策略2-工作模式",
+      "address": 10169,
+      "address_hex": "0x27B9",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "充电",
+        "1": "放电"
+      },
+      "note": "0充电 1放电 掉电保存"
+    },
+    {
+      "code": "tou_slot2_target_soc",
+      "name": "用户手动充放电策略2-目标SOC",
+      "address": 10170,
+      "address_hex": "0x27BA",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "%",
+      "note": "掉电保存"
+    },
+    {
+      "code": "tou_slot2_power",
+      "name": "用户手动充放电策略2-放电功率",
+      "address": 10171,
+      "address_hex": "0x27BB",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "W",
+      "note": "掉电保存"
+    },
+    {
+      "code": "tou_slot2_curtail",
+      "name": "用户手动充放电策略2-弃光",
+      "address": 10172,
+      "address_hex": "0x27BC",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "关闭",
+        "1": "开启"
+      },
+      "note": "1：开启 0：关闭 掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "tou_slot2_ignore_export",
+      "name": "用户手动充放电策略2-忽略防逆流",
+      "address": 10173,
+      "address_hex": "0x27BD",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "关闭",
+        "1": "使能"
+      },
+      "note": "1：使能 0：关闭 掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "tou_slot3_start",
+      "name": "用户手动充放电策略3-开始时间",
+      "address": 10174,
+      "address_hex": "0x27BE",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "tou_slot3_end",
+      "name": "用户手动充放电策略3-结束时间",
+      "address": 10175,
+      "address_hex": "0x27BF",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "tou_slot3_mode",
+      "name": "用户手动充放电策略3-工作模式",
+      "address": 10176,
+      "address_hex": "0x27C0",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "充电",
+        "1": "放电"
+      },
+      "note": "0充电 1放电 掉电保存"
+    },
+    {
+      "code": "tou_slot3_target_soc",
+      "name": "用户手动充放电策略3-目标SOC",
+      "address": 10177,
+      "address_hex": "0x27C1",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "%",
+      "note": "掉电保存"
+    },
+    {
+      "code": "tou_slot3_power",
+      "name": "用户手动充放电策略3-放电功率",
+      "address": 10178,
+      "address_hex": "0x27C2",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "W",
+      "note": "掉电保存"
+    },
+    {
+      "code": "tou_slot3_curtail",
+      "name": "用户手动充放电策略3-弃光",
+      "address": 10179,
+      "address_hex": "0x27C3",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "关闭",
+        "1": "开启"
+      },
+      "note": "1：开启 0：关闭 掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "tou_slot3_ignore_export",
+      "name": "用户手动充放电策略3-忽略防逆流",
+      "address": 10180,
+      "address_hex": "0x27C4",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "关闭",
+        "1": "使能"
+      },
+      "note": "1：使能 0：关闭 掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "tou_slot4_start",
+      "name": "用户手动充放电策略4-开始时间",
+      "address": 10181,
+      "address_hex": "0x27C5",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "tou_slot4_end",
+      "name": "用户手动充放电策略4-结束时间",
+      "address": 10182,
+      "address_hex": "0x27C6",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "tou_slot4_mode",
+      "name": "用户手动充放电策略4-工作模式",
+      "address": 10183,
+      "address_hex": "0x27C7",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "充电",
+        "1": "放电"
+      },
+      "note": "0充电 1放电 掉电保存"
+    },
+    {
+      "code": "tou_slot4_target_soc",
+      "name": "用户手动充放电策略4-目标SOC",
+      "address": 10184,
+      "address_hex": "0x27C8",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "%",
+      "note": "掉电保存"
+    },
+    {
+      "code": "tou_slot4_power",
+      "name": "用户手动充放电策略4-放电功率",
+      "address": 10185,
+      "address_hex": "0x27C9",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "W",
+      "note": "掉电保存"
+    },
+    {
+      "code": "tou_slot4_curtail",
+      "name": "用户手动充放电策略4-弃光",
+      "address": 10186,
+      "address_hex": "0x27CA",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "关闭",
+        "1": "开启"
+      },
+      "note": "1：开启 0：关闭 掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "tou_slot4_ignore_export",
+      "name": "用户手动充放电策略4-忽略防逆流",
+      "address": 10187,
+      "address_hex": "0x27CB",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "关闭",
+        "1": "使能"
+      },
+      "note": "1：使能 0：关闭 掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "tou_slot5_start",
+      "name": "用户手动充放电策略5-开始时间",
+      "address": 10188,
+      "address_hex": "0x27CC",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "tou_slot5_end",
+      "name": "用户手动充放电策略5-结束时间",
+      "address": 10189,
+      "address_hex": "0x27CD",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "tou_slot5_mode",
+      "name": "用户手动充放电策略5-工作模式",
+      "address": 10190,
+      "address_hex": "0x27CE",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "充电",
+        "1": "放电"
+      },
+      "note": "0充电 1放电 掉电保存"
+    },
+    {
+      "code": "tou_slot5_target_soc",
+      "name": "用户手动充放电策略5-目标SOC",
+      "address": 10191,
+      "address_hex": "0x27CF",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "%",
+      "note": "掉电保存"
+    },
+    {
+      "code": "tou_slot5_power",
+      "name": "用户手动充放电策略5-放电功率",
+      "address": 10192,
+      "address_hex": "0x27D0",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "W",
+      "note": "掉电保存"
+    },
+    {
+      "code": "tou_slot5_curtail",
+      "name": "用户手动充放电策略5-弃光",
+      "address": 10193,
+      "address_hex": "0x27D1",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "关闭",
+        "1": "开启"
+      },
+      "note": "1：开启 0：关闭 掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "tou_slot5_ignore_export",
+      "name": "用户手动充放电策略5-忽略防逆流",
+      "address": 10194,
+      "address_hex": "0x27D2",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "关闭",
+        "1": "使能"
+      },
+      "note": "1：使能 0：关闭 掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "tou_slot6_start",
+      "name": "用户手动充放电策略6-开始时间",
+      "address": 10195,
+      "address_hex": "0x27D3",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "tou_slot6_end",
+      "name": "用户手动充放电策略6-结束时间",
+      "address": 10196,
+      "address_hex": "0x27D4",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "tou_slot6_mode",
+      "name": "用户手动充放电策略6-工作模式",
+      "address": 10197,
+      "address_hex": "0x27D5",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "充电",
+        "1": "放电"
+      },
+      "note": "0充电 1放电 掉电保存"
+    },
+    {
+      "code": "tou_slot6_target_soc",
+      "name": "用户手动充放电策略6-目标SOC",
+      "address": 10198,
+      "address_hex": "0x27D6",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "%",
+      "note": "掉电保存"
+    },
+    {
+      "code": "tou_slot6_power",
+      "name": "用户手动充放电策略6-放电功率",
+      "address": 10199,
+      "address_hex": "0x27D7",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "W",
+      "note": "掉电保存"
+    },
+    {
+      "code": "tou_slot6_curtail",
+      "name": "用户手动充放电策略6-弃光",
+      "address": 10200,
+      "address_hex": "0x27D8",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "关闭",
+        "1": "开启"
+      },
+      "note": "1：开启 0：关闭 掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "tou_slot6_ignore_export",
+      "name": "用户手动充放电策略6-忽略防逆流",
+      "address": 10201,
+      "address_hex": "0x27D9",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "关闭",
+        "1": "使能"
+      },
+      "note": "1：使能 0：关闭 掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "tou_slot7_start",
+      "name": "用户手动充放电策略7-开始时间",
+      "address": 10202,
+      "address_hex": "0x27DA",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "tou_slot7_end",
+      "name": "用户手动充放电策略7-结束时间",
+      "address": 10203,
+      "address_hex": "0x27DB",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "tou_slot7_mode",
+      "name": "用户手动充放电策略7-工作模式",
+      "address": 10204,
+      "address_hex": "0x27DC",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "充电",
+        "1": "放电"
+      },
+      "note": "0充电 1放电 掉电保存"
+    },
+    {
+      "code": "tou_slot7_target_soc",
+      "name": "用户手动充放电策略7-目标SOC",
+      "address": 10205,
+      "address_hex": "0x27DD",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "%",
+      "note": "掉电保存"
+    },
+    {
+      "code": "tou_slot7_power",
+      "name": "用户手动充放电策略7-放电功率",
+      "address": 10206,
+      "address_hex": "0x27DE",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "W",
+      "note": "掉电保存"
+    },
+    {
+      "code": "tou_slot7_curtail",
+      "name": "用户手动充放电策略7-弃光",
+      "address": 10207,
+      "address_hex": "0x27DF",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "关闭",
+        "1": "开启"
+      },
+      "note": "1：开启 0：关闭 掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "tou_slot7_ignore_export",
+      "name": "用户手动充放电策略7-忽略防逆流",
+      "address": 10208,
+      "address_hex": "0x27E0",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "关闭",
+        "1": "使能"
+      },
+      "note": "1：使能 0：关闭 掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "tou_slot8_start",
+      "name": "用户手动充放电策略8-开始时间",
+      "address": 10209,
+      "address_hex": "0x27E1",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "tou_slot8_end",
+      "name": "用户手动充放电策略8-结束时间",
+      "address": 10210,
+      "address_hex": "0x27E2",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "高字节时 低字节分 掉电保存",
+      "format": "hhmm"
+    },
+    {
+      "code": "tou_slot8_mode",
+      "name": "用户手动充放电策略8-工作模式",
+      "address": 10211,
+      "address_hex": "0x27E3",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "充电",
+        "1": "放电"
+      },
+      "note": "0充电 1放电 掉电保存"
+    },
+    {
+      "code": "tou_slot8_target_soc",
+      "name": "用户手动充放电策略8-目标SOC",
+      "address": 10212,
+      "address_hex": "0x27E4",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "%",
+      "note": "掉电保存"
+    },
+    {
+      "code": "tou_slot8_power",
+      "name": "用户手动充放电策略8-放电功率",
+      "address": 10213,
+      "address_hex": "0x27E5",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "W",
+      "note": "掉电保存"
+    },
+    {
+      "code": "tou_slot8_curtail",
+      "name": "用户手动充放电策略8-弃光",
+      "address": 10214,
+      "address_hex": "0x27E6",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "关闭",
+        "1": "开启"
+      },
+      "note": "1：开启 0：关闭 掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "tou_slot8_ignore_export",
+      "name": "用户手动充放电策略8-忽略防逆流",
+      "address": 10215,
+      "address_hex": "0x27E7",
+      "block": "control",
+      "category": "TOU计划表",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "values": {
+        "0": "关闭",
+        "1": "使能"
+      },
+      "note": "1：使能 0：关闭 掉电保存",
+      "boolean": true
+    },
+    {
+      "code": "dp52_rtu_address",
+      "name": "Modbus RTU通信地址",
+      "address": 16471,
+      "address_hex": "0x4057",
+      "block": "dp52_module",
+      "category": "DP52新增地址",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "默认 A0，可设 0x80–0xB0，本地保存，Wi-Fi 重置掉电不丢失"
+    },
+    {
+      "code": "dp52_module_ip",
+      "name": "模组IP",
+      "address": 16472,
+      "address_hex": "0x4058",
+      "block": "dp52_module",
+      "category": "DP52新增地址",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "note": "IPv4，两个寄存器（0x4058–0x4059）"
+    },
+    {
+      "code": "dp52_module_port",
+      "name": "模组端口号",
+      "address": 16474,
+      "address_hex": "0x405A",
+      "block": "dp52_module",
+      "category": "DP52新增地址",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false
+    },
+    {
+      "code": "dp52_tcp_address",
+      "name": "Modbus TCP通信地址",
+      "address": 16475,
+      "address_hex": "0x405B",
+      "block": "dp52_module",
+      "category": "DP52新增地址",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "note": "默认 A0，可设 0x80–0xB0，本地保存，Wi-Fi 重置掉电不丢失"
+    },
+    {
+      "code": "dp52_tcp_dynamic_code",
+      "name": "Modbus TCP动态验证码",
+      "address": 16476,
+      "address_hex": "0x405C",
+      "block": "dp52_module",
+      "category": "DP52新增地址",
+      "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "note": "MCU 随机生成；验证码匹配成功本地保存；连接对象 MAC 或使能开关变化时重新生成"
+    },
+    {
+      "code": "dp52_meter_connection_state",
+      "name": "电表连接状态",
+      "address": 16478,
+      "address_hex": "0x405E",
+      "block": "dp52_module",
+      "category": "DP52新增地址",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": false,
+      "values": {
+        "0": "未绑定",
+        "1": "无线电表",
+        "2": "有线电表"
+      }
+    }
+  ],
+  "groups": [
+    {
+      "id": "modbus_comm",
+      "label": "Modbus 通信",
+      "icon": "mdi:lan-connect",
+      "order": 5,
+      "atomic": false,
+      "members": [
+        "modbus_slave_address"
+      ],
+      "span": {
+        "start": 9984,
+        "end": 9984,
+        "registers": 1
+      },
+      "note": "从机地址改动即刻切链路，单寄存器写入"
+    },
+    {
+      "id": "realtime",
+      "label": "实时监控",
+      "icon": "mdi:home-lightning-bolt",
+      "order": 10,
+      "atomic": false,
+      "members": [
+        "device_status",
+        "device_fault_code",
+        "system_soc",
+        "meter_connection_state",
+        "meter_total_power",
+        "grid_active_power",
+        "pv_total_power",
+        "battery_work_state",
+        "battery_power",
+        "bypass_switch_state",
+        "bypass_power"
+      ],
+      "span": {
+        "start": 10000,
+        "end": 10016,
+        "registers": 17
+      },
+      "note": "只读汇总，1 次连续读取"
+    },
+    {
+      "id": "grid_detail",
+      "label": "电网详情",
+      "icon": "mdi:transmission-tower",
+      "order": 20,
+      "atomic": false,
+      "members": [
+        "grid_voltage",
+        "grid_current",
+        "grid_frequency",
+        "phase_a_power",
+        "phase_b_power",
+        "phase_c_power"
+      ],
+      "span": {
+        "start": 10017,
+        "end": 10025,
+        "registers": 9
+      },
+      "note": "只读"
+    },
+    {
+      "id": "pv_detail",
+      "label": "光伏详情",
+      "icon": "mdi:solar-panel",
+      "order": 30,
+      "atomic": false,
+      "members": [
+        "pv_string_count",
+        "pv1_voltage",
+        "pv1_current",
+        "pv1_energy",
+        "pv2_voltage",
+        "pv2_current",
+        "pv2_energy",
+        "pv3_voltage",
+        "pv3_current",
+        "pv3_energy",
+        "pv4_voltage",
+        "pv4_current",
+        "pv4_energy"
+      ],
+      "span": {
+        "start": 10026,
+        "end": 10042,
+        "registers": 17
+      },
+      "note": "只读；读出 N 路即支持 N 路"
+    },
+    {
+      "id": "battery_detail",
+      "label": "电池详情",
+      "icon": "mdi:battery-heart-variant",
+      "order": 40,
+      "atomic": false,
+      "members": [
+        "battery_voltage",
+        "battery_current",
+        "cell_temp_max",
+        "cell_temp_min",
+        "battery_max_charge_power",
+        "battery_max_discharge_power"
+      ],
+      "span": {
+        "start": 10043,
+        "end": 10050,
+        "registers": 8
+      },
+      "note": "只读"
+    },
+    {
+      "id": "bypass_detail",
+      "label": "旁路口",
+      "icon": "mdi:power-plug",
+      "order": 50,
+      "atomic": false,
+      "members": [
+        "bypass_voltage",
+        "bypass_current",
+        "bypass_frequency"
+      ],
+      "span": {
+        "start": 10051,
+        "end": 10053,
+        "registers": 3
+      },
+      "note": "只读"
+    },
+    {
+      "id": "capacity",
+      "label": "容量与功率能力",
+      "icon": "mdi:battery-high",
+      "order": 60,
+      "atomic": false,
+      "members": [
+        "design_capacity",
+        "remaining_capacity",
+        "system_backup_soc",
+        "soh",
+        "hardware_max_ac_charge_power",
+        "hardware_max_ac_discharge_power",
+        "grid_code_export_limit",
+        "global_ac_charge_power_limit",
+        "global_ac_discharge_power_limit"
+      ],
+      "span": {
+        "start": 10054,
+        "end": 10069,
+        "registers": 16
+      },
+      "note": "只读；硬件能力上限用于前端校验写入范围"
+    },
+    {
+      "id": "device_info",
+      "label": "设备信息",
+      "icon": "mdi:information-outline",
+      "order": 70,
+      "atomic": false,
+      "members": [
+        "wifi_signal",
+        "device_serial",
+        "firmware_version"
+      ],
+      "span": {
+        "start": 10070,
+        "end": 10084,
+        "registers": 15
+      },
+      "note": "只读；SN 与固件为 ASCII"
+    },
+    {
+      "id": "lifetime_energy",
+      "label": "累计电量",
+      "icon": "mdi:counter",
+      "order": 80,
+      "atomic": false,
+      "members": [
+        "grid_import_energy_total",
+        "grid_export_energy_total",
+        "meter_import_energy_total",
+        "meter_export_energy_total",
+        "pv_energy_total",
+        "battery_charge_energy_total",
+        "battery_discharge_energy_total",
+        "bypass_output_energy_total",
+        "bypass_input_energy_total"
+      ],
+      "span": {
+        "start": 10085,
+        "end": 10102,
+        "registers": 18
+      },
+      "note": "只读；全部 U32，高位字在前"
+    },
+    {
+      "id": "power_limit",
+      "label": "功率与 SoC 设置",
+      "icon": "mdi:speedometer",
+      "order": 90,
+      "atomic": true,
+      "members": [
+        "ac_charge_power_limit",
+        "ac_discharge_power_limit",
+        "safety_soc"
+      ],
+      "span": {
+        "start": 10103,
+        "end": 10107,
+        "registers": 5
+      },
+      "note": "充放电限值与安全 SoC 成组下发，避免限值已改而保护门限未跟"
+    },
+    {
+      "id": "force_control",
+      "label": "实时控制",
+      "icon": "mdi:battery-sync",
+      "order": 100,
+      "atomic": true,
+      "members": [
+        "charge_discharge_direction",
+        "battery_target_power",
+        "charge_discharge_cutoff_soc",
+        "charge_discharge_duration"
+      ],
+      "span": {
+        "start": 10108,
+        "end": 10111,
+        "registers": 4
+      },
+      "note": "设备明确不支持单寄存器写，只能 FC 0x10 一次写入；掉电不保存；超时（10122–10123）后回退工作模式"
+    },
+    {
+      "id": "work_mode",
+      "label": "工作模式与基础负载",
+      "icon": "mdi:cog-transfer",
+      "order": 110,
+      "atomic": true,
+      "members": [
+        "work_mode",
+        "base_load_setpoint"
+      ],
+      "span": {
+        "start": 10112,
+        "end": 10114,
+        "registers": 3
+      },
+      "note": "切换模式时无电表场景依赖基础负载，需同时生效"
+    },
+    {
+      "id": "backup_soc",
+      "label": "备电 SoC",
+      "icon": "mdi:home-battery",
+      "order": 120,
+      "atomic": false,
+      "members": [
+        "backup_soc"
+      ],
+      "span": {
+        "start": 10115,
+        "end": 10115,
+        "registers": 1
+      },
+      "note": "单寄存器，写入走 FC 0x06"
+    },
+    {
+      "id": "reverse_power",
+      "label": "逆流控制",
+      "icon": "mdi:transmission-tower-export",
+      "order": 130,
+      "atomic": true,
+      "members": [
+        "allow_reverse_power",
+        "allow_battery_export"
+      ],
+      "span": {
+        "start": 10116,
+        "end": 10118,
+        "registers": 3
+      },
+      "note": "逆流限值与电池馈网许可成对生效，单向改会造成瞬时越限"
+    },
+    {
+      "id": "switches",
+      "label": "开关控制",
+      "icon": "mdi:toggle-switch",
+      "order": 140,
+      "atomic": false,
+      "members": [
+        "bypass_enable",
+        "off_grid_output_enable",
+        "pv_curtailment_enable"
+      ],
+      "span": {
+        "start": 10119,
+        "end": 10121,
+        "registers": 3
+      },
+      "note": "三个相互独立的开关，无原子性需求；弃光开关为预留"
+    },
+    {
+      "id": "modbus_timeout",
+      "label": "Modbus 超时",
+      "icon": "mdi:timer-off-outline",
+      "order": 150,
+      "atomic": false,
+      "members": [
+        "modbus_timeout"
+      ],
+      "span": {
+        "start": 10122,
+        "end": 10123,
+        "registers": 2
+      },
+      "note": "只作用于实时控制指令；0=禁用，范围 0–3600 s"
+    },
+    {
+      "id": "generator",
+      "label": "柴发",
+      "icon": "mdi:engine",
+      "order": 160,
+      "atomic": true,
+      "members": [
+        "generator_enable",
+        "generator_start_time",
+        "generator_end_time",
+        "generator_power",
+        "generator_start_soc",
+        "generator_stop_soc"
+      ],
+      "span": {
+        "start": 10124,
+        "end": 10130,
+        "registers": 7
+      },
+      "note": "启停门限与功率必须同时生效，避免以旧门限启动"
+    },
+    {
+      "id": "do_control",
+      "label": "DO 控制",
+      "icon": "mdi:electric-switch",
+      "order": 170,
+      "atomic": false,
+      "members": [
+        "do1_state",
+        "do2_state"
+      ],
+      "span": {
+        "start": 10131,
+        "end": 10132,
+        "registers": 2
+      },
+      "note": "手动开关，掉电不保存"
+    },
+    {
+      "id": "base_load",
+      "label": "基础负载",
+      "icon": "mdi:home-analytics",
+      "order": 180,
+      "atomic": false,
+      "members": [
+        "base_load_power"
+      ],
+      "span": {
+        "start": 10133,
+        "end": 10133,
+        "registers": 1
+      },
+      "note": "单寄存器，写入走 FC 0x06"
+    },
+    {
+      "id": "base_load_schedule",
+      "label": "基础负载计划表",
+      "icon": "mdi:calendar-clock",
+      "order": 190,
+      "atomic": false,
+      "members": [
+        "base_load_slot_count",
+        "base_load_slot1_start",
+        "base_load_slot1_end",
+        "base_load_slot1_power",
+        "base_load_slot2_start",
+        "base_load_slot2_end",
+        "base_load_slot2_power",
+        "base_load_slot3_start",
+        "base_load_slot3_end",
+        "base_load_slot3_power",
+        "base_load_slot4_start",
+        "base_load_slot4_end",
+        "base_load_slot4_power",
+        "base_load_slot5_start",
+        "base_load_slot5_end",
+        "base_load_slot5_power",
+        "base_load_slot6_start",
+        "base_load_slot6_end",
+        "base_load_slot6_power",
+        "base_load_slot7_start",
+        "base_load_slot7_end",
+        "base_load_slot7_power",
+        "base_load_slot8_start",
+        "base_load_slot8_end",
+        "base_load_slot8_power"
+      ],
+      "span": {
+        "start": 10134,
+        "end": 10158,
+        "registers": 25
+      },
+      "note": "25 个寄存器，超过单帧上限；按「时段」3 寄存器一组写入，时段数最后写",
+      "write_chunk": {
+        "size": 3,
+        "count_register": "base_load_slot_count",
+        "order": "count_last"
+      },
+      "subgroups": [
+        {
+          "label": "时段 1",
+          "members": [
+            "base_load_slot1_start",
+            "base_load_slot1_end",
+            "base_load_slot1_power"
+          ]
+        },
+        {
+          "label": "时段 2",
+          "members": [
+            "base_load_slot2_start",
+            "base_load_slot2_end",
+            "base_load_slot2_power"
+          ]
+        },
+        {
+          "label": "时段 3",
+          "members": [
+            "base_load_slot3_start",
+            "base_load_slot3_end",
+            "base_load_slot3_power"
+          ]
+        },
+        {
+          "label": "时段 4",
+          "members": [
+            "base_load_slot4_start",
+            "base_load_slot4_end",
+            "base_load_slot4_power"
+          ]
+        },
+        {
+          "label": "时段 5",
+          "members": [
+            "base_load_slot5_start",
+            "base_load_slot5_end",
+            "base_load_slot5_power"
+          ]
+        },
+        {
+          "label": "时段 6",
+          "members": [
+            "base_load_slot6_start",
+            "base_load_slot6_end",
+            "base_load_slot6_power"
+          ]
+        },
+        {
+          "label": "时段 7",
+          "members": [
+            "base_load_slot7_start",
+            "base_load_slot7_end",
+            "base_load_slot7_power"
+          ]
+        },
+        {
+          "label": "时段 8",
+          "members": [
+            "base_load_slot8_start",
+            "base_load_slot8_end",
+            "base_load_slot8_power"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tou_schedule",
+      "label": "TOU 计划表",
+      "icon": "mdi:calendar-multiple",
+      "order": 200,
+      "atomic": false,
+      "members": [
+        "tou_slot_count",
+        "tou_slot1_start",
+        "tou_slot1_end",
+        "tou_slot1_mode",
+        "tou_slot1_target_soc",
+        "tou_slot1_power",
+        "tou_slot1_curtail",
+        "tou_slot1_ignore_export",
+        "tou_slot2_start",
+        "tou_slot2_end",
+        "tou_slot2_mode",
+        "tou_slot2_target_soc",
+        "tou_slot2_power",
+        "tou_slot2_curtail",
+        "tou_slot2_ignore_export",
+        "tou_slot3_start",
+        "tou_slot3_end",
+        "tou_slot3_mode",
+        "tou_slot3_target_soc",
+        "tou_slot3_power",
+        "tou_slot3_curtail",
+        "tou_slot3_ignore_export",
+        "tou_slot4_start",
+        "tou_slot4_end",
+        "tou_slot4_mode",
+        "tou_slot4_target_soc",
+        "tou_slot4_power",
+        "tou_slot4_curtail",
+        "tou_slot4_ignore_export",
+        "tou_slot5_start",
+        "tou_slot5_end",
+        "tou_slot5_mode",
+        "tou_slot5_target_soc",
+        "tou_slot5_power",
+        "tou_slot5_curtail",
+        "tou_slot5_ignore_export",
+        "tou_slot6_start",
+        "tou_slot6_end",
+        "tou_slot6_mode",
+        "tou_slot6_target_soc",
+        "tou_slot6_power",
+        "tou_slot6_curtail",
+        "tou_slot6_ignore_export",
+        "tou_slot7_start",
+        "tou_slot7_end",
+        "tou_slot7_mode",
+        "tou_slot7_target_soc",
+        "tou_slot7_power",
+        "tou_slot7_curtail",
+        "tou_slot7_ignore_export",
+        "tou_slot8_start",
+        "tou_slot8_end",
+        "tou_slot8_mode",
+        "tou_slot8_target_soc",
+        "tou_slot8_power",
+        "tou_slot8_curtail",
+        "tou_slot8_ignore_export"
+      ],
+      "span": {
+        "start": 10159,
+        "end": 10215,
+        "registers": 57
+      },
+      "note": "57 个寄存器，超过单帧上限；按「时段」7 寄存器一组写入，时段数最后写",
+      "write_chunk": {
+        "size": 7,
+        "count_register": "tou_slot_count",
+        "order": "count_last"
+      },
+      "subgroups": [
+        {
+          "label": "策略 1",
+          "members": [
+            "tou_slot1_start",
+            "tou_slot1_end",
+            "tou_slot1_mode",
+            "tou_slot1_target_soc",
+            "tou_slot1_power",
+            "tou_slot1_curtail",
+            "tou_slot1_ignore_export"
+          ]
+        },
+        {
+          "label": "策略 2",
+          "members": [
+            "tou_slot2_start",
+            "tou_slot2_end",
+            "tou_slot2_mode",
+            "tou_slot2_target_soc",
+            "tou_slot2_power",
+            "tou_slot2_curtail",
+            "tou_slot2_ignore_export"
+          ]
+        },
+        {
+          "label": "策略 3",
+          "members": [
+            "tou_slot3_start",
+            "tou_slot3_end",
+            "tou_slot3_mode",
+            "tou_slot3_target_soc",
+            "tou_slot3_power",
+            "tou_slot3_curtail",
+            "tou_slot3_ignore_export"
+          ]
+        },
+        {
+          "label": "策略 4",
+          "members": [
+            "tou_slot4_start",
+            "tou_slot4_end",
+            "tou_slot4_mode",
+            "tou_slot4_target_soc",
+            "tou_slot4_power",
+            "tou_slot4_curtail",
+            "tou_slot4_ignore_export"
+          ]
+        },
+        {
+          "label": "策略 5",
+          "members": [
+            "tou_slot5_start",
+            "tou_slot5_end",
+            "tou_slot5_mode",
+            "tou_slot5_target_soc",
+            "tou_slot5_power",
+            "tou_slot5_curtail",
+            "tou_slot5_ignore_export"
+          ]
+        },
+        {
+          "label": "策略 6",
+          "members": [
+            "tou_slot6_start",
+            "tou_slot6_end",
+            "tou_slot6_mode",
+            "tou_slot6_target_soc",
+            "tou_slot6_power",
+            "tou_slot6_curtail",
+            "tou_slot6_ignore_export"
+          ]
+        },
+        {
+          "label": "策略 7",
+          "members": [
+            "tou_slot7_start",
+            "tou_slot7_end",
+            "tou_slot7_mode",
+            "tou_slot7_target_soc",
+            "tou_slot7_power",
+            "tou_slot7_curtail",
+            "tou_slot7_ignore_export"
+          ]
+        },
+        {
+          "label": "策略 8",
+          "members": [
+            "tou_slot8_start",
+            "tou_slot8_end",
+            "tou_slot8_mode",
+            "tou_slot8_target_soc",
+            "tou_slot8_power",
+            "tou_slot8_curtail",
+            "tou_slot8_ignore_export"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dp52_module",
+      "label": "DP52 通信模块",
+      "icon": "mdi:router-network",
+      "order": 210,
+      "atomic": false,
+      "members": [
+        "dp52_rtu_address",
+        "dp52_module_ip",
+        "dp52_module_port",
+        "dp52_tcp_address",
+        "dp52_tcp_dynamic_code",
+        "dp52_meter_connection_state"
+      ],
+      "span": {
+        "start": 16471,
+        "end": 16478,
+        "registers": 8
+      },
+      "note": "独立地址空间 0x4057–0x405E；IP 与端口用于模组联网信息展示"
+    }
+  ]
+}

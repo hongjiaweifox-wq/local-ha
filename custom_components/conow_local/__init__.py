@@ -9,6 +9,11 @@ from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN, PLATFORMS
 from .coordinator import ConowLocalCoordinator
+from .panel_api import async_register_local_panel
+from .panel_coordinator import (
+    async_setup_panel_coordinator,
+    async_shutdown_panel_coordinator,
+)
 
 type ConowLocalConfigEntry = ConfigEntry[ConowLocalCoordinator]
 
@@ -19,6 +24,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up Conow Local."""
     # pymodbus logs each timeout as ERROR; conow_local already retries internally.
     logging.getLogger("pymodbus").setLevel(logging.WARNING)
+    await async_register_local_panel(hass)
     return True
 
 
@@ -27,6 +33,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConowLocalConfigEntry) -
     coordinator = ConowLocalCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
+    # Shared by the switch and time platforms, and stopped again on unload.
+    await async_setup_panel_coordinator(hass, entry, coordinator)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
@@ -34,6 +42,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConowLocalConfigEntry) -
 async def async_unload_entry(hass: HomeAssistant, entry: ConowLocalConfigEntry) -> bool:
     """Unload Conow Local platforms."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if unload_ok and entry.runtime_data is not None:
-        await hass.async_add_executor_job(entry.runtime_data.shutdown)
+    if unload_ok:
+        await async_shutdown_panel_coordinator(hass, entry.entry_id)
+        if entry.runtime_data is not None:
+            await hass.async_add_executor_job(entry.runtime_data.shutdown)
     return unload_ok
