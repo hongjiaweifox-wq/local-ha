@@ -55,6 +55,10 @@
         },
         "description": "Connect to the all-in-one machine's own Ethernet port (TCP port **502** by default, slave **0xA0**). No RS-485↔Ethernet adapter is involved. Enter the **6-digit verification code** shown on the machine; it is written to holding registers **0x045C–0x045D** and the connection is accepted only if the device confirms it."
       }
+    },
+    "abort": {
+      "already_configured": "This device is already configured. Open the existing Conow Local integration entry instead.",
+      "already_in_progress": "This device is already being configured. Finish or cancel the open dialog first."
     }
   },
   "entity": {

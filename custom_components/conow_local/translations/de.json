@@ -55,6 +55,10 @@
         },
         "description": "Verbinde dich mit dem eigenen Ethernet-Anschluss des All-in-One-Geräts (TCP-Port standardmäßig **502**, Slave **0xA0**). Es wird kein RS-485↔Ethernet-Adapter verwendet. Gib den **6-stelligen Bestätigungscode** vom Gerät ein; er wird in die Holding-Register **0x045C–0x045D** geschrieben, und die Verbindung wird nur bei erfolgreicher Bestätigung akzeptiert."
       }
+    },
+    "abort": {
+      "already_configured": "Dieses Gerät ist bereits eingerichtet. Verwende den vorhandenen Conow Local Eintrag.",
+      "already_in_progress": "Dieses Gerät wird bereits eingerichtet. Schließe zuerst den offenen Dialog ab oder brich ihn ab."
     }
   },
   "entity": {

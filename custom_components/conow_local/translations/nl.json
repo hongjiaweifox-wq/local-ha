@@ -55,6 +55,10 @@
         },
         "description": "Verbind met de eigen Ethernet-poort van het alles-in-één-apparaat (standaard TCP-poort **502**, slave **0xA0**). Er is geen RS-485↔Ethernet-adapter nodig. Voer de **6-cijferige verificatiecode** van het apparaat in; deze wordt naar de holding-registers **0x045C–0x045D** geschreven en de verbinding wordt alleen bij bevestiging geaccepteerd."
       }
+    },
+    "abort": {
+      "already_configured": "Dit apparaat is al geconfigureerd. Gebruik de bestaande Conow Local-integratie.",
+      "already_in_progress": "Dit apparaat wordt al geconfigureerd. Rond eerst het open venster af of annuleer het."
     }
   },
   "entity": {
