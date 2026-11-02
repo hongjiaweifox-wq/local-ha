@@ -27,7 +27,7 @@ from .panel_functions import (
 
 URL_BASE = "/conow_local_panel_static"
 PANEL_WEBCOMPONENT = "conow-local-panel"
-PANEL_STATIC_VERSION = "46"
+PANEL_STATIC_VERSION = "47"
 PANEL_SCRIPT_URL = f"{URL_BASE}/conow-local-panel.js?v={PANEL_STATIC_VERSION}"
 NOTIFY_SCRIPT_URL = f"{URL_BASE}/conow-local-notify.js?v={PANEL_STATIC_VERSION}"
 PANEL_SIDEBAR_ENABLED = True

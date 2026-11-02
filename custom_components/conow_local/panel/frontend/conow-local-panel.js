@@ -278,6 +278,54 @@ const PANEL_STYLE = `
     border-color: var(--error-color, #f44336);
     background: color-mix(in srgb, var(--error-color, #f44336) 10%, transparent);
   }
+  .modal-backdrop {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 16px;
+    box-sizing: border-box;
+  }
+  .modal {
+    width: min(360px, 100%);
+    background: var(--card-background-color, #1c1c1c);
+    color: var(--primary-text-color, #e0e0e0);
+    border: 1px solid var(--divider-color, #333);
+    border-radius: 14px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  .modal h2 {
+    margin: 0 0 8px;
+    font-size: 1.05rem;
+    font-weight: 500;
+  }
+  .modal .modal-message {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--secondary-text-color, #aaa);
+    line-height: 1.5;
+  }
+  .modal-actions {
+    display: flex; justify-content: flex-end; gap: 10px;
+    margin-top: 20px;
+  }
+  .modal-actions button {
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-size: 0.88rem;
+    cursor: pointer;
+  }
+  .modal-actions .modal-cancel {
+    background: transparent;
+    border: 1px solid var(--divider-color, #3a3a3a);
+    color: inherit;
+  }
+  .modal-actions .modal-confirm {
+    border: 1px solid var(--primary-color, #03a9f4);
+    background: var(--primary-color, #03a9f4);
+    color: var(--text-primary-color, #fff);
+  }
   .reg-control {
     display: flex; align-items: center; justify-content: flex-end;
     gap: 8px; min-width: 0; flex: 0 0 auto;
@@ -316,7 +364,7 @@ const PANEL_STYLE = `
   }
 `;
 
-const I18N_VERSION = "1";
+const I18N_VERSION = "2";
 const FALLBACK_LANGUAGE = "en";
 
 class ConowLocalPanel extends HTMLElement {
@@ -1496,15 +1544,8 @@ class ConowLocalPanel extends HTMLElement {
         values[register.code] = this._draftValue(groupId, register);
       }
     }
-    const preview = Object.entries(values)
-      .map(([code, value]) => `${code}=${value}`)
-      .join(this._t("codeSeparator"));
     const groupLabel = this._groupLabel(group);
-    if (
-      !window.confirm(
-        this._t("confirmWrite", { group: groupLabel, preview })
-      )
-    ) {
+    if (!(await this._confirmGroupWrite(groupLabel))) {
       return;
     }
     this._pendingGroups.add(groupId);
@@ -1533,6 +1574,53 @@ class ConowLocalPanel extends HTMLElement {
       this._pendingGroups.delete(groupId);
       this._render();
     }
+  }
+
+  _confirmGroupWrite(groupLabel) {
+    return new Promise((resolve) => {
+      const backdrop = document.createElement("div");
+      backdrop.className = "modal-backdrop";
+      backdrop.innerHTML = `
+        <div class="modal" role="dialog" aria-modal="true">
+          <h2>${this._escape(this._t("confirmWriteTitle"))}</h2>
+          <p class="modal-message">${this._escape(
+            this._t("confirmWrite", { group: groupLabel })
+          )}</p>
+          <div class="modal-actions">
+            <button type="button" class="modal-cancel">${this._escape(
+              this._t("actionCancel")
+            )}</button>
+            <button type="button" class="modal-confirm">${this._escape(
+              this._t("actionConfirm")
+            )}</button>
+          </div>
+        </div>`;
+      const finish = (confirmed) => {
+        document.removeEventListener("keydown", onKey, true);
+        backdrop.remove();
+        resolve(confirmed);
+      };
+      const onKey = (event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          finish(false);
+        }
+      };
+      backdrop
+        .querySelector(".modal-cancel")
+        .addEventListener("click", () => finish(false));
+      backdrop
+        .querySelector(".modal-confirm")
+        .addEventListener("click", () => finish(true));
+      backdrop.addEventListener("click", (event) => {
+        if (event.target === backdrop) {
+          finish(false);
+        }
+      });
+      document.addEventListener("keydown", onKey, true);
+      this.shadowRoot.appendChild(backdrop);
+      backdrop.querySelector(".modal-confirm").focus();
+    });
   }
 
   _renderGroup(group) {
