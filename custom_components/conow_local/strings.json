@@ -5,6 +5,9 @@
     },
     "force_mode_cutoff_required": {
       "message": "Set charge/discharge cutoff SOC between 1 and 100 before force charge or discharge."
+    },
+    "panel_write_required": {
+      "message": "Single controls do not write to the device. Apply the whole group from the Conow Local panel. {url}"
     }
   },
   "config": {

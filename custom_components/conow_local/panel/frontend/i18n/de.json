@@ -2,7 +2,6 @@
   "language": "de",
   "ui": {
     "title": "Conow Local Gruppenpanel",
-    "banner": "Diese Seite zeigt die Modbus-Adressen aus dem technischen Dokument vom Oktober (<code>registers.json</code> v{version}). Beschreibbare Register werden mit Home-Assistant-Steuerelementen bearbeitet; klicken Sie unten in einer Gruppe auf <b>Gruppe senden</b>, um sie in möglichst wenigen Schreibrahmen zu übertragen. Der Status der Felder ist weiterhin „zu bestätigen“ – prüfen Sie die Adressen, bevor Sie auf ein echtes Gerät schreiben.",
     "loadingRegisters": "Geräteregister werden gelesen…",
     "loadingMap": "Gruppierte Zuordnung wird geladen…",
     "errorDeviceNotFound": "Gerät nicht gefunden oder Integration nicht geladen.",

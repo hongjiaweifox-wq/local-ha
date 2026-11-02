@@ -2,7 +2,6 @@
   "language": "en",
   "ui": {
     "title": "Conow Local Grouped Panel",
-    "banner": "This page renders the Modbus addresses from the October technical document (<code>registers.json</code> v{version}). Writable registers are edited with Home Assistant controls; click <b>Apply group</b> at the bottom of a group to send it in as few write frames as possible. Field status is still marked “to be confirmed” — double-check the addresses before writing to a real device.",
     "loadingRegisters": "Reading device registers…",
     "loadingMap": "Loading grouped map…",
     "errorDeviceNotFound": "Device not found or the integration is not loaded.",

@@ -486,14 +486,6 @@ for _n in range(1, 9):
 UI = {
     "en": {
         "title": "Conow Local Grouped Panel",
-        "banner": (
-            "This page renders the Modbus addresses from the October technical "
-            "document (<code>registers.json</code> v{version}). Writable registers "
-            "are edited with Home Assistant controls; click <b>Apply group</b> at "
-            "the bottom of a group to send it in as few write frames as possible. "
-            "Field status is still marked “to be confirmed” — double-check the "
-            "addresses before writing to a real device."
-        ),
         "loadingRegisters": "Reading device registers…",
         "loadingMap": "Loading grouped map…",
         "errorDeviceNotFound": "Device not found or the integration is not loaded.",
@@ -561,15 +553,6 @@ UI = {
     },
     "de": {
         "title": "Conow Local Gruppenpanel",
-        "banner": (
-            "Diese Seite zeigt die Modbus-Adressen aus dem technischen Dokument vom "
-            "Oktober (<code>registers.json</code> v{version}). Beschreibbare Register "
-            "werden mit Home-Assistant-Steuerelementen bearbeitet; klicken Sie unten "
-            "in einer Gruppe auf <b>Gruppe senden</b>, um sie in möglichst wenigen "
-            "Schreibrahmen zu übertragen. Der Status der Felder ist weiterhin "
-            "„zu bestätigen“ – prüfen Sie die Adressen, bevor Sie auf ein echtes "
-            "Gerät schreiben."
-        ),
         "loadingRegisters": "Geräteregister werden gelesen…",
         "loadingMap": "Gruppierte Zuordnung wird geladen…",
         "errorDeviceNotFound": "Gerät nicht gefunden oder Integration nicht geladen.",
@@ -641,15 +624,6 @@ UI = {
     },
     "nl": {
         "title": "Conow Local groepenpaneel",
-        "banner": (
-            "Deze pagina toont de Modbus-adressen uit het technische document van "
-            "oktober (<code>registers.json</code> v{version}). Beschrijfbare "
-            "registers worden met Home Assistant-bediening bewerkt; klik onderaan "
-            "een groep op <b>Groep verzenden</b> om de groep in zo weinig mogelijk "
-            "schrijf frames te versturen. De veldstatus is nog steeds "
-            "“te bevestigen” — controleer de adressen voordat u naar een echt "
-            "apparaat schrijft."
-        ),
         "loadingRegisters": "Apparaatregisters lezen…",
         "loadingMap": "Gegroepeerde map laden…",
         "errorDeviceNotFound": (
@@ -720,12 +694,6 @@ UI = {
     },
     "zh-Hans": {
         "title": "Conow Local 分组面板",
-        "banner": (
-            "本页渲染的是《10月技术文档》的 Modbus 编址（<code>registers.json</code> "
-            "v{version}）。可写寄存器使用 Home Assistant 控件编辑，修改后点击分组底部"
-            "<b>批量下发</b>，该组会合并成尽量少的写入帧一次发出。表内状态仍为"
-            "「待确定」，下发到真实设备前请再次核对地址。"
-        ),
         "loadingRegisters": "读取设备寄存器…",
         "loadingMap": "加载分组表…",
         "errorDeviceNotFound": "设备不存在或集成未加载。",

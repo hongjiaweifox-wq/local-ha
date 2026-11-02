@@ -13,6 +13,7 @@ from .entity_factory import build_device_info, build_switch_description
 from .map_router import MAP_V2
 from .panel import panel_map
 from .panel.panel_coordinator import ConowPanelCoordinator, get_panel_coordinator
+from .panel.panel_guard import async_refuse_device_write
 from .register_map import EntityDef, get_entities
 
 
@@ -65,6 +66,7 @@ class ConowPanelSwitch(CoordinatorEntity[ConowPanelCoordinator], SwitchEntity):
     ) -> None:
         """Initialize the panel-backed switch."""
         super().__init__(coordinator)
+        self._entry = entry
         self._register = register
         self._attr_unique_id = f"{entry.entry_id}_{unique_code or register.code}"
         self._attr_name = register.name
@@ -87,11 +89,8 @@ class ConowPanelSwitch(CoordinatorEntity[ConowPanelCoordinator], SwitchEntity):
         await self._async_write(0)
 
     async def _async_write(self, value: int) -> None:
-        await self.coordinator.main.async_write_panel_ops(
-            [(self._register.address, value)]
-        )
-        await self.coordinator.async_request_refresh()
-
+        """Refuse single-register writes from the device page."""
+        async_refuse_device_write(self.coordinator.hass, self._entry)
 
 async def _async_add_panel_switches(
     hass: HomeAssistant,

@@ -4,13 +4,18 @@ The October map marks each register read-only or writable. Writable on/off
 registers become switches and writable ``hhmm`` registers become time
 entities; every other read-only register is exposed as a sensor or binary
 sensor so the Home Assistant device page shows the same values as the panel.
+Writable numeric registers get a hidden mirror sensor: writes still go
+through the grouping panel, but the entity gives the panel row a history.
 """
 
 from __future__ import annotations
 
 from functools import lru_cache
 
-from homeassistant.components.binary_sensor import BinarySensorEntityDescription
+from homeassistant.components.binary_sensor import (
+    BinarySensorDeviceClass,
+    BinarySensorEntityDescription,
+)
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntityDescription,
@@ -34,20 +39,43 @@ from . import panel_map
 # live telemetry; HA renders these under the diagnostic section.
 DIAGNOSTIC_GROUPS = frozenset({"device_info"})
 
-# Map unit strings from panel_registers.json onto HA units/device classes.
-UNITS: dict[str, tuple[str, SensorDeviceClass | None]] = {
-    "W": (UnitOfPower.WATT, SensorDeviceClass.POWER),
-    "kWh": (UnitOfEnergy.KILO_WATT_HOUR, SensorDeviceClass.ENERGY),
-    "V": (UnitOfElectricPotential.VOLT, SensorDeviceClass.VOLTAGE),
-    "A": (UnitOfElectricCurrent.AMPERE, SensorDeviceClass.CURRENT),
-    "Hz": (UnitOfFrequency.HERTZ, SensorDeviceClass.FREQUENCY),
-    "%": (PERCENTAGE, None),
-    "℃": (UnitOfTemperature.CELSIUS, SensorDeviceClass.TEMPERATURE),
-    "°C": (UnitOfTemperature.CELSIUS, SensorDeviceClass.TEMPERATURE),
-    "dBm": (
-        SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
-        SensorDeviceClass.SIGNAL_STRENGTH,
-    ),
+# Map unit strings from panel_registers.json onto HA units.  device_class and
+# state_class are read from the map itself, never inferred here.
+HA_UNITS: dict[str, str] = {
+    "W": UnitOfPower.WATT,
+    "kWh": UnitOfEnergy.KILO_WATT_HOUR,
+    "V": UnitOfElectricPotential.VOLT,
+    "A": UnitOfElectricCurrent.AMPERE,
+    "Hz": UnitOfFrequency.HERTZ,
+    "%": PERCENTAGE,
+    "℃": UnitOfTemperature.CELSIUS,
+    "°C": UnitOfTemperature.CELSIUS,
+    "dBm": SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+}
+
+SENSOR_DEVICE_CLASSES: dict[str, SensorDeviceClass] = {
+    "power": SensorDeviceClass.POWER,
+    "energy": SensorDeviceClass.ENERGY,
+    "energy_storage": SensorDeviceClass.ENERGY_STORAGE,
+    "voltage": SensorDeviceClass.VOLTAGE,
+    "current": SensorDeviceClass.CURRENT,
+    "frequency": SensorDeviceClass.FREQUENCY,
+    "temperature": SensorDeviceClass.TEMPERATURE,
+    "signal_strength": SensorDeviceClass.SIGNAL_STRENGTH,
+    "enum": SensorDeviceClass.ENUM,
+    "battery": SensorDeviceClass.BATTERY,
+}
+
+SENSOR_STATE_CLASSES: dict[str, SensorStateClass] = {
+    "measurement": SensorStateClass.MEASUREMENT,
+    "total_increasing": SensorStateClass.TOTAL_INCREASING,
+}
+
+BINARY_DEVICE_CLASSES: dict[str, BinarySensorDeviceClass] = {
+    "battery_charging": BinarySensorDeviceClass.BATTERY_CHARGING,
+    "power": BinarySensorDeviceClass.POWER,
+    "problem": BinarySensorDeviceClass.PROBLEM,
+    "running": BinarySensorDeviceClass.RUNNING,
 }
 
 
@@ -59,9 +87,28 @@ def _group_ids() -> dict[str, str]:
     }
 
 
+def is_panel_setting_sensor(register: panel_map.PanelRegister) -> bool:
+    """Return whether a writable numeric register needs a mirror sensor.
+
+    Writable numbers have no editable HA entity (writes must go through the
+    grouping panel), but the panel row can only open the more-info/history
+    dialog when an entity id backs it.  A hidden sensor mirrors the register
+    value so history is recorded and the row is clickable.
+    """
+    return (
+        register.writable
+        and not register.boolean
+        and not register.is_time
+        and not register.values
+        and register.dtype != "string"
+    )
+
+
 def is_panel_sensor(register: panel_map.PanelRegister) -> bool:
-    """Return whether the register is exposed as a read-only sensor."""
-    return not register.writable and not register.boolean
+    """Return whether the register is exposed as a sensor."""
+    return (not register.writable and not register.boolean) or (
+        is_panel_setting_sensor(register)
+    )
 
 
 def is_panel_binary_sensor(register: panel_map.PanelRegister) -> bool:
@@ -87,32 +134,35 @@ def _entity_category(
 def build_panel_sensor_description(
     register: panel_map.PanelRegister,
 ) -> SensorEntityDescription:
-    """Build a sensor description from a read-only panel register."""
+    """Build a sensor description from a panel register."""
     kwargs: dict[str, object] = {
         "key": register.code,
         "name": register.name,
     }
-    if register.values:
-        # Enum registers carry their label as the state, so they have no unit.
-        kwargs["device_class"] = SensorDeviceClass.ENUM
-        kwargs["options"] = list(register.values.values())
-    else:
-        unit, device_class = UNITS.get(register.unit, (None, None))
-        if unit is not None:
-            kwargs["native_unit_of_measurement"] = unit
-        if device_class is not None:
-            kwargs["device_class"] = device_class
-        if device_class == SensorDeviceClass.ENERGY:
-            if _group_ids().get(register.code) == "capacity":
-                # Design/remaining capacity is a stored-energy level, not a
-                # counter; HA requires a different class for a measurement.
-                kwargs["device_class"] = SensorDeviceClass.ENERGY_STORAGE
-                kwargs["state_class"] = SensorStateClass.MEASUREMENT
-            else:
-                # Lifetime counters and per-string PV counters only grow.
-                kwargs["state_class"] = SensorStateClass.TOTAL_INCREASING
-        elif unit is not None or device_class is not None:
-            kwargs["state_class"] = SensorStateClass.MEASUREMENT
+    if register.writable:
+        # Mirror sensor for a panel-only setting: keep the device page clean
+        # and hide it from the entity list, but keep it enabled so the panel
+        # row can open its history.
+        kwargs["entity_registry_visible_default"] = False
+    unit = HA_UNITS.get(register.unit)
+    if unit is not None:
+        kwargs["native_unit_of_measurement"] = unit
+    if register.device_class:
+        try:
+            kwargs["device_class"] = SENSOR_DEVICE_CLASSES[register.device_class]
+        except KeyError as err:
+            raise ValueError(
+                f"{register.code}: unknown device_class {register.device_class!r}"
+            ) from err
+        if register.device_class == "enum":
+            kwargs["options"] = list((register.values or {}).values())
+    if register.state_class:
+        try:
+            kwargs["state_class"] = SENSOR_STATE_CLASSES[register.state_class]
+        except KeyError as err:
+            raise ValueError(
+                f"{register.code}: unknown state_class {register.state_class!r}"
+            ) from err
     if (category := _entity_category(register)) is not None:
         kwargs["entity_category"] = category
     return SensorEntityDescription(**kwargs)
@@ -126,6 +176,14 @@ def build_panel_binary_sensor_description(
         "key": register.code,
         "name": register.name,
     }
+    if register.device_class:
+        try:
+            kwargs["device_class"] = BINARY_DEVICE_CLASSES[register.device_class]
+        except KeyError as err:
+            raise ValueError(
+                f"{register.code}: unknown binary device_class "
+                f"{register.device_class!r}"
+            ) from err
     if (category := _entity_category(register)) is not None:
         kwargs["entity_category"] = category
     return BinarySensorEntityDescription(**kwargs)

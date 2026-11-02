@@ -5,6 +5,9 @@
     },
     "force_mode_cutoff_required": {
       "message": "Set charge/discharge cutoff SOC between 1 and 100 before force charge or discharge."
+    },
+    "panel_write_required": {
+      "message": "Losse bedieningselementen schrijven niet direct naar het apparaat. Verzend de hele groep in het Conow Local paneel. {url}"
     }
   },
   "config": {

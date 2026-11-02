@@ -7,7 +7,11 @@ from pathlib import Path
 import voluptuous as vol
 
 from homeassistant.components import panel_custom, websocket_api
-from homeassistant.components.frontend import async_panel_exists
+from homeassistant.components.frontend import (
+    add_extra_js_url,
+    async_panel_exists,
+    remove_extra_js_url,
+)
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import HomeAssistant, callback
 
@@ -23,8 +27,9 @@ from .panel_functions import (
 
 URL_BASE = "/conow_local_panel_static"
 PANEL_WEBCOMPONENT = "conow-local-panel"
-PANEL_STATIC_VERSION = "39"
+PANEL_STATIC_VERSION = "46"
 PANEL_SCRIPT_URL = f"{URL_BASE}/conow-local-panel.js?v={PANEL_STATIC_VERSION}"
+NOTIFY_SCRIPT_URL = f"{URL_BASE}/conow-local-notify.js?v={PANEL_STATIC_VERSION}"
 PANEL_SIDEBAR_ENABLED = True
 SIDEBAR_TITLES = {
     "de": "Conow Local Gruppen",
@@ -131,6 +136,14 @@ async def async_register_local_panel(hass: HomeAssistant) -> None:
             [StaticPathConfig(URL_BASE, str(frontend_dir), cache_headers=False)]
         )
         hass.data[f"{DOMAIN}_panel_static_registered"] = True
+
+    # Adds the "Open panel" action to the device-page write-guard toast.
+    previous_js = hass.data.get(f"{DOMAIN}_notify_js")
+    if previous_js != NOTIFY_SCRIPT_URL:
+        if previous_js:
+            remove_extra_js_url(hass, previous_js)
+        add_extra_js_url(hass, NOTIFY_SCRIPT_URL)
+        hass.data[f"{DOMAIN}_notify_js"] = NOTIFY_SCRIPT_URL
 
     if hass.data.get(f"{DOMAIN}_panel_registered"):
         return

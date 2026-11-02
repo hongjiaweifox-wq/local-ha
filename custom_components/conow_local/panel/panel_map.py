@@ -42,6 +42,8 @@ class PanelRegister:
     scale: float
     offset: float
     unit: str
+    device_class: str
+    state_class: str
     values: dict[int, str] | None
     note: str
     fmt: str
@@ -119,6 +121,8 @@ def get_registers() -> tuple[PanelRegister, ...]:
                 scale=float(item.get("scale", 1.0)),
                 offset=float(item.get("offset", 0.0)),
                 unit=item.get("unit", ""),
+                device_class=str(item.get("device_class") or ""),
+                state_class=str(item.get("state_class") or ""),
                 values=(
                     {int(key): str(value) for key, value in item["values"].items()}
                     if item.get("values")
@@ -261,11 +265,64 @@ def to_physical(register: PanelRegister, raw: int | str) -> float | str:
     return (raw - register.offset) * register.scale
 
 
-def numeric_bounds(register: PanelRegister) -> tuple[float, float, float] | None:
+def _physical_value(values: dict[str, dict[str, Any]], code: str) -> float | None:
+    """Return a decoded live value in physical units, if it is numeric."""
+    value = (values.get(code) or {}).get("value")
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value)
+
+
+def _positive_value(values: dict[str, dict[str, Any]], code: str) -> float | None:
+    """Return a live value only when it is a usable positive limit."""
+    value = _physical_value(values, code)
+    return value if value is not None and value > 0 else None
+
+
+def _max_ac_power(values: dict[str, dict[str, Any]]) -> float | None:
+    """Return the larger of the two AC power limits currently configured."""
+    limits = [
+        _positive_value(values, code)
+        for code in ("ac_charge_power_limit", "ac_discharge_power_limit")
+    ]
+    limits = [limit for limit in limits if limit is not None]
+    return max(limits) if limits else None
+
+
+# Some writable registers are not bounded by the protocol table alone: their
+# limit comes from another register's live value (hardware capability, grid
+# code, safety SoC).  Keys are the constrained register; each callable returns
+# the effective lower or upper limit in physical units.  Read-only registers
+# are decoded from the same block read, so no extra Modbus traffic is needed.
+_DYNAMIC_MIN = {
+    "charge_discharge_cutoff_soc": lambda values: _physical_value(values, "safety_soc"),
+    "backup_soc": lambda values: _physical_value(values, "safety_soc"),
+}
+_DYNAMIC_MAX = {
+    "ac_charge_power_limit": lambda values: _positive_value(
+        values, "hardware_max_ac_charge_power"
+    ),
+    "ac_discharge_power_limit": lambda values: _positive_value(
+        values, "grid_code_export_limit"
+    ),
+    "allow_reverse_power": lambda values: _positive_value(
+        values, "grid_code_export_limit"
+    ),
+    "battery_target_power": _max_ac_power,
+}
+
+
+def numeric_bounds(
+    register: PanelRegister,
+    values: dict[str, dict[str, Any]] | None = None,
+) -> tuple[float, float, float] | None:
     """Return (min, max, step) in physical units for numeric registers.
 
     Percent registers get an explicit 0–100 range so the panel can render
-    them as a slider instead of a free-form number field.
+    them as a slider instead of a free-form number field.  When ``values``
+    holds the decoded live map, limits that depend on another register (for
+    example ``backup_soc`` >= ``safety_soc`` or the AC power limit capped by
+    the hardware maximum) are narrowed to the current device state.
     """
     if register.dtype == "string" or register.values or register.is_time:
         return None
@@ -280,16 +337,30 @@ def numeric_bounds(register: PanelRegister) -> tuple[float, float, float] | None
     if register.min is not None or register.max is not None:
         # Explicit device-documented limits (e.g. slot count 1–8) win over
         # the dtype range, which is meaningless for such small integers.
-        return (
-            float(register.min) if register.min is not None else fallback[0],
-            float(register.max) if register.max is not None else fallback[1],
-            register.scale or 1.0,
-        )
-    if register.unit == "%":
-        return (0.0, 100.0, 1.0)
-    if not register.scale:
+        low = float(register.min) if register.min is not None else fallback[0]
+        high = float(register.max) if register.max is not None else fallback[1]
+        step = register.scale or 1.0
+    elif register.unit == "%":
+        low, high, step = 0.0, 100.0, 1.0
+    elif not register.scale:
         return None
-    return (fallback[0], fallback[1], register.scale)
+    else:
+        low, high, step = fallback[0], fallback[1], register.scale
+
+    if values:
+        dynamic_min = _DYNAMIC_MIN.get(register.code)
+        if dynamic_min is not None:
+            limit = dynamic_min(values)
+            if limit is not None:
+                low = max(low, limit)
+        dynamic_max = _DYNAMIC_MAX.get(register.code)
+        if dynamic_max is not None:
+            limit = dynamic_max(values)
+            if limit is not None:
+                high = min(high, limit)
+        if high < low:
+            high = low
+    return (low, high, step)
 
 
 def encode_value(register: PanelRegister, value: Any) -> list[int]:

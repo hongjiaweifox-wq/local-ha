@@ -61,6 +61,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": false,
+      "device_class": "",
+      "state_class": "",
       "note": "位字段，位定义待确认"
     },
     {
@@ -73,7 +75,9 @@
       "dtype": "uint32",
       "length": 2,
       "writable": false,
-      "end_address": 10002
+      "end_address": 10002,
+      "device_class": "",
+      "state_class": ""
     },
     {
       "code": "system_soc",
@@ -85,7 +89,9 @@
       "dtype": "uint16",
       "length": 1,
       "writable": false,
-      "unit": "%"
+      "unit": "%",
+      "device_class": "battery",
+      "state_class": "measurement"
     },
     {
       "code": "meter_connection_state",
@@ -102,6 +108,8 @@
         "1": "已配对未连接",
         "2": "未配对未连接"
       },
+      "device_class": "enum",
+      "state_class": "",
       "note": "0=已配对已连接 / 1=已配对未连接 / 2=未配对未连接"
     },
     {
@@ -116,6 +124,8 @@
       "writable": false,
       "end_address": 10006,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "正=从电网取电，负=向电网馈电"
     },
     {
@@ -130,6 +140,8 @@
       "writable": false,
       "end_address": 10008,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "正=向电网馈电 / 电池放电，负=从电网取电 / 电池充电"
     },
     {
@@ -143,7 +155,9 @@
       "length": 2,
       "writable": false,
       "end_address": 10010,
-      "unit": "W"
+      "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement"
     },
     {
       "code": "battery_work_state",
@@ -160,6 +174,8 @@
         "1": "chg",
         "2": "dchg"
       },
+      "device_class": "enum",
+      "state_class": "",
       "note": "0=idle／1=chg／2=dchg；反映电池当前实际状态"
     },
     {
@@ -174,6 +190,8 @@
       "writable": false,
       "end_address": 10013,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "正=充电，负=放电"
     },
     {
@@ -190,6 +208,8 @@
         "0": "off",
         "1": "on"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "0=off／1=on",
       "boolean": true
     },
@@ -205,6 +225,8 @@
       "writable": false,
       "end_address": 10016,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "正=从电池放电，负=向电池充电"
     },
     {
@@ -219,6 +241,8 @@
       "writable": false,
       "scale": 0.1,
       "unit": "V",
+      "device_class": "voltage",
+      "state_class": "measurement",
       "note": "单相电压（三相机型为 A 相）"
     },
     {
@@ -233,6 +257,8 @@
       "writable": false,
       "scale": 0.1,
       "unit": "A",
+      "device_class": "current",
+      "state_class": "measurement",
       "note": "正=馈电"
     },
     {
@@ -246,7 +272,9 @@
       "length": 1,
       "writable": false,
       "scale": 0.01,
-      "unit": "Hz"
+      "unit": "Hz",
+      "device_class": "frequency",
+      "state_class": "measurement"
     },
     {
       "code": "phase_a_power",
@@ -259,7 +287,9 @@
       "length": 2,
       "writable": false,
       "end_address": 10021,
-      "unit": "W"
+      "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement"
     },
     {
       "code": "phase_b_power",
@@ -272,7 +302,9 @@
       "length": 2,
       "writable": false,
       "end_address": 10023,
-      "unit": "W"
+      "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement"
     },
     {
       "code": "phase_c_power",
@@ -285,7 +317,9 @@
       "length": 2,
       "writable": false,
       "end_address": 10025,
-      "unit": "W"
+      "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement"
     },
     {
       "code": "pv_string_count",
@@ -297,6 +331,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": false,
+      "device_class": "",
+      "state_class": "",
       "note": "读出 N 路即支持 N 路，不支持的路数返回 0"
     },
     {
@@ -310,7 +346,9 @@
       "length": 1,
       "writable": false,
       "scale": 0.1,
-      "unit": "V"
+      "unit": "V",
+      "device_class": "voltage",
+      "state_class": "measurement"
     },
     {
       "code": "pv1_current",
@@ -323,7 +361,9 @@
       "length": 1,
       "writable": false,
       "scale": 0.1,
-      "unit": "A"
+      "unit": "A",
+      "device_class": "current",
+      "state_class": "measurement"
     },
     {
       "code": "pv1_energy",
@@ -338,6 +378,8 @@
       "end_address": 10030,
       "scale": 0.01,
       "unit": "kWh",
+      "device_class": "energy",
+      "state_class": "total_increasing",
       "note": "高位在前"
     },
     {
@@ -351,7 +393,9 @@
       "length": 1,
       "writable": false,
       "scale": 0.1,
-      "unit": "V"
+      "unit": "V",
+      "device_class": "voltage",
+      "state_class": "measurement"
     },
     {
       "code": "pv2_current",
@@ -364,7 +408,9 @@
       "length": 1,
       "writable": false,
       "scale": 0.1,
-      "unit": "A"
+      "unit": "A",
+      "device_class": "current",
+      "state_class": "measurement"
     },
     {
       "code": "pv2_energy",
@@ -379,6 +425,8 @@
       "end_address": 10034,
       "scale": 0.01,
       "unit": "kWh",
+      "device_class": "energy",
+      "state_class": "total_increasing",
       "note": "高位在前"
     },
     {
@@ -392,7 +440,9 @@
       "length": 1,
       "writable": false,
       "scale": 0.1,
-      "unit": "V"
+      "unit": "V",
+      "device_class": "voltage",
+      "state_class": "measurement"
     },
     {
       "code": "pv3_current",
@@ -405,7 +455,9 @@
       "length": 1,
       "writable": false,
       "scale": 0.1,
-      "unit": "A"
+      "unit": "A",
+      "device_class": "current",
+      "state_class": "measurement"
     },
     {
       "code": "pv3_energy",
@@ -420,6 +472,8 @@
       "end_address": 10038,
       "scale": 0.01,
       "unit": "kWh",
+      "device_class": "energy",
+      "state_class": "total_increasing",
       "note": "高位在前"
     },
     {
@@ -433,7 +487,9 @@
       "length": 1,
       "writable": false,
       "scale": 0.1,
-      "unit": "V"
+      "unit": "V",
+      "device_class": "voltage",
+      "state_class": "measurement"
     },
     {
       "code": "pv4_current",
@@ -446,7 +502,9 @@
       "length": 1,
       "writable": false,
       "scale": 0.1,
-      "unit": "A"
+      "unit": "A",
+      "device_class": "current",
+      "state_class": "measurement"
     },
     {
       "code": "pv4_energy",
@@ -461,6 +519,8 @@
       "end_address": 10042,
       "scale": 0.01,
       "unit": "kWh",
+      "device_class": "energy",
+      "state_class": "total_increasing",
       "note": "高位在前"
     },
     {
@@ -475,6 +535,8 @@
       "writable": false,
       "scale": 0.01,
       "unit": "V",
+      "device_class": "voltage",
+      "state_class": "measurement",
       "note": "直流母线电压"
     },
     {
@@ -489,6 +551,8 @@
       "writable": false,
       "scale": 0.1,
       "unit": "A",
+      "device_class": "current",
+      "state_class": "measurement",
       "note": "正=充电，负=放电"
     },
     {
@@ -502,7 +566,9 @@
       "length": 1,
       "writable": false,
       "scale": 0.1,
-      "unit": "℃"
+      "unit": "℃",
+      "device_class": "temperature",
+      "state_class": "measurement"
     },
     {
       "code": "cell_temp_min",
@@ -515,7 +581,9 @@
       "length": 1,
       "writable": false,
       "scale": 0.1,
-      "unit": "℃"
+      "unit": "℃",
+      "device_class": "temperature",
+      "state_class": "measurement"
     },
     {
       "code": "battery_max_charge_power",
@@ -529,6 +597,8 @@
       "writable": false,
       "end_address": 10048,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "因温度 / SoC而导致当前电池充电功率小于设定值"
     },
     {
@@ -543,6 +613,8 @@
       "writable": false,
       "end_address": 10050,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "因温度 / SoC而导致当前电池放电功率小于设定值"
     },
     {
@@ -556,7 +628,9 @@
       "length": 1,
       "writable": false,
       "scale": 0.1,
-      "unit": "V"
+      "unit": "V",
+      "device_class": "voltage",
+      "state_class": "measurement"
     },
     {
       "code": "bypass_current",
@@ -569,7 +643,9 @@
       "length": 1,
       "writable": false,
       "scale": 0.1,
-      "unit": "A"
+      "unit": "A",
+      "device_class": "current",
+      "state_class": "measurement"
     },
     {
       "code": "bypass_frequency",
@@ -582,7 +658,9 @@
       "length": 1,
       "writable": false,
       "scale": 0.01,
-      "unit": "Hz"
+      "unit": "Hz",
+      "device_class": "frequency",
+      "state_class": "measurement"
     },
     {
       "code": "design_capacity",
@@ -596,7 +674,9 @@
       "writable": false,
       "end_address": 10055,
       "scale": 0.01,
-      "unit": "kWh"
+      "unit": "kWh",
+      "device_class": "energy_storage",
+      "state_class": "measurement"
     },
     {
       "code": "remaining_capacity",
@@ -610,7 +690,9 @@
       "writable": false,
       "end_address": 10057,
       "scale": 0.01,
-      "unit": "kWh"
+      "unit": "kWh",
+      "device_class": "energy_storage",
+      "state_class": "measurement"
     },
     {
       "code": "system_backup_soc",
@@ -623,6 +705,8 @@
       "length": 1,
       "writable": false,
       "unit": "%",
+      "device_class": "battery",
+      "state_class": "measurement",
       "note": "等于“安全 SoC”写入值"
     },
     {
@@ -636,6 +720,8 @@
       "length": 1,
       "writable": false,
       "unit": "%",
+      "device_class": "",
+      "state_class": "measurement",
       "note": "0–100%"
     },
     {
@@ -650,6 +736,8 @@
       "writable": false,
       "end_address": 10061,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "设备硬件能力上限"
     },
     {
@@ -664,6 +752,8 @@
       "writable": false,
       "end_address": 10063,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "设备硬件能力上限"
     },
     {
@@ -678,6 +768,8 @@
       "writable": false,
       "end_address": 10065,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "未解锁时等于法规并网上限，App 解锁后等于硬件最大 AC 放电功率；未解锁时对应 AC 放电功率上限 10102–10103 的默认法规值；App 解锁后对应硬件最大 AC 放电功率 10054–10055；仅可在 App 解锁"
     },
     {
@@ -692,6 +784,8 @@
       "writable": false,
       "end_address": 10067,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "等于 AC 充电功率的写入值"
     },
     {
@@ -706,6 +800,8 @@
       "writable": false,
       "end_address": 10069,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "等于 AC 放电功率的写入值"
     },
     {
@@ -719,6 +815,8 @@
       "length": 1,
       "writable": false,
       "unit": "dBm",
+      "device_class": "signal_strength",
+      "state_class": "measurement",
       "note": "负值，例如 −60 dBm"
     },
     {
@@ -732,6 +830,8 @@
       "length": 12,
       "writable": false,
       "end_address": 10082,
+      "device_class": "",
+      "state_class": "",
       "note": "24 字节 ASCII，占用 12 个寄存器"
     },
     {
@@ -745,6 +845,8 @@
       "length": 2,
       "writable": false,
       "end_address": 10084,
+      "device_class": "",
+      "state_class": "",
       "note": "4 字节 ASCII，主控版本，占用 2 个寄存器"
     },
     {
@@ -760,6 +862,8 @@
       "end_address": 10086,
       "scale": 0.01,
       "unit": "kWh",
+      "device_class": "energy",
+      "state_class": "total_increasing",
       "note": "高位在前"
     },
     {
@@ -775,6 +879,8 @@
       "end_address": 10088,
       "scale": 0.01,
       "unit": "kWh",
+      "device_class": "energy",
+      "state_class": "total_increasing",
       "note": "高位在前"
     },
     {
@@ -790,6 +896,8 @@
       "end_address": 10090,
       "scale": 0.01,
       "unit": "kWh",
+      "device_class": "energy",
+      "state_class": "total_increasing",
       "note": "高位在前"
     },
     {
@@ -805,6 +913,8 @@
       "end_address": 10092,
       "scale": 0.01,
       "unit": "kWh",
+      "device_class": "energy",
+      "state_class": "total_increasing",
       "note": "高位在前"
     },
     {
@@ -820,6 +930,8 @@
       "end_address": 10094,
       "scale": 0.01,
       "unit": "kWh",
+      "device_class": "energy",
+      "state_class": "total_increasing",
       "note": "高位在前"
     },
     {
@@ -835,6 +947,8 @@
       "end_address": 10096,
       "scale": 0.01,
       "unit": "kWh",
+      "device_class": "energy",
+      "state_class": "total_increasing",
       "note": "高字在前"
     },
     {
@@ -850,6 +964,8 @@
       "end_address": 10098,
       "scale": 0.01,
       "unit": "kWh",
+      "device_class": "energy",
+      "state_class": "total_increasing",
       "note": "高字在前"
     },
     {
@@ -865,6 +981,8 @@
       "end_address": 10100,
       "scale": 0.01,
       "unit": "kWh",
+      "device_class": "energy",
+      "state_class": "total_increasing",
       "note": "高位在前"
     },
     {
@@ -880,6 +998,8 @@
       "end_address": 10102,
       "scale": 0.01,
       "unit": "kWh",
+      "device_class": "energy",
+      "state_class": "total_increasing",
       "note": "高位在前"
     },
     {
@@ -894,6 +1014,9 @@
       "writable": true,
       "end_address": 10104,
       "unit": "W",
+      "min": 50,
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "默认 800 W，可写范围 [50W, 设备硬件能力上限];掉电保存,不在范围返回错误"
     },
     {
@@ -908,6 +1031,9 @@
       "writable": true,
       "end_address": 10106,
       "unit": "W",
+      "min": 0,
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "未解锁时可写上限为当地法规并网输出值；App 解锁后上限为硬件能力上限，掉电保存 不在范围返回错误"
     },
     {
@@ -921,6 +1047,10 @@
       "length": 1,
       "writable": true,
       "unit": "%",
+      "min": 10,
+      "max": 100,
+      "device_class": "battery",
+      "state_class": "measurement",
       "note": "10–100%，默认 20%；超范围异常 0x03，掉电保存"
     },
     {
@@ -939,6 +1069,8 @@
         "2": "dchg"
       },
       "write_fc10_only": true,
+      "device_class": "",
+      "state_class": "",
       "note": "源文 0=idle／1=chg／2=dchg，掉电不保存，不支持单寄存器写"
     },
     {
@@ -953,6 +1085,9 @@
       "writable": true,
       "unit": "W",
       "write_fc10_only": true,
+      "min": 0,
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "可写上限受到 AC 充放电功率限制，不支持单寄存器写，掉电不保存"
     },
     {
@@ -967,6 +1102,9 @@
       "writable": true,
       "unit": "%",
       "write_fc10_only": true,
+      "max": 100,
+      "device_class": "battery",
+      "state_class": "measurement",
       "note": "可写范围：[安全 SoC, 100%]，不支持单寄存器写，掉电不保存"
     },
     {
@@ -981,6 +1119,8 @@
       "writable": true,
       "unit": "min",
       "write_fc10_only": true,
+      "device_class": "",
+      "state_class": "",
       "note": "控制时长和截止 SoC 任意条件到达本次指令结束，不支持单寄存器写，掉电不保存"
     },
     {
@@ -999,6 +1139,8 @@
         "3": "馈网优先",
         "4": "手动时段"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "1=自发自用／2=备电优先／3=馈网优先／4=手动时段，上电后先读后写。当有电表是按照电表功率执行，当无电表/电表连接异常时按照基础负载值输出，掉电保存"
     },
     {
@@ -1013,6 +1155,10 @@
       "writable": true,
       "end_address": 10114,
       "unit": "W",
+      "min": 100,
+      "max": 3000,
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "默认200W，范围[100，3000W]，无电表/电表连接异常时，未设置的时段按照该寄存器值运行，掉电保存"
     },
     {
@@ -1026,6 +1172,9 @@
       "length": 1,
       "writable": true,
       "unit": "%",
+      "max": 100,
+      "device_class": "battery",
+      "state_class": "measurement",
       "note": "[安全 SoC，100%]、默认 80%、掉电保存"
     },
     {
@@ -1040,6 +1189,9 @@
       "writable": true,
       "end_address": 10117,
       "unit": "W",
+      "min": 0,
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "0=禁止逆流；>0=允许的最大逆流功率；电表未连接时可写入但不生效，掉电保存"
     },
     {
@@ -1056,6 +1208,8 @@
         "0": "禁止电池馈网",
         "1": "允许电池馈网"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "0=禁止电池馈网 / 1=允许电池馈网；电表未连接时可写入但不生效，掉电保存",
       "boolean": true
     },
@@ -1073,6 +1227,8 @@
         "0": "disable",
         "1": "enable"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "0=disable／1=enable、默认关、掉电保存",
       "boolean": true
     },
@@ -1090,6 +1246,8 @@
         "0": "disable",
         "1": "enable"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "0=disable／1=enable、默认关、掉电保存",
       "boolean": true
     },
@@ -1107,6 +1265,8 @@
         "0": "disable",
         "1": "enable"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "预留，0=disable／1=enable、默认关、掉电保存",
       "boolean": true
     },
@@ -1122,6 +1282,10 @@
       "writable": true,
       "end_address": 10123,
       "unit": "s",
+      "min": 0,
+      "max": 3600,
+      "device_class": "",
+      "state_class": "",
       "note": "0=禁用、范围 0–3600 s\n只针对实时控制指令， =0，按照实时控制指令继续运行，否则超时后回退到模式，掉电保存"
     },
     {
@@ -1138,6 +1302,8 @@
         "0": "disable",
         "1": "enable"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "0=disable／1=enable、默认关、掉电保存",
       "boolean": true
     },
@@ -1152,6 +1318,8 @@
       "length": 1,
       "writable": true,
       "unit": "min",
+      "device_class": "",
+      "state_class": "",
       "note": "时间编码待确认（高字节时、低字节分）；掉电保存",
       "format": "hhmm"
     },
@@ -1166,6 +1334,8 @@
       "length": 1,
       "writable": true,
       "unit": "min",
+      "device_class": "",
+      "state_class": "",
       "note": "时间编码待确认（高字节时、低字节分）；掉电保存",
       "format": "hhmm"
     },
@@ -1181,6 +1351,8 @@
       "writable": true,
       "end_address": 10128,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -1194,6 +1366,8 @@
       "length": 1,
       "writable": true,
       "unit": "%",
+      "device_class": "battery",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -1207,6 +1381,8 @@
       "length": 1,
       "writable": true,
       "unit": "%",
+      "device_class": "battery",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -1223,6 +1399,8 @@
         "0": "off",
         "1": "on"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "0=off／1=on、掉电不保存",
       "boolean": true
     },
@@ -1240,6 +1418,8 @@
         "0": "off",
         "1": "on"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "0=off／1=on、掉电不保存",
       "boolean": true
     },
@@ -1253,6 +1433,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "与 10113–10114 基础负载同名，类型/单位待确认"
     },
     {
@@ -1267,6 +1449,8 @@
       "writable": true,
       "min": 0,
       "max": 8,
+      "device_class": "",
+      "state_class": "",
       "note": "最大 8 段，掉电保存；最大8 掉电保存"
     },
     {
@@ -1279,6 +1463,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1292,6 +1478,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1306,6 +1494,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -1318,6 +1508,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1331,6 +1523,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1345,6 +1539,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -1357,6 +1553,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1370,6 +1568,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1384,6 +1584,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -1396,6 +1598,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1409,6 +1613,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1423,6 +1629,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -1435,6 +1643,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1448,6 +1658,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1462,6 +1674,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -1474,6 +1688,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1487,6 +1703,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1501,6 +1719,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -1513,6 +1733,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1526,6 +1748,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1540,6 +1764,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -1552,6 +1778,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1565,6 +1793,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1579,6 +1809,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -1593,6 +1825,8 @@
       "writable": true,
       "min": 0,
       "max": 8,
+      "device_class": "",
+      "state_class": "",
       "note": "最大 8 段，掉电保存；最大8 掉电保存"
     },
     {
@@ -1605,6 +1839,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1618,6 +1854,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1635,6 +1873,8 @@
         "0": "充电",
         "1": "放电"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "0充电 1放电 掉电保存"
     },
     {
@@ -1648,6 +1888,8 @@
       "length": 1,
       "writable": true,
       "unit": "%",
+      "device_class": "battery",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -1661,6 +1903,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -1677,6 +1921,8 @@
         "0": "关闭",
         "1": "开启"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "1：开启 0：关闭 掉电保存",
       "boolean": true
     },
@@ -1694,6 +1940,8 @@
         "0": "关闭",
         "1": "使能"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "1：使能 0：关闭 掉电保存",
       "boolean": true
     },
@@ -1707,6 +1955,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1720,6 +1970,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1737,6 +1989,8 @@
         "0": "充电",
         "1": "放电"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "0充电 1放电 掉电保存"
     },
     {
@@ -1750,6 +2004,8 @@
       "length": 1,
       "writable": true,
       "unit": "%",
+      "device_class": "battery",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -1763,6 +2019,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -1779,6 +2037,8 @@
         "0": "关闭",
         "1": "开启"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "1：开启 0：关闭 掉电保存",
       "boolean": true
     },
@@ -1796,6 +2056,8 @@
         "0": "关闭",
         "1": "使能"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "1：使能 0：关闭 掉电保存",
       "boolean": true
     },
@@ -1809,6 +2071,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1822,6 +2086,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1839,6 +2105,8 @@
         "0": "充电",
         "1": "放电"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "0充电 1放电 掉电保存"
     },
     {
@@ -1852,6 +2120,8 @@
       "length": 1,
       "writable": true,
       "unit": "%",
+      "device_class": "battery",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -1865,6 +2135,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -1881,6 +2153,8 @@
         "0": "关闭",
         "1": "开启"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "1：开启 0：关闭 掉电保存",
       "boolean": true
     },
@@ -1898,6 +2172,8 @@
         "0": "关闭",
         "1": "使能"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "1：使能 0：关闭 掉电保存",
       "boolean": true
     },
@@ -1911,6 +2187,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1924,6 +2202,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -1941,6 +2221,8 @@
         "0": "充电",
         "1": "放电"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "0充电 1放电 掉电保存"
     },
     {
@@ -1954,6 +2236,8 @@
       "length": 1,
       "writable": true,
       "unit": "%",
+      "device_class": "battery",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -1967,6 +2251,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -1983,6 +2269,8 @@
         "0": "关闭",
         "1": "开启"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "1：开启 0：关闭 掉电保存",
       "boolean": true
     },
@@ -2000,6 +2288,8 @@
         "0": "关闭",
         "1": "使能"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "1：使能 0：关闭 掉电保存",
       "boolean": true
     },
@@ -2013,6 +2303,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -2026,6 +2318,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -2043,6 +2337,8 @@
         "0": "充电",
         "1": "放电"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "0充电 1放电 掉电保存"
     },
     {
@@ -2056,6 +2352,8 @@
       "length": 1,
       "writable": true,
       "unit": "%",
+      "device_class": "battery",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -2069,6 +2367,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -2085,6 +2385,8 @@
         "0": "关闭",
         "1": "开启"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "1：开启 0：关闭 掉电保存",
       "boolean": true
     },
@@ -2102,6 +2404,8 @@
         "0": "关闭",
         "1": "使能"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "1：使能 0：关闭 掉电保存",
       "boolean": true
     },
@@ -2115,6 +2419,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -2128,6 +2434,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -2145,6 +2453,8 @@
         "0": "充电",
         "1": "放电"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "0充电 1放电 掉电保存"
     },
     {
@@ -2158,6 +2468,8 @@
       "length": 1,
       "writable": true,
       "unit": "%",
+      "device_class": "battery",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -2171,6 +2483,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -2187,6 +2501,8 @@
         "0": "关闭",
         "1": "开启"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "1：开启 0：关闭 掉电保存",
       "boolean": true
     },
@@ -2204,6 +2520,8 @@
         "0": "关闭",
         "1": "使能"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "1：使能 0：关闭 掉电保存",
       "boolean": true
     },
@@ -2217,6 +2535,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -2230,6 +2550,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -2247,6 +2569,8 @@
         "0": "充电",
         "1": "放电"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "0充电 1放电 掉电保存"
     },
     {
@@ -2260,6 +2584,8 @@
       "length": 1,
       "writable": true,
       "unit": "%",
+      "device_class": "battery",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -2273,6 +2599,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -2289,6 +2617,8 @@
         "0": "关闭",
         "1": "开启"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "1：开启 0：关闭 掉电保存",
       "boolean": true
     },
@@ -2306,6 +2636,8 @@
         "0": "关闭",
         "1": "使能"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "1：使能 0：关闭 掉电保存",
       "boolean": true
     },
@@ -2319,6 +2651,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -2332,6 +2666,8 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "device_class": "",
+      "state_class": "",
       "note": "高字节时 低字节分 掉电保存",
       "format": "hhmm"
     },
@@ -2349,6 +2685,8 @@
         "0": "充电",
         "1": "放电"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "0充电 1放电 掉电保存"
     },
     {
@@ -2362,6 +2700,8 @@
       "length": 1,
       "writable": true,
       "unit": "%",
+      "device_class": "battery",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -2375,6 +2715,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "device_class": "power",
+      "state_class": "measurement",
       "note": "掉电保存"
     },
     {
@@ -2391,6 +2733,8 @@
         "0": "关闭",
         "1": "开启"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "1：开启 0：关闭 掉电保存",
       "boolean": true
     },
@@ -2408,6 +2752,8 @@
         "0": "关闭",
         "1": "使能"
       },
+      "device_class": "",
+      "state_class": "",
       "note": "1：使能 0：关闭 掉电保存",
       "boolean": true
     }

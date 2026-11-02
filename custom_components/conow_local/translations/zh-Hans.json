@@ -5,6 +5,9 @@
     },
     "force_mode_cutoff_required": {
       "message": "请先将「充放电截止 SOC」设置为 1–100，再选择强制充电或强制放电。"
+    },
+    "panel_write_required": {
+      "message": "为保证原子性，设备页上的单个控件不会直接下发；请在 Conow Local 面板中整组下发。 {url}"
     }
   },
   "config": {

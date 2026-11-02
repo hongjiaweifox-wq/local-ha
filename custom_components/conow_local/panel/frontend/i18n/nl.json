@@ -2,7 +2,6 @@
   "language": "nl",
   "ui": {
     "title": "Conow Local groepenpaneel",
-    "banner": "Deze pagina toont de Modbus-adressen uit het technische document van oktober (<code>registers.json</code> v{version}). Beschrijfbare registers worden met Home Assistant-bediening bewerkt; klik onderaan een groep op <b>Groep verzenden</b> om de groep in zo weinig mogelijk schrijf frames te versturen. De veldstatus is nog steeds “te bevestigen” — controleer de adressen voordat u naar een echt apparaat schrijft.",
     "loadingRegisters": "Apparaatregisters lezen…",
     "loadingMap": "Gegroepeerde map laden…",
     "errorDeviceNotFound": "Apparaat niet gevonden of integratie niet geladen.",

@@ -6,6 +6,54 @@
  * with Home Assistant form controls and sent per group with one batch write.
  */
 
+// Home Assistant resolves entity icons from
+// homeassistant/components/<domain>/icons.json.  Keep the same tables here so
+// a panel row shows the icon of the entity it links to (registry icon, then
+// device_class, then the domain default).
+const SENSOR_DEVICE_CLASS_ICONS = {
+  battery: "mdi:battery-unknown",
+  current: "mdi:current-ac",
+  energy: "mdi:lightning-bolt",
+  energy_storage: "mdi:car-battery",
+  enum: "mdi:eye",
+  frequency: "mdi:sine-wave",
+  power: "mdi:flash",
+  signal_strength: "mdi:wifi",
+  temperature: "mdi:thermometer",
+  voltage: "mdi:sine-wave",
+};
+// HA picks the highest threshold that is <= the battery level.
+const SENSOR_BATTERY_LEVEL_ICONS = {
+  0: "mdi:battery-alert",
+  10: "mdi:battery-10",
+  20: "mdi:battery-20",
+  30: "mdi:battery-30",
+  40: "mdi:battery-40",
+  50: "mdi:battery-50",
+  60: "mdi:battery-60",
+  70: "mdi:battery-70",
+  80: "mdi:battery-80",
+  90: "mdi:battery-90",
+  100: "mdi:battery",
+};
+const BINARY_SENSOR_DEVICE_CLASS_ICONS = {
+  battery: { off: "mdi:battery", on: "mdi:battery-outline" },
+  battery_charging: { off: "mdi:battery", on: "mdi:battery-charging" },
+  connectivity: {
+    off: "mdi:close-network-outline",
+    on: "mdi:check-network-outline",
+  },
+  power: { off: "mdi:power-plug-off", on: "mdi:power-plug" },
+  problem: { off: "mdi:check-circle", on: "mdi:alert-circle" },
+  running: { off: "mdi:stop", on: "mdi:play" },
+};
+const DOMAIN_ICONS = {
+  binary_sensor: { off: "mdi:radiobox-blank", on: "mdi:checkbox-marked-circle" },
+  sensor: "mdi:eye",
+  switch: { off: "mdi:toggle-switch-variant-off", on: "mdi:toggle-switch-variant" },
+  time: "mdi:clock",
+};
+
 const PANEL_STYLE = `
   :host {
     display: block;
@@ -17,15 +65,6 @@ const PANEL_STYLE = `
     font-family: var(--ha-font-family-body, Roboto, sans-serif);
   }
   h1 { margin: 0 0 4px; font-size: 1.5rem; font-weight: 500; }
-  .banner {
-    border: 1px solid var(--warning-color, #ffa600);
-    background: color-mix(in srgb, var(--warning-color, #ffa600) 12%, transparent);
-    border-radius: 10px;
-    padding: 10px 14px;
-    margin-bottom: 16px;
-    font-size: 0.85rem;
-    line-height: 1.45;
-  }
   .toolbar {
     display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
     margin-bottom: 16px;
@@ -246,6 +285,14 @@ const PANEL_STYLE = `
   .reg-control ha-input,
   .reg-control ha-select { flex: 0 1 160px; min-width: 96px; }
   .reg-control ha-slider { flex: 1 1 auto; min-width: 40px; }
+  .reg-control .reg-slider-value {
+    flex: 0 0 auto;
+    min-width: 38px;
+    text-align: end;
+    color: var(--secondary-text-color);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
   .reg-control ha-time-input { flex: 0 1 auto; min-width: 132px; }
   .reg-control ha-switch { flex: 0 0 auto; }
   .reg-control.has-slider { flex: 0 1 240px; }
@@ -546,6 +593,72 @@ class ConowLocalPanel extends HTMLElement {
       .replace(/"/g, "&quot;");
   }
 
+  _entityIcon(register) {
+    const entityId = register.entity_id;
+    if (!entityId) {
+      return "";
+    }
+    const state = this._hass?.states?.[entityId];
+    // Entity-registry icon overrides win in Home Assistant too.
+    const custom =
+      state?.attributes?.icon || this._hass?.entities?.[entityId]?.icon;
+    if (custom) {
+      return custom;
+    }
+    const domain = entityId.slice(0, entityId.indexOf("."));
+    const deviceClass = state?.attributes?.device_class;
+    const key = state?.state === "on" ? "on" : "off";
+    if (domain === "sensor") {
+      if (deviceClass === "battery") {
+        const level = Number(state?.state);
+        if (Number.isFinite(level)) {
+          let icon = "";
+          for (const [threshold, candidate] of Object.entries(
+            SENSOR_BATTERY_LEVEL_ICONS
+          )) {
+            if (level >= Number(threshold)) {
+              icon = candidate;
+            }
+          }
+          if (icon) {
+            return icon;
+          }
+        }
+      }
+      return (
+        (deviceClass && SENSOR_DEVICE_CLASS_ICONS[deviceClass]) ||
+        DOMAIN_ICONS.sensor
+      );
+    }
+    if (domain === "binary_sensor") {
+      return (
+        (deviceClass && BINARY_SENSOR_DEVICE_CLASS_ICONS[deviceClass]) ||
+        DOMAIN_ICONS.binary_sensor
+      )[key];
+    }
+    if (domain === "switch") {
+      return DOMAIN_ICONS.switch[key];
+    }
+    return DOMAIN_ICONS[domain] || "";
+  }
+
+  _controlIcon(register) {
+    switch (register.control) {
+      case "time":
+        return "mdi:clock-outline";
+      case "switch":
+        return register.raw
+          ? "mdi:toggle-switch-variant"
+          : "mdi:toggle-switch-variant-off";
+      case "enum":
+        return "mdi:format-list-bulleted";
+      case "text":
+        return "mdi:form-textbox";
+      default:
+        return "mdi:tune-variant";
+    }
+  }
+
   _renderRegister(register, group) {
     const invalidTime = this._timeInvalid(register);
     const hints = [];
@@ -572,24 +685,13 @@ class ConowLocalPanel extends HTMLElement {
       hints.push(this._t("entityHint", { entity: register.entity_id }));
     }
     const title = ` title="${this._escape(hints.join("\n"))}"`;
-    // Prefer the mapped entity's own icon (battery, grid, …) so read-only
-    // rows look like the entity list; fall back to a control-type icon.
-    const entityIcon =
-      register.entity_id &&
-      this._hass?.states?.[register.entity_id]?.attributes?.icon;
+    // Prefer the mapped entity's own icon (registry override, device_class
+    // and state), so rows look exactly like the entity list; fall back to a
+    // control-type icon for registers without an entity.
     const icon =
       invalidTime
         ? "mdi:alert-outline"
-        : entityIcon ||
-          (register.control === "time"
-            ? "mdi:clock-outline"
-            : register.control === "switch"
-              ? "mdi:toggle-switch-outline"
-              : register.control === "enum"
-                ? "mdi:format-list-bulleted"
-                : register.control === "text"
-                  ? "mdi:form-textbox"
-                  : "mdi:tune-variant");
+        : this._entityIcon(register) || this._controlIcon(register);
     const slider = this._sliderEnabled(register) ? " has-slider" : "";
     const value = this._controlValue(group.id, register);
     const editable = Boolean(register.writable && this._state?.map_readable);
@@ -771,6 +873,13 @@ class ConowLocalPanel extends HTMLElement {
       value = "";
     }
     return value === null || value === undefined ? "" : String(value);
+  }
+
+  _sliderText(register, value) {
+    if (value === "" || value === null || value === undefined) {
+      return "—";
+    }
+    return `${value}${register?.unit || ""}`;
   }
 
   _sliderEnabled(register) {
@@ -1100,13 +1209,16 @@ class ConowLocalPanel extends HTMLElement {
       .filter(Boolean)
       .join(" ");
     const state = editable ? (pending ? "disabled" : "") : "readonly";
-    const slider = this._sliderEnabled(register)
-      ? `<ha-slider labeled ${bounds} ${
-          editable ? (pending ? "disabled" : "") : "disabled"
-        }></ha-slider>`
-      : "";
+    if (this._sliderEnabled(register)) {
+      // Slider rows keep a compact read-only value next to the track: the
+      // native tooltip only appears while dragging, and a second editable
+      // number box for a percentage setting is redundant.
+      return `<ha-slider labeled ${bounds} ${
+        editable ? (pending ? "disabled" : "") : "disabled"
+      }></ha-slider><span class="reg-slider-value"></span>`;
+    }
     const type = register.control === "number" ? 'type="number"' : "";
-    return `${slider}<ha-input ${type} ${bounds} ${state}>${unit}</ha-input>`;
+    return `<ha-input ${type} ${bounds} ${state}>${unit}</ha-input>`;
   }
 
   _ensureTimeInput() {
@@ -1189,6 +1301,13 @@ class ConowLocalPanel extends HTMLElement {
               slider.value = numeric;
             }
           }
+          const badge = control.querySelector(".reg-slider-value");
+          if (badge) {
+            badge.textContent = this._sliderText(
+              this._findRegister(control.dataset.group, control.dataset.code),
+              value
+            );
+          }
           if (time) {
             // Registers store 00:00–23:59; always show HH:MM (no AM/PM select)
             // regardless of the user's 12/24-hour UI preference.
@@ -1248,6 +1367,7 @@ class ConowLocalPanel extends HTMLElement {
         const slider = control.querySelector("ha-slider");
         const time = control.querySelector("ha-time-input");
         const toggle = control.querySelector("ha-switch");
+        const badge = control.querySelector(".reg-slider-value");
         const register = this._findRegister(groupId, code);
         const handle = (raw) => {
           let value = raw === undefined || raw === null ? "" : raw;
@@ -1300,6 +1420,9 @@ class ConowLocalPanel extends HTMLElement {
           ) {
             slider.value = numeric;
           }
+          if (badge) {
+            badge.textContent = this._sliderText(register, value);
+          }
           if (code === this._state?.groups?.[groupId]?.count_register) {
             this._syncSlotVisibility(groupId);
           }
@@ -1309,6 +1432,13 @@ class ConowLocalPanel extends HTMLElement {
           handle(event.detail?.value)
         );
         slider?.addEventListener("change", (event) => handle(event.target.value));
+        // Keep the read-only value in step with the thumb during a drag; the
+        // native tooltip disappears as soon as the pointer is released.
+        slider?.addEventListener("input", (event) => {
+          if (badge) {
+            badge.textContent = this._sliderText(register, event.target.value);
+          }
+        });
         input?.addEventListener("input", (event) => handle(event.target.value));
         input?.addEventListener("change", (event) => handle(event.target.value));
         toggle?.addEventListener("change", (event) =>
@@ -1902,9 +2032,6 @@ class ConowLocalPanel extends HTMLElement {
 
     this._root.innerHTML = `
       <h1>${this._escape(this._t("title"))}</h1>
-      <div class="banner">${this._t("banner", {
-        version: this._escape(map.version ?? 2),
-      })}</div>
       <div class="toolbar" id="toolbar">${this._renderToolbar()}</div>
       <div id="groups-body">${body}</div>
     `;

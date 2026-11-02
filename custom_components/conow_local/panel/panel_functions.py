@@ -142,7 +142,7 @@ def _serialize_group(
                 "values": register.values,
                 "note": register.note,
                 "control": _control_kind(register),
-                "bounds": panel_map.numeric_bounds(register),
+                "bounds": panel_map.numeric_bounds(register, decoded),
                 "raw": value.get("raw"),
                 "value": value.get("value"),
                 "display": value.get("display", ""),
@@ -257,20 +257,6 @@ def _probe_map_version(
     return select_map(version), version
 
 
-def _probe_entry_map(entry) -> tuple[str, tuple[int, ...] | None]:
-    """Probe an entry that has no live coordinator (TCP only)."""
-    if entry.data.get(CONF_MODBUS_MODE) not in MODBUS_TCP_MODES:
-        return MAP_V1, None
-    host = entry.data[CONF_MODBUS_HOST]
-    tcp_port = entry.data.get(CONF_MODBUS_TCP_PORT, DEFAULT_TCP_PORT)
-    slave = entry.data[CONF_MODBUS_SLAVE]
-    try:
-        with ConowModbusClient(host=host, tcp_port=tcp_port, slave=slave) as client:
-            return _probe_map_version(client)
-    except (ConowModbusError, OSError):
-        return MAP_V1, None
-
-
 def _merge_contiguous(
     ops: list[tuple[int, list[int]]],
 ) -> tuple[int, list[int]] | None:
@@ -290,13 +276,17 @@ MAX_WRITE_REGISTERS = 123  # FC 0x10 quantity limit
 
 
 def plan_group_writes(
-    group: panel_map.PanelGroup, values: dict[str, Any]
+    group: panel_map.PanelGroup,
+    values: dict[str, Any],
+    live: dict[str, dict[str, Any]] | None = None,
 ) -> list[tuple[int, list[int]]]:
     """Validate a group submission and return ``(address, words)`` writes.
 
     A group is sent as one atomic FC 0x10 frame whenever its writable
     registers are contiguous; groups with gaps fall back to per-register
-    frames written back to back.
+    frames written back to back.  ``live`` holds the decoded device state so
+    limits that depend on another register (safety SoC, hardware power
+    capability) can be enforced before anything is sent.
     """
     index = panel_map.get_register_index()
     registers = [index[code] for code in group.members if index[code].writable]
@@ -305,10 +295,23 @@ def plan_group_writes(
     missing = [register.code for register in registers if register.code not in values]
     if missing:
         raise ValueError("Missing value for " + ", ".join(missing))
-    ops = [
-        (register.address, panel_map.encode_value(register, values[register.code]))
-        for register in registers
-    ]
+    ops: list[tuple[int, list[int]]] = []
+    for register in registers:
+        value = values[register.code]
+        bounds = panel_map.numeric_bounds(register, live)
+        if bounds is not None and not register.values and not register.is_time:
+            try:
+                physical = float(value)
+            except (TypeError, ValueError):
+                physical = None
+            if physical is not None:
+                low, high, _step = bounds
+                if not low <= physical <= high:
+                    raise ValueError(
+                        f"{register.code}: {physical:g} is outside the allowed "
+                        f"range {low:g}–{high:g}"
+                    )
+        ops.append((register.address, panel_map.encode_value(register, value)))
     if len(ops) > 1:
         merged = _merge_contiguous(ops)
         if merged is not None and len(merged[1]) <= MAX_WRITE_REGISTERS:
@@ -347,13 +350,22 @@ async def async_write_panel_group(
 
     coordinator = getattr(entry, "runtime_data", None)
     loaded = entry.state is ConfigEntryState.LOADED and coordinator is not None
+    live: dict[str, dict[str, Any]] = {}
     if loaded:
         map_version = getattr(coordinator, "map_version", MAP_V1)
         firmware = getattr(coordinator, "firmware_version", None)
+        panel_coordinator = get_panel_coordinator(hass, entry.entry_id)
+        live = dict(getattr(panel_coordinator, "data", None) or {})
     else:
-        map_version, firmware = await hass.async_add_executor_job(
-            _probe_entry_map, entry
-        )
+        try:
+            map_version, firmware, raw_blocks = await hass.async_add_executor_job(
+                _read_blocks_direct, entry
+            )
+        except (ConowModbusError, OSError):
+            map_version, firmware, raw_blocks = MAP_V1, None, {}
+        for block, words in raw_blocks.items():
+            if words is not None:
+                live.update(panel_map.decode_block(block, words))
     if map_version != MAP_V2:
         raise ConowModbusError(
             "Grouped panel writes need the October register map "
@@ -364,7 +376,7 @@ async def async_write_panel_group(
     group = panel_map.get_group(group_id)
     if group is None:
         raise LookupError(f"Unknown group {group_id}")
-    ops = plan_group_writes(group, values)
+    ops = plan_group_writes(group, values, live)
 
     if loaded:
         await coordinator.async_write_panel_ops(ops)

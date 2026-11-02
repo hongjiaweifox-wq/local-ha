@@ -13,6 +13,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .entity_factory import build_device_info
 from .panel import panel_map
 from .panel.panel_coordinator import ConowPanelCoordinator, get_panel_coordinator
+from .panel.panel_guard import async_refuse_device_write
 
 
 class ConowPanelTime(CoordinatorEntity[ConowPanelCoordinator], TimeEntity):
@@ -28,6 +29,7 @@ class ConowPanelTime(CoordinatorEntity[ConowPanelCoordinator], TimeEntity):
     ) -> None:
         """Initialize time entity."""
         super().__init__(coordinator)
+        self._entry = entry
         self._register = register
         self._attr_unique_id = f"{entry.entry_id}_{register.code}"
         self._attr_name = register.name
@@ -47,14 +49,8 @@ class ConowPanelTime(CoordinatorEntity[ConowPanelCoordinator], TimeEntity):
         return dt_time(hour=hour, minute=minute)
 
     async def async_set_value(self, value: dt_time) -> None:
-        """Write the time back to the device (minute precision)."""
-        encoded = panel_map.encode_value(
-            self._register, f"{value.hour:02d}:{value.minute:02d}"
-        )
-        await self.coordinator.main.async_write_panel_ops(
-            [(self._register.address, encoded)]
-        )
-        await self.coordinator.async_request_refresh()
+        """Refuse single-register writes from the device page."""
+        async_refuse_device_write(self.hass, self._entry)
 
 
 async def async_setup_entry(
