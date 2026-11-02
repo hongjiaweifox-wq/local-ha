@@ -12,8 +12,17 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from . import panel_map
+from .panel import panel_map
 from .client import INTER_FRAME_DELAY_S, POST_WRITE_DELAY_S, ConowModbusClient, ConowModbusError
+from .map_router import (
+    FIRMWARE_VERSION_ADDRESS,
+    FIRMWARE_VERSION_REGISTERS,
+    MAP_V1,
+    MAP_V2,
+    format_version,
+    parse_firmware_version,
+    select_map,
+)
 from .register_map import DEFAULT_BAUDRATE
 from .const import (
     CONF_MODBUS_BAUDRATE,
@@ -26,7 +35,7 @@ from .const import (
     DOMAIN,
     LOGGER,
     MODBUS_POLL_INTERVAL,
-    MODBUS_MODE_TCP,
+    MODBUS_TCP_MODES,
 )
 
 _T = TypeVar("_T")
@@ -40,7 +49,7 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.entry = entry
         self.mode = entry.data.get(CONF_MODBUS_MODE, "rtu")
         self.slave = entry.data[CONF_MODBUS_SLAVE]
-        if self.mode == MODBUS_MODE_TCP:
+        if self.mode in MODBUS_TCP_MODES:
             self.host = entry.data[CONF_MODBUS_HOST]
             self.tcp_port = entry.data.get(CONF_MODBUS_TCP_PORT, DEFAULT_TCP_PORT)
             self.port = None
@@ -51,6 +60,9 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self.baudrate = entry.data[CONF_MODBUS_BAUDRATE]
         self._lock = threading.Lock()
         self._client: ConowModbusClient | None = None
+        # v1 is the default; async_probe_map_version() may upgrade this.
+        self.map_version = MAP_V1
+        self.firmware_version: tuple[int, ...] | None = None
         super().__init__(
             hass,
             LOGGER,
@@ -92,8 +104,50 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         with self._lock:
             self._reset_client()
 
+    def _probe_firmware_version(self) -> tuple[int, ...] | None:
+        """Read the 4-byte firmware version used for register-map routing."""
+
+        def _operation(client: ConowModbusClient) -> list[int]:
+            return client.read_holding_registers(
+                FIRMWARE_VERSION_ADDRESS,
+                FIRMWARE_VERSION_REGISTERS,
+                retries=2,
+            )
+
+        try:
+            words = self._run_locked(_operation)
+        except ConowModbusError as err:
+            LOGGER.info(
+                "Map: firmware probe at 0x%04X failed (%s); keeping registers.json",
+                FIRMWARE_VERSION_ADDRESS,
+                err,
+            )
+            return None
+        return parse_firmware_version(words)
+
+    async def async_probe_map_version(self) -> str:
+        """Probe the device and store the selected register map id."""
+        version = await self.hass.async_add_executor_job(self._probe_firmware_version)
+        self.firmware_version = version
+        self.map_version = select_map(version)
+        if self.map_version == MAP_V2:
+            # v2 is panel-first: the panel coordinator owns device polling.
+            # Leaving the v1 interval running would read v1 addresses on v2
+            # firmware, so exactly one map stays active.
+            self.update_interval = None
+        LOGGER.info(
+            "Map: firmware=%s -> %s (%s)",
+            format_version(version) or "unknown",
+            self.map_version,
+            "panel_registers.json" if self.map_version != MAP_V1 else "registers.json",
+        )
+        return self.map_version
+
     def _read_device(self) -> dict[str, Any]:
         """Blocking Modbus read executed in executor."""
+        if self.map_version == MAP_V2:
+            # The panel coordinator reads the v2 blocks; never mix maps here.
+            return {}
         return self._run_locked(lambda client: client.read_all())
 
     async def _async_update_data(self) -> dict[str, Any]:

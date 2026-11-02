@@ -9,12 +9,14 @@
   },
   "config": {
     "error": {
-      "cannot_connect": "无法通过 Modbus 连接，请检查连接方式、是否开启「启用外部控制 / ModBus RTU」及从站地址。"
+      "cannot_connect": "无法通过 Modbus 连接，请检查连接方式、是否开启「启用外部控制 / ModBus RTU」及从站地址。",
+      "invalid_verify_code": "验证码必须是 6 位数字。",
+      "verification_failed": "设备校验未通过，请核对一体机上显示的 6 位验证码后重试。"
     },
     "step": {
       "user": {
         "title": "连接方式",
-        "description": "选择连接设备的方式：RS-485 串口，或通过 485 转以太网适配器的 Modbus TCP。",
+        "description": "选择连接设备的方式：RS-485 串口、通过 485 转以太网适配器的 Modbus TCP，或直连一体机自身的 Modbus TCP。",
         "data": {
           "modbus_mode": "连接方式"
         }
@@ -38,6 +40,17 @@
           "modbus_slave": "从站地址"
         },
         "description": "连接你的 485 转以太网适配器（默认 TCP 端口 **502**，从站 **0xA0**）。适配器会把 Modbus TCP 转换为 RTU，设备端无需任何改动。"
+      },
+      "tcp_direct": {
+        "title": "Modbus TCP（直连一体机）",
+        "data": {
+          "device_name": "设备名称",
+          "modbus_host": "主机 / IP 地址",
+          "modbus_tcp_port": "TCP 端口",
+          "modbus_slave": "从站地址",
+          "tcp_verify_code": "验证码"
+        },
+        "description": "连接一体机自身的网口（默认 TCP 端口 **502**，从站 **0xA0**），不经过 485 转以太网适配器。请输入一体机上显示的 **6 位验证码**，它会写入保持寄存器 **0x045C–0x045D**，只有设备返回校验成功才会完成连接。"
       }
     }
   },

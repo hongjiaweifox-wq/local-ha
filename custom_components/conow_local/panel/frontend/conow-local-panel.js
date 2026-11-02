@@ -139,6 +139,7 @@ const PANEL_STYLE = `
   }
   .group-header .group-toggle {
     --mdc-icon-size: 20px;
+    margin-left: auto;
     color: inherit;
     opacity: 0.7;
     transition: transform 0.2s ease;
@@ -147,16 +148,6 @@ const PANEL_STYLE = `
   .group.collapsed .group-body { display: none; }
   .group-header ha-icon { color: var(--primary-color, #03a9f4); --mdc-icon-size: 22px; }
   .group-title { font-weight: 600; font-size: 1rem; }
-  .group-meta { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
-  .chip {
-    font-size: 0.72rem;
-    padding: 3px 8px;
-    border-radius: 999px;
-    border: 1px solid var(--divider-color, #3a3a3a);
-    opacity: 0.85;
-    white-space: nowrap;
-  }
-  .chip.atomic { border-color: var(--success-color, #4caf50); color: var(--success-color, #4caf50); }
   .rows-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -189,7 +180,6 @@ const PANEL_STYLE = `
     background: var(--secondary-background-color, #181818);
     border-bottom: 1px solid var(--divider-color, #2a2a2a);
   }
-  .subgroup-header .chip { margin-left: auto; font-weight: 400; }
   .subgroup .register-row { padding: 8px 14px; }
   .subgroup .register-row:last-child { border-bottom: none; }
   .reg-name { display: flex; gap: 10px; align-items: center; line-height: 1.35; min-width: 0; flex: 0 1 auto; }
@@ -275,10 +265,12 @@ const PANEL_STYLE = `
   @media (max-width: 720px) {
     .register-row { flex-wrap: wrap; gap: 8px; }
     .reg-name { flex: 1 1 100%; }
-    .group-meta { margin-left: 0; }
     .group-footer { flex-direction: column; align-items: stretch; }
   }
 `;
+
+const I18N_VERSION = "1";
+const FALLBACK_LANGUAGE = "en";
 
 class ConowLocalPanel extends HTMLElement {
   constructor() {
@@ -289,6 +281,9 @@ class ConowLocalPanel extends HTMLElement {
     this._devices = [];
     this._state = null;
     this._mapState = null;
+    this._i18n = null;
+    this._language = null;
+    this._i18nReady = Promise.resolve();
     this._groupFilter = "";
     this._entityFilter = "";
     this._accessFilter = "all";
@@ -311,6 +306,15 @@ class ConowLocalPanel extends HTMLElement {
   set hass(hass) {
     const first = !this._hass;
     this._hass = hass;
+    const language = this._normalizeLanguage(hass?.language);
+    if (language !== this._language) {
+      this._language = language;
+      this._i18nReady = this._loadI18n(language).then(() => {
+        if (!first) {
+          this._render();
+        }
+      });
+    }
     if (first) {
       if (!this._deviceId) {
         this._readDeviceFromUrl();
@@ -320,7 +324,81 @@ class ConowLocalPanel extends HTMLElement {
     }
   }
 
+  // Home Assistant exposes the profile language; `zh-*` all share one file.
+  _normalizeLanguage(language) {
+    const value = String(language || "").toLowerCase();
+    if (value.startsWith("zh")) {
+      return "zh-Hans";
+    }
+    if (value.startsWith("de")) {
+      return "de";
+    }
+    if (value.startsWith("nl")) {
+      return "nl";
+    }
+    return FALLBACK_LANGUAGE;
+  }
+
+  async _loadI18n(language) {
+    const load = async (lang) => {
+      const url = new URL(
+        `i18n/${lang}.json?v=${I18N_VERSION}`,
+        import.meta.url
+      );
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return response.json();
+    };
+    try {
+      this._i18n = await load(language);
+    } catch (err) {
+      // Fall back to English, then to the Chinese labels carried by the map.
+      try {
+        this._i18n = await load(FALLBACK_LANGUAGE);
+      } catch {
+        this._i18n = { ui: {}, groups: {}, registers: {}, values: {}, subgroups: {} };
+      }
+    }
+  }
+
+  _t(key, values) {
+    let text = this._i18n?.ui?.[key] ?? key;
+    if (values) {
+      text = text.replace(/\{(\w+)\}/g, (match, name) =>
+        values[name] === undefined ? match : String(values[name])
+      );
+    }
+    return text;
+  }
+
+  _regName(register) {
+    return this._i18n?.registers?.[register.code] || register.name;
+  }
+
+  _groupLabel(group) {
+    return this._i18n?.groups?.[group.id] || group.label;
+  }
+
+  _subgroupLabel(subgroup, slot) {
+    const template = subgroup?.key
+      ? this._i18n?.subgroups?.[subgroup.key]
+      : null;
+    return template ? template.replace("{n}", slot) : subgroup?.label || "";
+  }
+
+  _enumLabel(register, raw) {
+    const translated = this._i18n?.values?.[register.code]?.[String(raw)];
+    if (translated !== undefined) {
+      return translated;
+    }
+    const label = (register.values || {})[String(raw)];
+    return label !== undefined ? label : String(raw);
+  }
+
   async _loadMap() {
+    await this._i18nReady;
     try {
       this._mapState = await this._callWS("conow_local/get_panel_map");
       this._render();
@@ -368,6 +446,7 @@ class ConowLocalPanel extends HTMLElement {
   }
 
   async _loadDevices() {
+    await this._i18nReady;
     this._loading = true;
     this._error = null;
     this._render();
@@ -392,7 +471,7 @@ class ConowLocalPanel extends HTMLElement {
         const preferred =
           this._devices.find((device) => device.online) ||
           this._devices.find((device) => device.loaded) ||
-          this._devices.find((device) => device.mode === "tcp") ||
+          this._devices.find((device) => String(device.mode || "").startsWith("tcp")) ||
           this._devices[0] ||
           null;
         if (preferred) {
@@ -417,6 +496,7 @@ class ConowLocalPanel extends HTMLElement {
     if (!this._deviceId) {
       return;
     }
+    await this._i18nReady;
     const hadState = Boolean(this._state);
     this._error = null;
     if (hadState) {
@@ -450,10 +530,10 @@ class ConowLocalPanel extends HTMLElement {
   _errorText(err) {
     const message = err?.message || String(err);
     if (message.includes("not_found")) {
-      return "设备不存在或集成未加载。";
+      return this._t("errorDeviceNotFound");
     }
     if (message.includes("Unknown command") || message.includes("unknown_command")) {
-      return "面板 WebSocket 命令未注册 —— 请重启 Home Assistant 后再打开本页。";
+      return this._t("errorUnknownCommand");
     }
     return message;
   }
@@ -471,20 +551,25 @@ class ConowLocalPanel extends HTMLElement {
     const hints = [];
     // Address/type details stay available on hover instead of taking a column.
     hints.push(
-      `地址 ${register.address}（${register.address_hex}）· ${register.dtype}${
-        register.length > 1 ? ` ×${register.length}` : ""
-      } · ${register.writable ? "可写" : "只读"}`
+      this._t("addressHint", {
+        address: register.address,
+        hex: register.address_hex,
+        dtype: `${register.dtype}${
+          register.length > 1 ? ` ×${register.length}` : ""
+        }`,
+        access: this._t(
+          register.writable ? "addressAccessWritable" : "addressAccessReadonly"
+        ),
+      })
     );
     if (invalidTime) {
-      hints.push(
-        `设备读数 ${this._rawHex(register)} 不是合法的时分（范围 00:00–23:59），已隐藏，请重新设置后下发`
-      );
+      hints.push(this._t("invalidTimeHint", { raw: this._rawHex(register) }));
     }
     if (register.note) {
       hints.push(register.note);
     }
     if (register.entity_id) {
-      hints.push(`点击查看 ${register.entity_id} 的实体详情`);
+      hints.push(this._t("entityHint", { entity: register.entity_id }));
     }
     const title = ` title="${this._escape(hints.join("\n"))}"`;
     // Prefer the mapped entity's own icon (battery, grid, …) so read-only
@@ -521,7 +606,7 @@ class ConowLocalPanel extends HTMLElement {
         <div class="reg-name">
           <ha-icon icon="${icon}"></ha-icon>
           <div class="reg-name-text">
-            ${this._escape(register.name)}
+            ${this._escape(this._regName(register))}
             <span class="reg-code">${this._escape(register.code)}</span>
           </div>
         </div>
@@ -654,7 +739,9 @@ class ConowLocalPanel extends HTMLElement {
         <section class="subgroup" data-group="${this._escape(group.id)}"
           data-slot="${slot}"${hidden ? ' style="display: none;"' : ""}>
           <div class="subgroup-header">
-            <span class="subgroup-title">${this._escape(subgroup.label)}</span>
+            <span class="subgroup-title">${this._escape(
+              this._subgroupLabel(subgroup, slot)
+            )}</span>
           </div>
           <div class="rows-grid">
             ${rows.map((item) => this._renderRegister(item, group)).join("")}
@@ -741,11 +828,12 @@ class ConowLocalPanel extends HTMLElement {
       return "—";
     }
     if (register.control === "switch") {
-      return String(value) === "1" || value === true ? "开" : "关";
+      return String(value) === "1" || value === true
+        ? this._t("valueOn")
+        : this._t("valueOff");
     }
     if (register.control === "enum") {
-      const label = (register.values || {})[String(value)];
-      return label !== undefined ? String(label) : String(value);
+      return this._enumLabel(register, value);
     }
     if (register.control === "time") {
       return this._normalizeTime(value) || String(value);
@@ -764,20 +852,23 @@ class ConowLocalPanel extends HTMLElement {
   }
 
   _changedSummary(group) {
-    // One "从旧值到新值" entry per staged register, so the footer says what
+    // One "from old to new" entry per staged register, so the footer says what
     // the batch write will actually change.
     return this._changedRegisters(group)
-      .map(
-        (register) =>
-          `${register.name}：从 ${this._formatRegisterValue(
+      .map((register) =>
+        this._t("changedFromTo", {
+          name: this._regName(register),
+          old: this._formatRegisterValue(
             register,
             this._currentValue(register)
-          )} 到 ${this._formatRegisterValue(
+          ),
+          new: this._formatRegisterValue(
             register,
             this._draftValue(group.id, register)
-          )}`
+          ),
+        })
       )
-      .join("；");
+      .join(this._t("changedSeparator"));
   }
 
   _normalizeTime(value) {
@@ -881,18 +972,21 @@ class ConowLocalPanel extends HTMLElement {
   }
 
   _groupHint(group, valid, dirty) {
+    const separator = this._t("codeSeparator");
     const invalid = this._groupInvalidTimes(group);
     if (invalid.length) {
-      return `时间读数非法，请重新设置：${invalid.join("、")}`;
+      return this._t("groupHintInvalidTime", { codes: invalid.join(separator) });
     }
     const outOfRange = this._groupOutOfRange(group);
     if (outOfRange.length) {
-      return `超出允许范围，请调整：${outOfRange.join("、")}`;
+      return this._t("groupHintOutOfRange", {
+        codes: outOfRange.join(separator),
+      });
     }
     if (!valid) {
-      return "请填写完整所有可写字段";
+      return this._t("groupHintIncomplete");
     }
-    return dirty ? this._changedSummary(group) : "无改动";
+    return dirty ? this._changedSummary(group) : this._t("groupHintUnchanged");
   }
 
   _notify(message, duration = 5000) {
@@ -924,11 +1018,15 @@ class ConowLocalPanel extends HTMLElement {
       return;
     }
     this._invalidNotified = key;
-    const preview = codes.slice(0, 3).join("、");
+    const preview = codes
+      .slice(0, 3)
+      .join(this._t("codeSeparator"));
     this._notify(
-      `检测到 ${codes.length} 个时间寄存器读数非法（${preview}${
-        codes.length > 3 ? " 等" : ""
-      }），已隐藏原值；请在对应分组重新设置时间后再下发。`,
+      this._t("noticeInvalidTimes", {
+        count: codes.length,
+        preview,
+        more: codes.length > 3 ? this._t("noticeInvalidTimesMore") : "",
+      }),
       10000
     );
   }
@@ -985,7 +1083,9 @@ class ConowLocalPanel extends HTMLElement {
     if (register.control === "time") {
       // ha-time-input is HA's native time selector (HH:MM fields).
       const warning = this._timeInvalid(register)
-        ? `<span class="reg-warning">读数非法，请重新设置</span>`
+        ? `<span class="reg-warning">${this._escape(
+            this._t("warningInvalidTime")
+          )}</span>`
         : "";
       return `<ha-time-input ${
         editable && !pending ? "" : "disabled"
@@ -1065,9 +1165,10 @@ class ConowLocalPanel extends HTMLElement {
               control.dataset.group,
               control.dataset.code
             );
-            const options = Object.entries(register?.values || {}).map(
-              ([raw, label]) => ({ value: raw, label })
-            );
+            const options = Object.keys(register?.values || {}).map((raw) => ({
+              value: raw,
+              label: this._enumLabel(register, raw),
+            }));
             if (options.length) {
               select.options = options;
               select.value = options.some(
@@ -1089,8 +1190,9 @@ class ConowLocalPanel extends HTMLElement {
             }
           }
           if (time) {
-            // ha-time-input reads its display format from the locale object.
-            time.locale = this.hass?.locale;
+            // Registers store 00:00–23:59; always show HH:MM (no AM/PM select)
+            // regardless of the user's 12/24-hour UI preference.
+            time.locale = { ...(this.hass?.locale || {}), time_format: "24" };
             if (value !== "") {
               time.value = this._normalizeTime(value);
             }
@@ -1161,7 +1263,12 @@ class ConowLocalPanel extends HTMLElement {
               if (clamped !== numeric) {
                 value = String(clamped);
                 this._notify(
-                  `${register.name} 已限制为 ${clamped}（${min}–${max}）`,
+                  this._t("noticeClamped", {
+                    name: this._regName(register),
+                    value: clamped,
+                    min,
+                    max,
+                  }),
                   3000
                 );
               }
@@ -1213,7 +1320,10 @@ class ConowLocalPanel extends HTMLElement {
           const normalized = this._normalizeTime(raw);
           const clamped = this._clampTime(raw);
           if (normalized && normalized !== clamped) {
-            this._notify(`时间已限制为 ${clamped}（有效范围 00:00–23:59）`, 3000);
+            this._notify(
+              this._t("noticeTimeClamped", { value: clamped }),
+              3000
+            );
           }
           handle(clamped);
         });
@@ -1258,8 +1368,13 @@ class ConowLocalPanel extends HTMLElement {
     }
     const preview = Object.entries(values)
       .map(([code, value]) => `${code}=${value}`)
-      .join("，");
-    if (!window.confirm(`确认把分组「${group.label}」写入设备？\n\n${preview}`)) {
+      .join(this._t("codeSeparator"));
+    const groupLabel = this._groupLabel(group);
+    if (
+      !window.confirm(
+        this._t("confirmWrite", { group: groupLabel, preview })
+      )
+    ) {
       return;
     }
     this._pendingGroups.add(groupId);
@@ -1272,38 +1387,26 @@ class ConowLocalPanel extends HTMLElement {
         values,
       });
       this._drafts[groupId] = {};
-      this._notice = { ok: true, text: `${group.label}：已下发` };
+      this._notice = {
+        ok: true,
+        text: this._t("noticeApplied", { group: groupLabel }),
+      };
     } catch (err) {
-      this._notice = { ok: false, text: `${group.label}：${err.message || String(err)}` };
+      this._notice = {
+        ok: false,
+        text: this._t("noticeFailed", {
+          group: groupLabel,
+          error: err.message || String(err),
+        }),
+      };
     } finally {
       this._pendingGroups.delete(groupId);
       this._render();
     }
   }
 
-  _willMerge(group) {
-    const writable = (group.members || []).filter((item) => item.writable);
-    if (writable.length < 2) {
-      return false;
-    }
-    let expected = writable[0].address;
-    for (const item of writable) {
-      if (item.address !== expected) {
-        return false;
-      }
-      expected += item.length || 1;
-    }
-    return true;
-  }
-
   _renderGroup(group) {
     const writable = (group.members || []).filter((item) => item.writable);
-    const writeChip =
-      writable.length > 1
-        ? this._willMerge(group)
-          ? `<span class="chip atomic">整组原子写入</span>`
-          : `<span class="chip">逐条写入</span>`
-        : "";
     const rows = this._renderMemberRows(group);
     const hasWritable = writable.length > 0;
     // In the read-only view the editable rows are hidden, so hide the footer
@@ -1320,7 +1423,7 @@ class ConowLocalPanel extends HTMLElement {
           <span class="group-hint">${hint}</span>
           <button type="button" class="group-apply" data-group="${group.id}"
             ${valid && !pending ? "" : "disabled"}>
-            ${pending ? "下发中…" : "批量下发"}
+            ${pending ? this._t("actionApplying") : this._t("actionApply")}
           </button>
         </div>
       `;
@@ -1332,12 +1435,13 @@ class ConowLocalPanel extends HTMLElement {
       )}">
         <div class="group-header" role="button" tabindex="0"
           aria-expanded="${collapsed ? "false" : "true"}"
-          title="${collapsed ? "展开分组" : "折叠分组"}">
+          title="${this._escape(
+            this._t(collapsed ? "titleExpandGroup" : "titleCollapseGroup")
+          )}">
           <ha-icon icon="${this._escape(group.icon || "mdi:view-grid-outline")}"></ha-icon>
-          <span class="group-title">${this._escape(group.label)}</span>
-          <span class="group-meta">
-            ${writeChip}
-          </span>
+          <span class="group-title">${this._escape(
+            this._groupLabel(group)
+          )}</span>
           <ha-icon class="group-toggle" icon="mdi:chevron-down"></ha-icon>
         </div>
         <div class="group-body">
@@ -1377,11 +1481,21 @@ class ConowLocalPanel extends HTMLElement {
   }
 
   _mapMismatchHint() {
-    if (!this._state || this._state.map_readable !== false) {
+    if (!this._state) {
       return "";
     }
-    return `<div class="hint">设备有 Modbus 响应，但 10 月映射的地址全部读不到 —— 多半仍在 v1 协议
-      （10000–10036 / 10100–10107）。请选择配置为 v2 的条目，或把该条目指向提供 10 月映射的服务端。</div>`;
+    if (this._state.map_version === 1) {
+      const firmware = this._state.firmware_version || this._t("unknownFirmware");
+      const minimum = this._state.min_firmware || "1.2";
+      return `<div class="hint">${this._t("mapMismatchV1", {
+        firmware: this._escape(firmware),
+        minimum: this._escape(minimum),
+      })}</div>`;
+    }
+    if (this._state.map_readable !== false) {
+      return "";
+    }
+    return `<div class="hint">${this._t("mapUnreadable")}</div>`;
   }
 
   _renderGroups() {
@@ -1400,7 +1514,9 @@ class ConowLocalPanel extends HTMLElement {
       return members.some((item) => this._accessMatches(item));
     });
     if (!visible.length) {
-      return `<div class="empty">没有匹配的分组。</div>`;
+      return `<div class="empty">${this._escape(
+        this._t("emptyNoGroups")
+      )}</div>`;
     }
     const notice = this._notice
       ? `<div class="notice ${this._notice.ok ? "" : "error"}">${this._escape(
@@ -1656,7 +1772,9 @@ class ConowLocalPanel extends HTMLElement {
         <ha-icon icon="mdi:chevron-down"></ha-icon>
         <div class="combo-menu" hidden>
           ${itemsHtml}
-          <div class="combo-empty" hidden>没有匹配项</div>
+          <div class="combo-empty" hidden>${this._escape(
+            this._t("comboNoMatch")
+          )}</div>
         </div>
       </div>
     `;
@@ -1682,17 +1800,21 @@ class ConowLocalPanel extends HTMLElement {
     }
 
     const deviceItems = this._devices.map((device) => {
-      const mode = String(device.mode || "").toUpperCase();
-      // Unloaded TCP entries are read directly over TCP, so "未加载" would
+      const rawMode = String(device.mode || "");
+      const mode =
+        rawMode === "tcp_direct"
+          ? this._t("modeTcpDirect")
+          : rawMode.toUpperCase();
+      // Unloaded TCP entries are read directly over TCP, so "not loaded" would
       // contradict the reachability shown once the read succeeds; only RTU
       // entries depend on the integration being loaded.
       const state = device.online
         ? ""
-        : device.mode === "tcp" && !device.loaded
+        : rawMode.startsWith("tcp") && !device.loaded
           ? ""
           : device.loaded
-            ? "（离线）"
-            : "（未加载）";
+            ? this._t("stateOffline")
+            : this._t("stateUnloaded");
       return {
         value: device.device_id,
         label: `${device.name}${mode ? ` · ${mode}` : ""}${state}`,
@@ -1700,14 +1822,17 @@ class ConowLocalPanel extends HTMLElement {
     });
 
     const groupItems = [
-      { value: "", label: "全部分组" },
-      ...groups.map((group) => ({ value: group.id, label: group.label })),
+      { value: "", label: this._t("allGroups") },
+      ...groups.map((group) => ({
+        value: group.id,
+        label: this._groupLabel(group),
+      })),
     ];
 
     // Entity choices follow the group and read/write filters; without a
     // group they are grouped by their section label.
     const entityCodes = new Set();
-    const entityItems = [{ value: "", label: "全部实体" }];
+    const entityItems = [{ value: "", label: this._t("allEntities") }];
     groups
       .filter((group) => !this._groupFilter || group.id === this._groupFilter)
       .forEach((group) => {
@@ -1719,12 +1844,15 @@ class ConowLocalPanel extends HTMLElement {
           return;
         }
         if (!this._groupFilter) {
-          entityItems.push({ heading: group.label });
+          entityItems.push({ heading: this._groupLabel(group) });
         }
         members.forEach((item) => {
           entityItems.push({
             value: item.code,
-            label: `${item.name}（${item.code}）`,
+            label: this._t("entityOption", {
+              name: this._regName(item),
+              code: item.code,
+            }),
           });
         });
       });
@@ -1733,18 +1861,20 @@ class ConowLocalPanel extends HTMLElement {
     }
 
     const accessItems = [
-      { value: "all", label: "全部读写" },
-      { value: "rw", label: "仅可写" },
-      { value: "ro", label: "仅只读" },
+      { value: "all", label: this._t("accessAll") },
+      { value: "rw", label: this._t("accessRw") },
+      { value: "ro", label: this._t("accessRo") },
     ];
 
     return `
-      ${this._combo("device", "选择设备…", deviceItems, this._deviceId || "")}
-      ${this._combo("group", "全部分组", groupItems, this._groupFilter)}
-      ${this._combo("entity", "全部实体", entityItems, this._entityFilter)}
-      ${this._combo("access", "全部读写", accessItems, this._accessFilter)}
+      ${this._combo("device", this._t("selectDevice"), deviceItems, this._deviceId || "")}
+      ${this._combo("group", this._t("allGroups"), groupItems, this._groupFilter)}
+      ${this._combo("entity", this._t("allEntities"), entityItems, this._entityFilter)}
+      ${this._combo("access", this._t("accessAll"), accessItems, this._accessFilter)}
       <button id="refresh-btn" class="icon-btn${this._loading ? " spinning" : ""}"
-        type="button" title="刷新" aria-label="刷新">
+        type="button" title="${this._escape(
+          this._t("refresh")
+        )}" aria-label="${this._escape(this._t("refresh"))}">
         <ha-icon icon="mdi:refresh"></ha-icon>
       </button>
     `;
@@ -1757,22 +1887,24 @@ class ConowLocalPanel extends HTMLElement {
 
     let body = "";
     if (this._loading) {
-      body = `<div class="loading">读取设备寄存器…</div>`;
+      body = `<div class="loading">${this._escape(
+        this._t("loadingRegisters")
+      )}</div>`;
     } else if (this._error) {
       body = `<div class="error">${this._escape(this._error)}</div>`;
     } else if (!groupCount) {
-      body = `<div class="loading">加载分组表…</div>`;
+      body = `<div class="loading">${this._escape(
+        this._t("loadingMap")
+      )}</div>`;
     } else {
       body = this._renderGroups();
     }
 
     this._root.innerHTML = `
-      <h1>Conow Local 分组面板</h1>
-      <div class="banner">
-        本页渲染的是《10月技术文档》的 Modbus 编址（<code>registers.json</code> v${map.version ?? 2}）。
-        可写寄存器使用 Home Assistant 控件编辑，修改后点击分组底部<b>批量下发</b>，该组会合并成尽量少的写入帧一次发出。
-        表内状态仍为「待确定」，下发到真实设备前请再次核对地址。
-      </div>
+      <h1>${this._escape(this._t("title"))}</h1>
+      <div class="banner">${this._t("banner", {
+        version: this._escape(map.version ?? 2),
+      })}</div>
       <div class="toolbar" id="toolbar">${this._renderToolbar()}</div>
       <div id="groups-body">${body}</div>
     `;

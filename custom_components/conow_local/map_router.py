@@ -1,0 +1,68 @@
+"""Select the register map from the device's reported firmware version.
+
+``registers.json`` (map version 1, the July protocol) is always the default.
+``panel/panel_registers.json`` (map version 2, the October protocol) is only
+used when the firmware version read from ``0x2763-0x2764`` is at least
+``PANEL_MAP_MIN_FIRMWARE``.  A failed or unparsable probe therefore falls
+back to the v1 map, never to the newer addresses.
+"""
+
+from __future__ import annotations
+
+import re
+
+MAP_V1 = "v1"
+MAP_V2 = "v2"
+
+FIRMWARE_VERSION_ADDRESS = 10083  # 0x2763, two 16-bit registers, 4-byte ASCII
+FIRMWARE_VERSION_REGISTERS = 2
+
+# The October register map ships with firmware v1.2 and later.  Change this
+# tuple if the vendor moves the cut-over.
+PANEL_MAP_MIN_FIRMWARE = (1, 2)
+
+_VERSION_TEXT = re.compile(r"^[Vv]?(\d{1,2}(?:\.\d{1,2}){0,3}|\d{3,4})$")
+
+
+def parse_firmware_version(words: list[int] | tuple[int, ...]) -> tuple[int, ...] | None:
+    """Decode a 4-byte ASCII firmware version into comparable components.
+
+    Accepted forms include ``1.2``, ``V1.02``, ``1.2.3`` and compact
+    ``0102`` (v1.2).  Anything that does not look like a version returns
+    ``None`` so the caller keeps the v1 default.
+    """
+    if len(words) < FIRMWARE_VERSION_REGISTERS:
+        return None
+    data = b"".join((int(word) & 0xFFFF).to_bytes(2, "big") for word in words[:2])
+    text = data.split(b"\x00", 1)[0].decode("ascii", errors="ignore").strip()
+    if text:
+        match = _VERSION_TEXT.fullmatch(text)
+        if match is not None:
+            value = match.group(1)
+            if "." in value:
+                return tuple(int(part) for part in value.split("."))
+            if len(value) == 4:
+                return (int(value[:2]), int(value[2:]))
+            if len(value) == 3:
+                return (int(value[0]), int(value[1:]))
+            return (int(value),)
+
+    # Some firmware revisions encode the version numerically as 0xMMmm
+    # (e.g. 0x0102 for v1.2).  Only accept a plausible major.minor pair.
+    raw = int(words[0]) & 0xFFFF
+    major, minor = (raw >> 8) & 0xFF, raw & 0xFF
+    if int(words[1]) == 0 and 1 <= major <= 9 and minor <= 99:
+        return (major, minor)
+    return None
+
+
+def select_map(version: tuple[int, ...] | None) -> str:
+    """Return the map id selected by a decoded firmware version."""
+    if version is not None and version >= PANEL_MAP_MIN_FIRMWARE:
+        return MAP_V2
+    return MAP_V1
+
+
+def format_version(version: tuple[int, ...] | None) -> str | None:
+    """Render a version tuple for logs and the panel."""
+    return ".".join(str(part) for part in version) if version else None

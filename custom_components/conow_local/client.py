@@ -122,6 +122,23 @@ class ConowModbusError(Exception):
     """Raised when Modbus communication fails."""
 
 
+class ConowVerificationError(ConowModbusError):
+    """Raised when the direct TCP verification code is rejected."""
+
+
+VERIFY_CODE_START = 0x045C  # uint32 challenge, two holding registers
+VERIFY_CODE_DIGITS = 6
+
+
+def encode_verify_code(code: str | int) -> list[int]:
+    """Encode a 6-digit code as uint32 words (high word first)."""
+    text = str(code).strip()
+    if len(text) != VERIFY_CODE_DIGITS or not text.isdigit():
+        raise ConowModbusError("Verification code must be exactly 6 digits")
+    value = int(text)
+    return [(value >> 16) & 0xFFFF, value & 0xFFFF]
+
+
 class ConowModbusClient:
     """Local Modbus client (RTU serial or TCP) for CONOW devices."""
 
@@ -137,7 +154,8 @@ class ConowModbusClient:
     ) -> None:
         """Initialize client: TCP when host is given, RTU serial otherwise.
 
-        Serial defaults to 38400 8N1; TCP targets a RS-485↔Ethernet adapter.
+        Serial defaults to 38400 8N1; TCP targets an RS-485↔Ethernet adapter
+        or the device's own Ethernet port.
         """
         self._slave = slave
         self._mode = MODBUS_MODE_TCP if host is not None else MODBUS_MODE_RTU
@@ -215,10 +233,17 @@ class ConowModbusClient:
         """Disconnect on context exit."""
         self.close()
 
-    def read_holding_registers(self, address: int, count: int) -> list[int]:
-        """Read holding registers (FC 0x03) with retry."""
+    def read_holding_registers(
+        self, address: int, count: int, *, retries: int = MAX_RETRIES
+    ) -> list[int]:
+        """Read holding registers (FC 0x03) with retry.
+
+        Set ``retries=1`` for optional probes where a slow failure should not
+        delay setup and where the caller has a safe fallback.
+        """
+        attempts = max(1, retries)
         last_error: Exception | None = None
-        for attempt in range(1, MAX_RETRIES + 1):
+        for attempt in range(1, attempts + 1):
             try:
                 self._flush_input_buffer()
                 if self._mode == MODBUS_MODE_TCP:
@@ -253,23 +278,23 @@ class ConowModbusClient:
                 _LOGGER.debug(
                     "Read failed (attempt %s/%s) addr=%s: %s",
                     attempt,
-                    MAX_RETRIES,
+                    attempts,
                     address,
                     exc,
                 )
-                if attempt < MAX_RETRIES:
+                if attempt < attempts:
                     self._reconnect_after_error()
         if self._mode == MODBUS_MODE_TCP:
             msg = (
-                f"Read failed after {MAX_RETRIES} attempts (slave={self._slave}, "
+                f"Read failed after {attempts} attempts (slave={self._slave}, "
                 f"tcp={self._host}:{self._tcp_port}): device sent no Modbus "
                 f"reply — check Enable External Control / ModBus RTU, the "
-                f"RS-485↔Ethernet adapter (server IP / port {DEFAULT_TCP_PORT}), "
-                f"and its serial settings (slave 160 / 38400 8N1)"
+                f"TCP endpoint (server IP / port {DEFAULT_TCP_PORT}) and its "
+                f"serial settings (slave 160 / 38400 8N1)"
             )
         else:
             msg = (
-                f"Read failed after {MAX_RETRIES} attempts (slave={self._slave}, "
+                f"Read failed after {attempts} attempts (slave={self._slave}, "
                 f"port={self._port}): device sent no Modbus reply — check "
                 f"Enable External Control / ModBus RTU, RS-485 wiring, "
                 f"and slave/baud (160 / 38400)"
@@ -336,16 +361,21 @@ class ConowModbusClient:
             f"Write failed after {MAX_RETRIES} attempts: {last_error}"
         ) from last_error
 
-    def write_registers(self, address: int, values: list[int]) -> None:
+    def write_registers(
+        self, address: int, values: list[int], *, retries: int = MAX_RETRIES
+    ) -> None:
         """Write consecutive holding registers (FC 0x10) with retry.
 
         Devices that reject single-register writes for a coupled group require
         this function code; 32-bit values are written as one atomic frame.
+        Set ``retries=1`` for one-shot writes such as challenge verification,
+        where repeating a rejected value could lock the device.
         """
         if not values:
             raise ConowModbusError("write_registers requires at least one value")
+        attempts = max(1, retries)
         last_error: Exception | None = None
-        for attempt in range(1, MAX_RETRIES + 1):
+        for attempt in range(1, attempts + 1):
             try:
                 self._flush_input_buffer()
                 if self._mode == MODBUS_MODE_TCP:
@@ -379,11 +409,11 @@ class ConowModbusClient:
                 _LOGGER.debug(
                     "Write failed (attempt %s/%s) addr=%s: %s",
                     attempt,
-                    MAX_RETRIES,
+                    attempts,
                     address,
                     exc,
                 )
-                if attempt < MAX_RETRIES:
+                if attempt < attempts:
                     self._reconnect_after_error()
         _LOGGER.error(
             "Modbus FC 0x10 write failed: slave=%s endpoint=%s addr=%s values=%s err=%s",
@@ -394,7 +424,8 @@ class ConowModbusClient:
             last_error,
         )
         raise ConowModbusError(
-            f"Write failed after {MAX_RETRIES} attempts: {last_error}"
+            f"Write failed after {attempts} attempt{'s' if attempts != 1 else ''}: "
+            f"{last_error}"
         ) from last_error
 
     @staticmethod
@@ -570,3 +601,29 @@ def probe_connection(
         port, host=host, tcp_port=tcp_port, slave=slave, baudrate=baudrate
     ) as client:
         client.read_holding_registers(soc_address, 1)
+
+
+def probe_direct_connection(
+    host: str,
+    *,
+    tcp_port: int = DEFAULT_TCP_PORT,
+    slave: int = DEFAULT_SLAVE,
+    verify_code: str,
+) -> None:
+    """Verify a direct TCP link and complete the challenge authentication.
+
+    The all-in-one machine requires the 6-digit code shown by the device to
+    be written to holding registers 0x045C–0x045D (uint32, high word first).
+    A normal FC 0x10 response means the device accepted the code; an error
+    response is treated as verification failure.
+    """
+    words = encode_verify_code(verify_code)
+    soc_address = REGISTERS_BY_NAME["battery_soc"].address
+    with ConowModbusClient(host=host, tcp_port=tcp_port, slave=slave) as client:
+        client.read_holding_registers(soc_address, 1)
+        try:
+            client.write_registers(VERIFY_CODE_START, words, retries=1)
+        except ConowModbusError as err:
+            raise ConowVerificationError(
+                f"Verification code rejected: {err}"
+            ) from err

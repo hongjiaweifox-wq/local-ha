@@ -5,13 +5,15 @@ from __future__ import annotations
 from homeassistant.components.number import NumberEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_DEVICE_NAME, DOMAIN
 from .coordinator import ConowLocalCoordinator
-from .entity_factory import build_number_description, register_for_entity
+from .entity_factory import (
+    build_device_info,
+    build_number_description,
+    register_for_entity,
+)
 from .register_map import EntityDef, get_entities
 
 
@@ -32,12 +34,7 @@ class ConowModbusNumber(CoordinatorEntity[ConowLocalCoordinator], NumberEntity):
         register = register_for_entity(entity)
         self.entity_description = build_number_description(entity, register)
         self._attr_unique_id = f"{entry.entry_id}_{entity.code}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=entry.data[CONF_DEVICE_NAME],
-            manufacturer="CONOW",
-            model="Balcony Solar Storage",
-        )
+        self._attr_device_info = build_device_info(coordinator.hass, entry)
 
     @property
     def native_value(self) -> float | None:

@@ -7,13 +7,12 @@ from datetime import time as dt_time
 from homeassistant.components.time import TimeEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import panel_map
-from .const import CONF_DEVICE_NAME, DOMAIN
-from .panel_coordinator import ConowPanelCoordinator, get_panel_coordinator
+from .entity_factory import build_device_info
+from .panel import panel_map
+from .panel.panel_coordinator import ConowPanelCoordinator, get_panel_coordinator
 
 
 class ConowPanelTime(CoordinatorEntity[ConowPanelCoordinator], TimeEntity):
@@ -33,12 +32,7 @@ class ConowPanelTime(CoordinatorEntity[ConowPanelCoordinator], TimeEntity):
         self._attr_unique_id = f"{entry.entry_id}_{register.code}"
         self._attr_name = register.name
         self._attr_suggested_object_id = register.code
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=entry.data[CONF_DEVICE_NAME],
-            manufacturer="CONOW",
-            model="Balcony Solar Storage",
-        )
+        self._attr_device_info = build_device_info(coordinator.hass, entry)
 
     @property
     def native_value(self) -> dt_time | None:

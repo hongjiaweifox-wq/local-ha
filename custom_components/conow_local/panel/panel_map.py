@@ -66,6 +66,7 @@ class PanelSubgroup:
 
     label: str
     members: tuple[str, ...]
+    key: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -162,6 +163,7 @@ def get_groups() -> tuple[PanelGroup, ...]:
                 PanelSubgroup(
                     label=sub.get("label") or "",
                     members=sub_members,
+                    key=str(sub.get("key") or ""),
                 )
             )
         count_register = str(

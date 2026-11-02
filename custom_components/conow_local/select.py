@@ -6,13 +6,12 @@ from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_DEVICE_NAME, DOMAIN
+from .const import DOMAIN
 from .coordinator import ConowLocalCoordinator
-from .entity_factory import build_select_description
+from .entity_factory import build_device_info, build_select_description
 from .register_map import DIRECTION_IDLE, EntityDef, get_entities
 
 
@@ -36,12 +35,7 @@ class ConowModbusDirectionSelect(
         self.entity_description = build_select_description(entity)
         self._attr_unique_id = f"{entry.entry_id}_{entity.code}"
         self._attr_options = list((entity.options or {}).keys())
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=entry.data[CONF_DEVICE_NAME],
-            manufacturer="CONOW",
-            model="Balcony Solar Storage",
-        )
+        self._attr_device_info = build_device_info(coordinator.hass, entry)
 
     @property
     def current_option(self) -> str | None:

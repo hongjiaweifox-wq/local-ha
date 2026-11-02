@@ -5,15 +5,14 @@ from __future__ import annotations
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import panel_map
-from .const import CONF_DEVICE_NAME, DOMAIN
 from .coordinator import ConowLocalCoordinator
-from .entity_factory import build_switch_description
-from .panel_coordinator import ConowPanelCoordinator, get_panel_coordinator
+from .entity_factory import build_device_info, build_switch_description
+from .map_router import MAP_V2
+from .panel import panel_map
+from .panel.panel_coordinator import ConowPanelCoordinator, get_panel_coordinator
 from .register_map import EntityDef, get_entities
 
 
@@ -33,12 +32,7 @@ class ConowModbusSwitch(CoordinatorEntity[ConowLocalCoordinator], SwitchEntity):
         self._register_name = entity.register
         self.entity_description = build_switch_description(entity)
         self._attr_unique_id = f"{entry.entry_id}_{entity.code}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=entry.data[CONF_DEVICE_NAME],
-            manufacturer="CONOW",
-            model="Balcony Solar Storage",
-        )
+        self._attr_device_info = build_device_info(coordinator.hass, entry)
 
     @property
     def is_on(self) -> bool | None:
@@ -74,12 +68,7 @@ class ConowPanelSwitch(CoordinatorEntity[ConowPanelCoordinator], SwitchEntity):
         self._register = register
         self._attr_unique_id = f"{entry.entry_id}_{unique_code or register.code}"
         self._attr_name = register.name
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=entry.data[CONF_DEVICE_NAME],
-            manufacturer="CONOW",
-            model="Balcony Solar Storage",
-        )
+        self._attr_device_info = build_device_info(coordinator.hass, entry)
 
     @property
     def is_on(self) -> bool | None:
@@ -141,9 +130,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up Modbus switch entities from registers.json and the panel map."""
     coordinator: ConowLocalCoordinator = entry.runtime_data
-    entities = [
-        ConowModbusSwitch(coordinator, entry, entity_def)
-        for entity_def in get_entities("switch")
-    ]
-    async_add_entities(entities)
+    if coordinator.map_version != MAP_V2:
+        entities = [
+            ConowModbusSwitch(coordinator, entry, entity_def)
+            for entity_def in get_entities("switch")
+        ]
+        async_add_entities(entities)
     await _async_add_panel_switches(hass, entry, async_add_entities)

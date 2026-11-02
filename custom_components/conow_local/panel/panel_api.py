@@ -12,8 +12,8 @@ from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import HomeAssistant, callback
 
 from . import panel_map
-from .client import ConowModbusError
-from .const import DOMAIN, LOGGER
+from ..client import ConowModbusError
+from ..const import DOMAIN, LOGGER, PANEL_URL_PATH
 from .panel_functions import (
     async_build_panel_state,
     async_write_panel_group,
@@ -22,11 +22,15 @@ from .panel_functions import (
 )
 
 URL_BASE = "/conow_local_panel_static"
-PANEL_URL_PATH = "conow-local-panel"
 PANEL_WEBCOMPONENT = "conow-local-panel"
-PANEL_STATIC_VERSION = "35"
+PANEL_STATIC_VERSION = "39"
 PANEL_SCRIPT_URL = f"{URL_BASE}/conow-local-panel.js?v={PANEL_STATIC_VERSION}"
 PANEL_SIDEBAR_ENABLED = True
+SIDEBAR_TITLES = {
+    "de": "Conow Local Gruppen",
+    "nl": "Conow Local groepen",
+    "zh-Hans": "Conow Local 分组",
+}
 
 
 @websocket_api.websocket_command(
@@ -121,7 +125,7 @@ async def async_register_local_panel(hass: HomeAssistant) -> None:
         LOGGER.error("Panel: cannot load panel_registers.json: %s", err)
     _register_websocket_api(hass)
 
-    frontend_dir = Path(__file__).parent / "panel" / "frontend"
+    frontend_dir = Path(__file__).parent / "frontend"
     if not hass.data.get(f"{DOMAIN}_panel_static_registered"):
         await hass.http.async_register_static_paths(
             [StaticPathConfig(URL_BASE, str(frontend_dir), cache_headers=False)]
@@ -132,13 +136,19 @@ async def async_register_local_panel(hass: HomeAssistant) -> None:
         return
 
     if PANEL_SIDEBAR_ENABLED and not async_panel_exists(hass, PANEL_URL_PATH):
+        language = str(hass.config.language or "")
+        sidebar_title = (
+            SIDEBAR_TITLES.get(language)
+            or SIDEBAR_TITLES.get(language.split("-")[0])
+            or "Conow Local"
+        )
         await panel_custom.async_register_panel(
             hass=hass,
             frontend_url_path=PANEL_URL_PATH,
             webcomponent_name=PANEL_WEBCOMPONENT,
             config_panel_domain=DOMAIN,
             module_url=PANEL_SCRIPT_URL,
-            sidebar_title="Conow Local 分组",
+            sidebar_title=sidebar_title,
             sidebar_icon="mdi:format-list-group",
             embed_iframe=False,
             require_admin=False,

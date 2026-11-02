@@ -12,7 +12,6 @@
     "byte_order": "big-endian，32 位高字在前"
   },
   "protocol": {
-    "unit_id_register": 9984,
     "default_unit_id": 160,
     "unit_id_range": [
       128,
@@ -25,10 +24,6 @@
     },
     "max_group_registers": 8,
     "area": {
-      "unit_id": {
-        "start": 9984,
-        "length": 1
-      },
       "read_only_input": {
         "start": 10000,
         "length": 103,
@@ -48,32 +43,14 @@
     }
   },
   "blocks": {
-    "system": {
-      "start": 9984
-    },
     "monitoring": {
       "start": 10000
     },
     "control": {
       "start": 10103
-    },
-    "dp52_module": {
-      "start": 16471
     }
   },
   "registers": [
-    {
-      "code": "modbus_slave_address",
-      "name": "Modbus地址",
-      "address": 9984,
-      "address_hex": "0x2700",
-      "block": "system",
-      "category": "Modbus地址",
-      "dtype": "uint16",
-      "length": 1,
-      "writable": true,
-      "note": "从机地址默认 A0(160)，可设 0x80–0xB0(128–176)，本地保存；TCP 的 Unit ID 跟随该值"
-    },
     {
       "code": "device_status",
       "name": "设备状态",
@@ -2433,100 +2410,9 @@
       },
       "note": "1：使能 0：关闭 掉电保存",
       "boolean": true
-    },
-    {
-      "code": "dp52_rtu_address",
-      "name": "Modbus RTU通信地址",
-      "address": 16471,
-      "address_hex": "0x4057",
-      "block": "dp52_module",
-      "category": "DP52新增地址",
-      "dtype": "uint16",
-      "length": 1,
-      "writable": true,
-      "note": "默认 A0，可设 0x80–0xB0，本地保存，Wi-Fi 重置掉电不丢失"
-    },
-    {
-      "code": "dp52_module_ip",
-      "name": "模组IP",
-      "address": 16472,
-      "address_hex": "0x4058",
-      "block": "dp52_module",
-      "category": "DP52新增地址",
-      "dtype": "uint32",
-      "length": 2,
-      "writable": false,
-      "note": "IPv4，两个寄存器（0x4058–0x4059）"
-    },
-    {
-      "code": "dp52_module_port",
-      "name": "模组端口号",
-      "address": 16474,
-      "address_hex": "0x405A",
-      "block": "dp52_module",
-      "category": "DP52新增地址",
-      "dtype": "uint16",
-      "length": 1,
-      "writable": false
-    },
-    {
-      "code": "dp52_tcp_address",
-      "name": "Modbus TCP通信地址",
-      "address": 16475,
-      "address_hex": "0x405B",
-      "block": "dp52_module",
-      "category": "DP52新增地址",
-      "dtype": "uint16",
-      "length": 1,
-      "writable": true,
-      "note": "默认 A0，可设 0x80–0xB0，本地保存，Wi-Fi 重置掉电不丢失"
-    },
-    {
-      "code": "dp52_tcp_dynamic_code",
-      "name": "Modbus TCP动态验证码",
-      "address": 16476,
-      "address_hex": "0x405C",
-      "block": "dp52_module",
-      "category": "DP52新增地址",
-      "dtype": "uint32",
-      "length": 2,
-      "writable": false,
-      "note": "MCU 随机生成；验证码匹配成功本地保存；连接对象 MAC 或使能开关变化时重新生成"
-    },
-    {
-      "code": "dp52_meter_connection_state",
-      "name": "电表连接状态",
-      "address": 16478,
-      "address_hex": "0x405E",
-      "block": "dp52_module",
-      "category": "DP52新增地址",
-      "dtype": "uint16",
-      "length": 1,
-      "writable": false,
-      "values": {
-        "0": "未绑定",
-        "1": "无线电表",
-        "2": "有线电表"
-      }
     }
   ],
   "groups": [
-    {
-      "id": "modbus_comm",
-      "label": "Modbus 通信",
-      "icon": "mdi:lan-connect",
-      "order": 5,
-      "atomic": false,
-      "members": [
-        "modbus_slave_address"
-      ],
-      "span": {
-        "start": 9984,
-        "end": 9984,
-        "registers": 1
-      },
-      "note": "从机地址改动即刻切链路，单寄存器写入"
-    },
     {
       "id": "realtime",
       "label": "实时监控",
@@ -2933,7 +2819,8 @@
             "base_load_slot1_start",
             "base_load_slot1_end",
             "base_load_slot1_power"
-          ]
+          ],
+          "key": "slot"
         },
         {
           "label": "时段 2",
@@ -2941,7 +2828,8 @@
             "base_load_slot2_start",
             "base_load_slot2_end",
             "base_load_slot2_power"
-          ]
+          ],
+          "key": "slot"
         },
         {
           "label": "时段 3",
@@ -2949,7 +2837,8 @@
             "base_load_slot3_start",
             "base_load_slot3_end",
             "base_load_slot3_power"
-          ]
+          ],
+          "key": "slot"
         },
         {
           "label": "时段 4",
@@ -2957,7 +2846,8 @@
             "base_load_slot4_start",
             "base_load_slot4_end",
             "base_load_slot4_power"
-          ]
+          ],
+          "key": "slot"
         },
         {
           "label": "时段 5",
@@ -2965,7 +2855,8 @@
             "base_load_slot5_start",
             "base_load_slot5_end",
             "base_load_slot5_power"
-          ]
+          ],
+          "key": "slot"
         },
         {
           "label": "时段 6",
@@ -2973,7 +2864,8 @@
             "base_load_slot6_start",
             "base_load_slot6_end",
             "base_load_slot6_power"
-          ]
+          ],
+          "key": "slot"
         },
         {
           "label": "时段 7",
@@ -2981,7 +2873,8 @@
             "base_load_slot7_start",
             "base_load_slot7_end",
             "base_load_slot7_power"
-          ]
+          ],
+          "key": "slot"
         },
         {
           "label": "时段 8",
@@ -2989,7 +2882,8 @@
             "base_load_slot8_start",
             "base_load_slot8_end",
             "base_load_slot8_power"
-          ]
+          ],
+          "key": "slot"
         }
       ]
     },
@@ -3080,7 +2974,8 @@
             "tou_slot1_power",
             "tou_slot1_curtail",
             "tou_slot1_ignore_export"
-          ]
+          ],
+          "key": "strategy"
         },
         {
           "label": "策略 2",
@@ -3092,7 +2987,8 @@
             "tou_slot2_power",
             "tou_slot2_curtail",
             "tou_slot2_ignore_export"
-          ]
+          ],
+          "key": "strategy"
         },
         {
           "label": "策略 3",
@@ -3104,7 +3000,8 @@
             "tou_slot3_power",
             "tou_slot3_curtail",
             "tou_slot3_ignore_export"
-          ]
+          ],
+          "key": "strategy"
         },
         {
           "label": "策略 4",
@@ -3116,7 +3013,8 @@
             "tou_slot4_power",
             "tou_slot4_curtail",
             "tou_slot4_ignore_export"
-          ]
+          ],
+          "key": "strategy"
         },
         {
           "label": "策略 5",
@@ -3128,7 +3026,8 @@
             "tou_slot5_power",
             "tou_slot5_curtail",
             "tou_slot5_ignore_export"
-          ]
+          ],
+          "key": "strategy"
         },
         {
           "label": "策略 6",
@@ -3140,7 +3039,8 @@
             "tou_slot6_power",
             "tou_slot6_curtail",
             "tou_slot6_ignore_export"
-          ]
+          ],
+          "key": "strategy"
         },
         {
           "label": "策略 7",
@@ -3152,7 +3052,8 @@
             "tou_slot7_power",
             "tou_slot7_curtail",
             "tou_slot7_ignore_export"
-          ]
+          ],
+          "key": "strategy"
         },
         {
           "label": "策略 8",
@@ -3164,30 +3065,10 @@
             "tou_slot8_power",
             "tou_slot8_curtail",
             "tou_slot8_ignore_export"
-          ]
+          ],
+          "key": "strategy"
         }
       ]
-    },
-    {
-      "id": "dp52_module",
-      "label": "DP52 通信模块",
-      "icon": "mdi:router-network",
-      "order": 210,
-      "atomic": false,
-      "members": [
-        "dp52_rtu_address",
-        "dp52_module_ip",
-        "dp52_module_port",
-        "dp52_tcp_address",
-        "dp52_tcp_dynamic_code",
-        "dp52_meter_connection_state"
-      ],
-      "span": {
-        "start": 16471,
-        "end": 16478,
-        "registers": 8
-      },
-      "note": "独立地址空间 0x4057–0x405E；IP 与端口用于模组联网信息展示"
     }
   ]
 }

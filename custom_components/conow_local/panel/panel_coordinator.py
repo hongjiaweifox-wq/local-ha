@@ -11,9 +11,10 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from . import panel_map
-from .client import ConowModbusError
-from .const import CONF_MODBUS_MODE, DOMAIN, LOGGER, MODBUS_MODE_TCP
-from .coordinator import ConowLocalCoordinator
+from ..client import ConowModbusError
+from ..const import CONF_MODBUS_MODE, DOMAIN, LOGGER, MODBUS_TCP_MODES
+from ..coordinator import ConowLocalCoordinator
+from ..map_router import MAP_V1, MAP_V2
 
 PANEL_POLL_INTERVAL_S = 30
 PANEL_COORDINATORS = f"{DOMAIN}_panel_coordinators"
@@ -57,10 +58,17 @@ async def async_setup_panel_coordinator(
 ) -> ConowPanelCoordinator | None:
     """Create and refresh the entry's shared panel coordinator.
 
-    Only TCP entries expose the October map; when the map cannot be read the
-    entry keeps its regular entities and simply has no panel-backed entities.
+    Only TCP entries whose firmware selected the v2 map expose the October
+    map; everything else keeps the regular v1 entities and has no
+    panel-backed entities.
     """
-    if entry.data.get(CONF_MODBUS_MODE) != MODBUS_MODE_TCP:
+    if getattr(main, "map_version", MAP_V1) != MAP_V2:
+        LOGGER.info(
+            "Panel map skipped for %s: firmware does not select panel_registers.json",
+            entry.title,
+        )
+        return None
+    if entry.data.get(CONF_MODBUS_MODE) not in MODBUS_TCP_MODES:
         return None
     coordinator = ConowPanelCoordinator(hass, entry, main)
     try:

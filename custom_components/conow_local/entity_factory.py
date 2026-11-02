@@ -7,6 +7,7 @@ from homeassistant.components.number import NumberEntityDescription
 from homeassistant.components.select import SelectEntityDescription
 from homeassistant.components.sensor import SensorEntityDescription
 from homeassistant.components.switch import SwitchEntityDescription
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     PERCENTAGE,
     UnitOfElectricPotential,
@@ -15,8 +16,12 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfTemperature,
 )
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import EntityCategory
 
+from .const import CONF_DEVICE_NAME, DOMAIN, LOGGER, PANEL_URL_PATH
 from .register_map import EntityDef, RegisterDef, REGISTERS_BY_NAME
 
 HA_UNITS = {
@@ -31,6 +36,40 @@ HA_UNITS = {
 ENTITY_CATEGORIES = {
     "diagnostic": EntityCategory.DIAGNOSTIC,
 }
+
+
+def _panel_device_id(hass: HomeAssistant, entry: ConfigEntry) -> str:
+    """Return the device-registry id backing this entry, if it is known."""
+    device_entry = dr.async_get(hass).async_get_device(
+        identifiers={(DOMAIN, entry.entry_id)}
+    )
+    return device_entry.id if device_entry else entry.entry_id
+
+
+def _panel_configuration_url(hass: HomeAssistant, entry: ConfigEntry) -> str:
+    """Return an in-app link to the grouping panel for this device.
+
+    The ``homeassistant://`` scheme is resolved by the frontend against the
+    current origin, so the link works regardless of which host/port the user
+    reached Home Assistant on (unlike an absolute internal-IP URL, which
+    lands on a different origin and loses the session).
+    """
+    device_id = _panel_device_id(hass, entry)
+    return f"homeassistant://{PANEL_URL_PATH}?device_id={device_id}"
+
+
+def build_device_info(hass: HomeAssistant, entry: ConfigEntry) -> DeviceInfo:
+    """Return the shared device info with a link to the grouping panel."""
+    info = DeviceInfo(
+        identifiers={(DOMAIN, entry.entry_id)},
+        name=entry.data[CONF_DEVICE_NAME],
+        manufacturer="CONOW",
+        model="Balcony Solar Storage",
+    )
+    url = _panel_configuration_url(hass, entry)
+    info["configuration_url"] = url
+    LOGGER.debug("Device info: panel link %s", url)
+    return info
 
 
 def _unit_for_register(register: RegisterDef | None) -> str | None:

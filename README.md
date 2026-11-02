@@ -60,7 +60,7 @@ Use the factory defaults unless you have changed them in manufacturer setup soft
 
 **Settings → Devices & Services → Add Integration → Conow Local**
 
-First choose the connection type — **Modbus RTU (RS-485 serial)** or **Modbus TCP (RS-485↔Ethernet adapter)**.
+First choose the connection type — **Modbus RTU (RS-485 serial)**, **Modbus TCP (RS-485↔Ethernet adapter)**, or **Modbus TCP (direct to all-in-one machine)**.
 
 ### Modbus RTU (serial)
 
@@ -86,6 +86,20 @@ Notes:
 
 - The adapter must be a **Modbus TCP ↔ RTU gateway** (most 485-to-Ethernet converters are). Configure the adapter's serial side to the device defaults: **38400 8N1**, and it must pass through the unit ID (`160`).
 - **Enable External Control / ModBus RTU** in the Conow app is still required — the device sees plain RTU either way.
+
+### Modbus TCP (direct to all-in-one machine)
+
+Use this when the all-in-one machine exposes its own Modbus TCP port, with no RS-485↔Ethernet adapter in between.
+
+| Field           | Value                                  |
+| --------------- | -------------------------------------- |
+| Device name     | Any label you prefer                   |
+| Host / IP       | Machine IP, e.g. `192.168.1.60`        |
+| TCP port        | `502` (default Modbus TCP port)        |
+| Slave address   | `160`                                  |
+| Verification code | 6-digit code shown on the machine    |
+
+When you submit the form, the integration writes the verification code to holding registers **0x045C–0x045D** (uint32, high word first). The setup succeeds only when the device acknowledges the write; a rejected code shows a verification error instead of creating the entry.
 
 
 
@@ -210,6 +224,26 @@ A0 06 27 75 02 BC 8B 04
 ```
 
 On success, the device normally **echoes the same 8 bytes** as the response.
+
+## Register map routing
+
+Two maps ship with the integration:
+
+| Map | File | Used for |
+|-----|------|----------|
+| v1 (default) | `registers.json` | HA entity platforms (sensor / binary_sensor / number / switch / select), always the fallback |
+| v2 (October) | `panel/panel_registers.json` | Grouping panel plus its on/off and time entities |
+
+The two maps are **mutually exclusive** for an entry: firmware ≥ 1.2 selects
+v2, and the v1 entity platforms are not set up at all; otherwise the entry
+stays on v1 and no v2 block is read or written.
+
+After setup begins, the integration reads the 4-byte ASCII firmware version
+at **10083–10084 (0x2763–0x2764)** before the first poll. The v2 map and its
+panel features are used only when the parsed version is **≥ 1.2**
+(`PANEL_MAP_MIN_FIRMWARE`). A missing, timed-out or unparsable value keeps
+`registers.json`; the integration never falls forward to the October control
+addresses by accident.
 
 ## Adding registers & entities
 

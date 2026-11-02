@@ -9,12 +9,14 @@
   },
   "config": {
     "error": {
-      "cannot_connect": "Verbindung über Modbus nicht möglich. Prüfe Verbindung, „Externen Steuerung / ModBus RTU“ und Slave-Adresse."
+      "cannot_connect": "Verbindung über Modbus nicht möglich. Prüfe Verbindung, „Externen Steuerung / ModBus RTU“ und Slave-Adresse.",
+      "invalid_verify_code": "Der Bestätigungscode muss aus genau 6 Ziffern bestehen.",
+      "verification_failed": "Das Gerät hat den Bestätigungscode abgelehnt. Prüfe den 6-stelligen Code am Gerät und versuche es erneut."
     },
     "step": {
       "user": {
         "title": "Verbindungsart",
-        "description": "Wähle, wie das Gerät erreicht wird: RS-485 seriell oder Modbus TCP über einen RS-485↔Ethernet-Adapter.",
+        "description": "Wähle, wie das Gerät erreicht wird: RS-485 seriell, Modbus TCP über einen RS-485↔Ethernet-Adapter oder Modbus TCP direkt am All-in-One-Gerät.",
         "data": {
           "modbus_mode": "Verbindungsart"
         }
@@ -38,6 +40,17 @@
           "modbus_slave": "Slave-Adresse"
         },
         "description": "Verbinde dich mit deinem RS-485↔Ethernet-Adapter (TCP-Port standardmäßig **502**, Slave **0xA0**). Der Adapter wandelt Modbus TCP in RTU um — am Gerät ist nichts zu ändern."
+      },
+      "tcp_direct": {
+        "title": "Modbus TCP (direkt am All-in-One-Gerät)",
+        "data": {
+          "device_name": "Gerätename",
+          "modbus_host": "Host / IP-Adresse",
+          "modbus_tcp_port": "TCP-Port",
+          "modbus_slave": "Slave-Adresse",
+          "tcp_verify_code": "Bestätigungscode"
+        },
+        "description": "Verbinde dich mit dem eigenen Ethernet-Anschluss des All-in-One-Geräts (TCP-Port standardmäßig **502**, Slave **0xA0**). Es wird kein RS-485↔Ethernet-Adapter verwendet. Gib den **6-stelligen Bestätigungscode** vom Gerät ein; er wird in die Holding-Register **0x045C–0x045D** geschrieben, und die Verbindung wird nur bei erfolgreicher Bestätigung akzeptiert."
       }
     }
   },

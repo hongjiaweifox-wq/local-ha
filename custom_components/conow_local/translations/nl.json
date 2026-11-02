@@ -9,12 +9,14 @@
   },
   "config": {
     "error": {
-      "cannot_connect": "Kan geen Modbus-verbinding maken. Controleer de verbinding, Externe besturing / ModBus RTU en het slave-adres."
+      "cannot_connect": "Kan geen Modbus-verbinding maken. Controleer de verbinding, Externe besturing / ModBus RTU en het slave-adres.",
+      "invalid_verify_code": "De verificatiecode moet uit precies 6 cijfers bestaan.",
+      "verification_failed": "Het apparaat heeft de verificatiecode geweigerd. Controleer de 6-cijferige code op het apparaat en probeer opnieuw."
     },
     "step": {
       "user": {
         "title": "Verbindingstype",
-        "description": "Kies hoe het apparaat bereikt wordt: RS-485 serieel, of Modbus TCP via een RS-485↔Ethernet-adapter.",
+        "description": "Kies hoe het apparaat bereikt wordt: RS-485 serieel, Modbus TCP via een RS-485↔Ethernet-adapter, of Modbus TCP rechtstreeks op het alles-in-één-apparaat.",
         "data": {
           "modbus_mode": "Verbindingstype"
         }
@@ -38,6 +40,17 @@
           "modbus_slave": "Slave-adres"
         },
         "description": "Verbind met je RS-485↔Ethernet-adapter (standaard TCP-poort **502**, slave **0xA0**). De adapter zet Modbus TCP om naar RTU — op het apparaat hoeft niets te veranderen."
+      },
+      "tcp_direct": {
+        "title": "Modbus TCP (rechtstreeks op alles-in-één)",
+        "data": {
+          "device_name": "Apparaatnaam",
+          "modbus_host": "Host / IP-adres",
+          "modbus_tcp_port": "TCP-poort",
+          "modbus_slave": "Slave-adres",
+          "tcp_verify_code": "Verificatiecode"
+        },
+        "description": "Verbind met de eigen Ethernet-poort van het alles-in-één-apparaat (standaard TCP-poort **502**, slave **0xA0**). Er is geen RS-485↔Ethernet-adapter nodig. Voer de **6-cijferige verificatiecode** van het apparaat in; deze wordt naar de holding-registers **0x045C–0x045D** geschreven en de verbinding wordt alleen bij bevestiging geaccepteerd."
       }
     }
   },

@@ -11,13 +11,13 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
 from . import panel_map
-from .client import (
+from ..client import (
     INTER_FRAME_DELAY_S,
     POST_WRITE_DELAY_S,
     ConowModbusClient,
     ConowModbusError,
 )
-from .const import (
+from ..const import (
     CONF_MODBUS_HOST,
     CONF_MODBUS_MODE,
     CONF_MODBUS_SLAVE,
@@ -25,8 +25,19 @@ from .const import (
     DEFAULT_TCP_PORT,
     DOMAIN,
     LOGGER,
-    MODBUS_MODE_TCP,
+    MODBUS_TCP_MODES,
 )
+from ..map_router import (
+    FIRMWARE_VERSION_ADDRESS,
+    FIRMWARE_VERSION_REGISTERS,
+    MAP_V1,
+    MAP_V2,
+    PANEL_MAP_MIN_FIRMWARE,
+    format_version,
+    parse_firmware_version,
+    select_map,
+)
+from .panel_coordinator import get_panel_coordinator
 
 
 def _control_kind(register: panel_map.PanelRegister) -> str:
@@ -155,7 +166,11 @@ def _serialize_group(
         "count_register": group.count_register or None,
         "members": members,
         "subgroups": [
-            {"label": subgroup.label, "members": list(subgroup.members)}
+            {
+                "label": subgroup.label,
+                "key": subgroup.key or None,
+                "members": list(subgroup.members),
+            }
             for subgroup in group.subgroups
         ],
     }
@@ -186,12 +201,25 @@ def get_panel_devices(hass: HomeAssistant) -> list[dict[str, Any]]:
         )
         coordinator = getattr(entry, "runtime_data", None)
         loaded = entry.state is ConfigEntryState.LOADED
+        map_version = getattr(coordinator, "map_version", MAP_V1)
+        panel_coordinator = (
+            get_panel_coordinator(hass, entry.entry_id)
+            if loaded and map_version == MAP_V2
+            else None
+        )
+        # On v2 the main coordinator does not poll, so its last_update_success
+        # would stay True forever; the panel coordinator owns device health.
+        online_coordinator = panel_coordinator or coordinator
         devices.append(
             {
                 "device_id": device_entry.id if device_entry else entry.entry_id,
                 "entry_id": entry.entry_id,
                 "name": _device_name(entry, device_entry) if device_entry else entry.title,
-                "online": bool(loaded and coordinator and coordinator.last_update_success),
+                "online": bool(
+                    loaded
+                    and online_coordinator is not None
+                    and online_coordinator.last_update_success
+                ),
                 "loaded": loaded,
                 "mode": entry.data.get(CONF_MODBUS_MODE, "rtu"),
                 "slave": entry.data.get(CONF_MODBUS_SLAVE),
@@ -211,6 +239,36 @@ def _entry_for_id(hass: HomeAssistant, device_id: str):
         if device_entry and (DOMAIN, entry.entry_id) in device_entry.identifiers:
             return entry
     return None
+
+
+def _probe_map_version(
+    client: ConowModbusClient,
+) -> tuple[str, tuple[int, ...] | None]:
+    """Probe firmware and return the selected map plus decoded version."""
+    try:
+        words = client.read_holding_registers(
+            FIRMWARE_VERSION_ADDRESS,
+            FIRMWARE_VERSION_REGISTERS,
+            retries=2,
+        )
+    except ConowModbusError:
+        return MAP_V1, None
+    version = parse_firmware_version(words)
+    return select_map(version), version
+
+
+def _probe_entry_map(entry) -> tuple[str, tuple[int, ...] | None]:
+    """Probe an entry that has no live coordinator (TCP only)."""
+    if entry.data.get(CONF_MODBUS_MODE) not in MODBUS_TCP_MODES:
+        return MAP_V1, None
+    host = entry.data[CONF_MODBUS_HOST]
+    tcp_port = entry.data.get(CONF_MODBUS_TCP_PORT, DEFAULT_TCP_PORT)
+    slave = entry.data[CONF_MODBUS_SLAVE]
+    try:
+        with ConowModbusClient(host=host, tcp_port=tcp_port, slave=slave) as client:
+            return _probe_map_version(client)
+    except (ConowModbusError, OSError):
+        return MAP_V1, None
 
 
 def _merge_contiguous(
@@ -260,7 +318,7 @@ def plan_group_writes(
 
 def _write_ops_direct(entry, ops: list[tuple[int, list[int]]]) -> None:
     """Write through a short-lived TCP client when the entry is not loaded."""
-    if entry.data.get(CONF_MODBUS_MODE) != MODBUS_MODE_TCP:
+    if entry.data.get(CONF_MODBUS_MODE) not in MODBUS_TCP_MODES:
         raise ConowModbusError("RTU entry must finish setup before writing")
     host = entry.data[CONF_MODBUS_HOST]
     tcp_port = entry.data.get(CONF_MODBUS_TCP_PORT, DEFAULT_TCP_PORT)
@@ -286,13 +344,29 @@ async def async_write_panel_group(
     entry = _entry_for_id(hass, device_id)
     if entry is None:
         raise LookupError(f"No {DOMAIN} entry for {device_id}")
+
+    coordinator = getattr(entry, "runtime_data", None)
+    loaded = entry.state is ConfigEntryState.LOADED and coordinator is not None
+    if loaded:
+        map_version = getattr(coordinator, "map_version", MAP_V1)
+        firmware = getattr(coordinator, "firmware_version", None)
+    else:
+        map_version, firmware = await hass.async_add_executor_job(
+            _probe_entry_map, entry
+        )
+    if map_version != MAP_V2:
+        raise ConowModbusError(
+            "Grouped panel writes need the October register map "
+            f"(firmware >= {format_version(PANEL_MAP_MIN_FIRMWARE)}); "
+            f"this device reports {format_version(firmware) or 'an unknown firmware'}"
+        )
+
     group = panel_map.get_group(group_id)
     if group is None:
         raise LookupError(f"Unknown group {group_id}")
     ops = plan_group_writes(group, values)
 
-    coordinator = getattr(entry, "runtime_data", None)
-    if entry.state is ConfigEntryState.LOADED and coordinator is not None:
+    if loaded:
         await coordinator.async_write_panel_ops(ops)
     else:
         await hass.async_add_executor_job(_write_ops_direct, entry, ops)
@@ -320,16 +394,21 @@ def _read_blocks(client: ConowModbusClient) -> dict[str, list[int] | None]:
     return blocks
 
 
-def _read_blocks_direct(entry) -> dict[str, list[int] | None]:
+def _read_blocks_direct(
+    entry,
+) -> tuple[str, tuple[int, ...] | None, dict[str, list[int] | None]]:
     """Open a short-lived TCP client for entries the coordinator does not own."""
-    if entry.data.get(CONF_MODBUS_MODE) != MODBUS_MODE_TCP:
+    if entry.data.get(CONF_MODBUS_MODE) not in MODBUS_TCP_MODES:
         # Never open a second handle on the serial port.
-        return {}
+        return MAP_V1, None, {}
     host = entry.data[CONF_MODBUS_HOST]
     tcp_port = entry.data.get(CONF_MODBUS_TCP_PORT, DEFAULT_TCP_PORT)
     slave = entry.data[CONF_MODBUS_SLAVE]
     with ConowModbusClient(host=host, tcp_port=tcp_port, slave=slave) as client:
-        return _read_blocks(client)
+        map_version, version = _probe_map_version(client)
+        if map_version != MAP_V2:
+            return map_version, version, {}
+        return map_version, version, _read_blocks(client)
 
 
 async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[str, Any]:
@@ -344,14 +423,23 @@ async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[s
     entities = _entity_code_map(hass, entry.entry_id, device_entry)
 
     coordinator = getattr(entry, "runtime_data", None)
-    if entry.state is ConfigEntryState.LOADED and coordinator is not None:
-        raw_blocks = await coordinator.async_read_panel_blocks()
+    loaded = entry.state is ConfigEntryState.LOADED and coordinator is not None
+    if loaded:
+        map_version = getattr(coordinator, "map_version", MAP_V1)
+        firmware = getattr(coordinator, "firmware_version", None)
+        raw_blocks = (
+            await coordinator.async_read_panel_blocks()
+            if map_version == MAP_V2
+            else {}
+        )
     else:
         try:
-            raw_blocks = await hass.async_add_executor_job(_read_blocks_direct, entry)
+            map_version, firmware, raw_blocks = await hass.async_add_executor_job(
+                _read_blocks_direct, entry
+            )
         except (ConowModbusError, OSError):
             LOGGER.debug("Panel: direct read failed for %s", entry.entry_id)
-            raw_blocks = {}
+            map_version, firmware, raw_blocks = MAP_V1, None, {}
 
     decoded: dict[str, dict[str, Any]] = {}
     for block, words in raw_blocks.items():
@@ -359,32 +447,56 @@ async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[s
             decoded.update(panel_map.decode_block(block, words))
 
     LOGGER.debug(
-        "Panel: read %s/%s blocks for %s",
+        "Panel: read %s/%s blocks for %s (map=%s, firmware=%s)",
         sum(1 for words in raw_blocks.values() if words is not None),
         len(raw_blocks),
         entry.entry_id,
+        map_version,
+        format_version(firmware) or "unknown",
     )
-    read_ok = any(words is not None for words in raw_blocks.values())
+    read_ok = map_version == MAP_V2 and any(
+        words is not None for words in raw_blocks.values()
+    )
+    map_info = dict(panel_map.get_map_meta())
+    map_info.update(
+        {
+            "selected": map_version,
+            "source": (
+                "panel_registers.json" if map_version == MAP_V2 else "registers.json"
+            ),
+            "firmware_version": format_version(firmware),
+            "min_firmware": format_version(PANEL_MAP_MIN_FIRMWARE),
+        }
+    )
     return {
         "device_id": device_id,
         "name": _device_name(entry, device_entry) if device_entry else entry.title,
         "online": bool(
             read_ok
             or (
-                entry.state is ConfigEntryState.LOADED
+                loaded
                 and coordinator is not None
                 and coordinator.last_update_success
             )
+            or firmware is not None
         ),
         "map_readable": read_ok,
+        "map_version": 2 if map_version == MAP_V2 else 1,
+        "map_source": map_info["source"],
+        "firmware_version": map_info["firmware_version"],
+        "min_firmware": map_info["min_firmware"],
         "mode": entry.data.get(CONF_MODBUS_MODE, "rtu"),
         "slave": entry.data.get(CONF_MODBUS_SLAVE),
-        "map": panel_map.get_map_meta(),
+        "map": map_info,
         "blocks_read": {
             block: words is not None for block, words in raw_blocks.items()
         },
-        "groups": {
-            group.id: _serialize_group(group, decoded, entities)
-            for group in panel_map.get_groups()
-        },
+        "groups": (
+            {
+                group.id: _serialize_group(group, decoded, entities)
+                for group in panel_map.get_groups()
+            }
+            if map_version == MAP_V2
+            else {}
+        ),
     }
