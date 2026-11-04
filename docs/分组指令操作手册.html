@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conow Local × Home Assistant 演示操作手册</title>
+<style>
+  :root {
+    --blue: #03a9f4;
+    --blue-dark: #0277bd;
+    --ink: #16222b;
+    --muted: #5b6b76;
+    --bg: #eef3f8;
+    --card: #ffffff;
+    --line: #dbe4ec;
+    --code-bg: #0f1720;
+    --ok: #2e7d32;
+    --ok-bg: #edf7ee;
+    --warn: #9a5b00;
+    --warn-bg: #fff6e5;
+    --danger: #b3261e;
+    --danger-bg: #fdecea;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(16, 36, 50, .06), 0 10px 30px rgba(16, 36, 50, .07);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.75 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 28px 20px 72px; }
+
+  /* ---------- hero ---------- */
+  .hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: 20px;
+    padding: 40px 40px 34px;
+    color: #fff;
+    background:
+      radial-gradient(1200px 400px at 100% -10%, rgba(3, 169, 244, .55), transparent 60%),
+      linear-gradient(135deg, #0b2233 0%, #123449 60%, #0e2a3d 100%);
+    box-shadow: var(--shadow);
+  }
+  .hero::after {
+    content: "";
+    position: absolute;
+    right: -60px; top: -60px;
+    width: 260px; height: 260px;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 50%;
+  }
+  .eyebrow {
+    margin: 0 0 10px;
+    font-size: .78rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: #8fd8ff;
+  }
+  .hero h1 { margin: 0 0 10px; font-size: clamp(1.6rem, 3.6vw, 2.3rem); line-height: 1.25; font-weight: 650; }
+  .hero p.lead { margin: 0; max-width: 760px; color: #cfe4f1; font-size: .98rem; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+  .badge {
+    padding: 5px 12px;
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 999px;
+    font-size: .78rem;
+    color: #dff1fb;
+    background: rgba(255, 255, 255, .07);
+  }
+
+  /* ---------- toc ---------- */
+  .toc {
+    margin: 22px 0 26px;
+    padding: 22px 24px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+  .toc h2 { margin: 0 0 14px; font-size: 1rem; letter-spacing: .02em; }
+  .toc ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 6px 24px;
+    counter-reset: toc;
+  }
+  .toc li { counter-increment: toc; }
+  .toc a {
+    display: flex;
+    gap: 10px;
+    padding: 5px 0;
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px dashed transparent;
+  }
+  .toc a::before {
+    content: counter(toc, decimal-leading-zero);
+    flex: none;
+    color: var(--blue-dark);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+  .toc a:hover { color: var(--blue-dark); border-bottom-color: var(--line); }
+
+  /* ---------- sections ---------- */
+  section {
+    margin: 0 0 22px;
+    padding: 30px 34px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    page-break-inside: avoid;
+  }
+  section > h2 {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 0 0 6px;
+    font-size: 1.32rem;
+    line-height: 1.35;
+  }
+  section > h2 .n {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px; height: 32px;
+    border-radius: 9px;
+    background: #e6f6fe;
+    color: var(--blue-dark);
+    font-size: .95rem;
+    font-weight: 700;
+    transform: translateY(2px);
+  }
+  .section-lead { margin: 0 0 20px; color: var(--muted); font-size: .95rem; }
+  h3 { margin: 26px 0 10px; font-size: 1.04rem; }
+  h3:first-of-type { margin-top: 8px; }
+  p { margin: 8px 0; }
+  ul, ol { margin: 8px 0 8px 1.2em; padding: 0; }
+  li { margin: 5px 0; }
+  strong { font-weight: 650; }
+  a { color: var(--blue-dark); }
+
+  /* ---------- steps ---------- */
+  ol.steps {
+    margin: 14px 0 6px;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+  }
+  ol.steps > li {
+    position: relative;
+    counter-increment: step;
+    margin: 0 0 16px;
+    padding: 0 0 0 44px;
+    min-height: 30px;
+  }
+  ol.steps > li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0; top: 1px;
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: var(--blue-dark);
+    color: #fff;
+    font-size: .82rem;
+    font-weight: 700;
+  }
+  ol.steps > li > strong:first-child { display: block; margin-bottom: 2px; }
+  ol.steps ul { margin-top: 4px; }
+
+  /* ---------- callouts ---------- */
+  .callout {
+    margin: 16px 0;
+    padding: 13px 16px;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--blue);
+    border-radius: 10px;
+    background: #f6fbfe;
+    font-size: .92rem;
+  }
+  .callout .label { font-weight: 700; margin-right: 6px; }
+  .callout.tip { border-left-color: var(--ok); background: var(--ok-bg); }
+  .callout.warn { border-left-color: var(--warn); background: var(--warn-bg); }
+  .callout.danger { border-left-color: var(--danger); background: var(--danger-bg); }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* ---------- tables ---------- */
+  .table-wrap { overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th, td { padding: 9px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+  th { background: #f4f8fb; font-weight: 650; white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  td code { white-space: nowrap; }
+
+  /* ---------- code ---------- */
+  code {
+    font-family: "SF Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .86em;
+    background: #eef3f7;
+    border: 1px solid #e2eaf1;
+    border-radius: 5px;
+    padding: 1px 5px;
+  }
+  pre {
+    margin: 12px 0;
+    padding: 15px 17px;
+    background: var(--code-bg);
+    color: #d7e5ef;
+    border-radius: 10px;
+    overflow-x: auto;
+    font-size: .84rem;
+    line-height: 1.65;
+  }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; white-space: pre; }
+  kbd {
+    display: inline-block;
+    padding: 1px 7px;
+    font: .8em ui-monospace, Menlo, monospace;
+    background: #fff;
+    border: 1px solid #c9d6e0;
+    border-bottom-width: 2px;
+    border-radius: 5px;
+  }
+
+  /* ---------- flow ---------- */
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 8px;
+    margin: 16px 0 6px;
+  }
+  .flow .node {
+    flex: 1 1 150px;
+    min-width: 140px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #f8fbfd;
+    font-size: .88rem;
+    text-align: center;
+  }
+  .flow .node b { display: block; font-size: .92rem; }
+  .flow .node span { color: var(--muted); font-size: .8rem; }
+  .flow .arrow {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    color: var(--blue-dark);
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 0 2px;
+  }
+
+  /* ---------- mock dialog ---------- */
+  .mock {
+    margin: 16px 0;
+    padding: 32px 20px;
+    border-radius: 12px;
+    background:
+      linear-gradient(rgba(10, 25, 38, .55), rgba(10, 25, 38, .55)),
+      repeating-linear-gradient(45deg, #203342 0 12px, #1b2c3a 12px 24px);
+    display: flex;
+    justify-content: center;
+  }
+  .mock-dialog {
+    width: min(360px, 100%);
+    padding: 20px;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, .35);
+  }
+  .mock-dialog h4 { margin: 0 0 8px; font-size: 1rem; }
+  .mock-dialog p { margin: 0; color: var(--muted); font-size: .9rem; }
+  .mock-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+  .mock-actions span {
+    padding: 7px 18px;
+    border-radius: 999px;
+    font-size: .85rem;
+    border: 1px solid var(--line);
+  }
+  .mock-actions .primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+  /* ---------- checklist ---------- */
+  ul.check { list-style: none; margin-left: 0; }
+  ul.check li { position: relative; padding-left: 30px; margin: 9px 0; }
+  ul.check li::before {
+    content: "";
+    position: absolute; left: 0; top: 4px;
+    width: 17px; height: 17px;
+    border: 2px solid #9fb3c2;
+    border-radius: 5px;
+    background: #fff;
+  }
+
+  /* ---------- misc ---------- */
+  .pill { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: .76rem; font-weight: 650; }
+  .pill.ok { color: var(--ok); background: var(--ok-bg); border: 1px solid #c8e6c9; }
+  .pill.warn { color: var(--warn); background: var(--warn-bg); border: 1px solid #ffe0a3; }
+  .pill.danger { color: var(--danger); background: var(--danger-bg); border: 1px solid #f5c6c2; }
+  .two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .mini-card { padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px; background: #f9fbfd; }
+  .mini-card h4 { margin: 0 0 6px; font-size: .95rem; }
+  .mini-card p { margin: 4px 0; font-size: .88rem; color: var(--muted); }
+  footer { margin-top: 30px; text-align: center; color: var(--muted); font-size: .82rem; }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 16px 12px 48px; }
+    .hero { padding: 28px 22px 24px; }
+    section { padding: 22px 18px; }
+    section > h2 { font-size: 1.15rem; }
+    .flow .arrow { display: none; }
+  }
+
+  @media print {
+    :root { --bg: #fff; --shadow: none; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { background: #fff; font-size: 11.5pt; }
+    .wrap { max-width: none; padding: 0; }
+    .hero { border-radius: 0; box-shadow: none; }
+    .toc { box-shadow: none; }
+    section { box-shadow: none; border-color: #ccc; page-break-inside: avoid; }
+    a { color: inherit; text-decoration: none; }
+    pre { white-space: pre-wrap; word-break: break-word; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <p class="eyebrow">Home Assistant · Conow Local</p>
+    <h1>Conow Local 分组面板<br>演示操作手册</h1>
+    <p class="lead">
+      从安装 Home Assistant、HACS，到添加 Conow Local 集成、进入设备详情并跳转到分组面板，
+      再到按分组整组下发。按本手册顺序操作即可完成一次完整演示。
+    </p>
+    <div class="badges">
+      <span class="badge">集成版本 2.5.0</span>
+      <span class="badge">HA 2026.6+</span>
+      <span class="badge">设备固件 ≥ 1.2</span>
+      <span class="badge">2026-11-03</span>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="目录">
+    <h2>目录</h2>
+    <ol>
+      <li><a href="#prep">演示前准备与检查清单</a></li>
+      <li><a href="#install-ha">安装 Home Assistant</a></li>
+      <li><a href="#install-hacs">安装 HACS</a></li>
+      <li><a href="#install-integration">通过 HACS 安装 Conow Local</a></li>
+      <li><a href="#add-device">添加设备（三种连接方式）</a></li>
+      <li><a href="#jump">从设备详情跳转到分组面板</a></li>
+      <li><a href="#panel">分组面板使用与整组下发</a></li>
+      <li><a href="#faq">常见问题排查</a></li>
+      <li><a href="#script">演示流程速查（15 分钟）</a></li>
+      <li><a href="#appendix">附录：参数与模拟器</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <!-- ========== 1 ========== -->
+    <section id="prep">
+      <h2><span class="n">1</span>演示前准备与检查清单</h2>
+      <p class="section-lead">建议提前一天完成安装和配对；演示当天只做“打开、展示、下发”，避免现场等待重启或网络下载。</p>
+
+      <div class="flow" aria-label="演示环境结构">
+        <div class="node"><b>CONOW 一体机</b><span>固件 ≥ 1.2</span></div>
+        <div class="arrow">↔</div>
+        <div class="node"><b>RS-485 / 网口</b><span>RTU 或 Modbus TCP</span></div>
+        <div class="arrow">↔</div>
+        <div class="node"><b>Home Assistant</b><span>2026.6 或更高</span></div>
+        <div class="arrow">→</div>
+        <div class="node"><b>分组面板</b><span>侧边栏 / 设备页跳转</span></div>
+      </div>
+
+      <h3>硬件与网络</h3>
+      <ul class="check">
+        <li>HA 主机已安装并可通过 <code>http://&lt;HA地址&gt;:8123</code> 访问。</li>
+        <li>HA 与设备在同一局域网；如用 RS-485 适配器，USB 已直通给 HA 主机。</li>
+        <li>设备已在 <strong>CONOW ECO App</strong> 中完成激活（全新设备未激活时 RS-485 不工作）。</li>
+        <li>已在 App 中打开 <strong>启用外部控制 / ModBus RTU</strong>。</li>
+        <li>准备演示用的连接参数：从站地址 <code>160</code>（<code>0xA0</code>）、波特率 <code>38400</code>、TCP 端口 <code>502</code>。</li>
+        <li>设备固件为 <strong>1.2 或更高</strong>（低于 1.2 时分组面板不可用，只能看到 v1 实体）。</li>
+      </ul>
+
+      <h3>软件</h3>
+      <ul class="check">
+        <li>HA 版本满足 <code>hacs.json</code> 要求：<strong>2026.6.0+</strong>。</li>
+        <li>HACS 已安装并完成 GitHub 授权。</li>
+        <li>Conow Local 已通过 HACS 安装（版本 2.5.0），并已重启 HA。</li>
+        <li>浏览器已强制刷新，侧边栏能看到 <strong>「Conow Local 分组」</strong>。</li>
+        <li>演示账号为管理员（安装集成、重启、HACS 操作都需要管理员权限）。</li>
+      </ul>
+
+      <div class="callout warn">
+        <span class="label">网络提醒</span>
+        HACS 安装与下载需要访问 GitHub。如果演示现场网络受限，请提前装好 HACS 与集成，现场只展示“已安装”的界面，或准备手机热点。
+      </div>
+
+      <div class="callout tip">
+        <span class="label">演示兜底</span>
+        没有真机时可用仓库自带的模拟器（见<a href="#appendix">附录</a>），以固件 1.2、v2 寄存器表启动，效果与真机一致。
+      </div>
+    </section>
+
+    <!-- ========== 2 ========== -->
+    <section id="install-ha">
+      <h2><span class="n">2</span>安装 Home Assistant</h2>
+      <p class="section-lead">推荐使用 Home Assistant OS；如果演示机已经装好 HA，可跳到下一节。</p>
+
+      <h3>方式一：Home Assistant OS（推荐）</h3>
+      <ol class="steps">
+        <li>
+          <strong>准备主机</strong>
+          x86-64 小主机、虚拟机或树莓派均可；建议至少 2 GB 内存、32 GB 存储。
+        </li>
+        <li>
+          <strong>下载镜像</strong>
+          打开 <a href="https://www.home-assistant.io/installation/" target="_blank" rel="noopener">home-assistant.io/installation</a>，
+          选择对应硬件的 HA OS 镜像。
+        </li>
+        <li>
+          <strong>写入启动盘</strong>
+          使用 Balena Etcher 把镜像写入 U 盘或 SSD。<strong>写入会清空目标磁盘</strong>，请先确认没有重要数据。
+        </li>
+        <li>
+          <strong>上电并联网</strong>
+          把启动盘插入目标机，用网线接入与设备相同的局域网，然后上电。
+        </li>
+        <li>
+          <strong>打开首次向导</strong>
+          浏览器访问 <code>http://homeassistant.local:8123</code>；如果无法解析，用路由器里查到的 HA 主机 IP 访问。
+        </li>
+        <li>
+          <strong>完成初始化</strong>
+          创建管理员账号，设置名称、语言（简体中文）、时区和位置，完成后进入 HA 概览页。
+        </li>
+        <li>
+          <strong>记录地址</strong>
+          在 <strong>设置 → 系统 → 网络</strong> 中确认 HA 的 IP，演示时统一使用这个地址。
+        </li>
+      </ol>
+
+      <h3>方式二：Docker（HA Container）</h3>
+      <p>如果演示机已经运行 Docker，可直接启动官方容器：</p>
+      <pre><code>docker run -d \
+  --name homeassistant \
+  --restart=unless-stopped \
+  --privileged \
+  -e TZ=Asia/Shanghai \
+  -v /opt/homeassistant:/config \
+  --network=host \
+  ghcr.io/home-assistant/home-assistant:stable</code></pre>
+      <p>启动后访问 <code>http://&lt;主机IP&gt;:8123</code>。若使用 RS-485 串口，需要把设备直通进容器，例如追加 <code>--device=/dev/ttyUSB0:/dev/ttyUSB0</code>。</p>
+
+      <div class="callout">
+        <span class="label">说明</span>
+        本手册以 HA OS 的界面为准；HA Container 没有加载项商店，HACS 需按下一节的“手动安装”方式处理。
+      </div>
+    </section>
+
+    <!-- ========== 3 ========== -->
+    <section id="install-hacs">
+      <h2><span class="n">3</span>安装 HACS</h2>
+      <p class="section-lead">HACS 用来从 GitHub 安装自定义集成。它需要 GitHub 账号，并要求 HA 版本满足集成声明的最低版本。</p>
+
+      <h3>HA OS / Supervised：脚本安装</h3>
+      <ol class="steps">
+        <li>
+          <strong>打开终端加载项</strong>
+          <strong>设置 → 加载项 → 加载项商店</strong>，安装并启动 <strong>Terminal &amp; SSH</strong>（或 Advanced SSH &amp; Web Terminal）。
+        </li>
+        <li>
+          <strong>关闭保护模式</strong>
+          打开该加载项的 <strong>配置</strong>，关闭 <strong>Protection mode</strong> 并重启加载项，否则无法写入 HA 配置目录。
+        </li>
+        <li>
+          <strong>执行安装脚本</strong>
+          在终端中运行：
+          <pre><code>wget -O - https://get.hacs.xyz | bash -</code></pre>
+        </li>
+        <li>
+          <strong>重启 Home Assistant</strong>
+          <strong>设置 → 系统 → 重启</strong>，等待 HA 重新启动完成。
+        </li>
+        <li>
+          <strong>添加 HACS 集成</strong>
+          <strong>设置 → 设备与服务 → 添加集成</strong>，搜索 <strong>HACS</strong>，勾选确认项后提交。
+        </li>
+        <li>
+          <strong>完成 GitHub 授权</strong>
+          页面会显示一个设备码。打开 <code>https://github.com/login/device</code>，登录 GitHub 并输入设备码，授权后回到 HA 完成。
+        </li>
+        <li>
+          <strong>确认入口</strong>
+          左侧边栏出现 <strong>HACS</strong> 即安装成功。
+        </li>
+      </ol>
+
+      <h3>HA Container：手动安装</h3>
+      <p>没有加载项商店时，在 HA 配置目录（通常是 <code>/config</code>）执行：</p>
+      <pre><code>cd /config
+wget -O hacs.zip https://github.com/hacs/integration/releases/latest/download/hacs.zip
+unzip -o hacs.zip -d custom_components/hacs
+rm hacs.zip</code></pre>
+      <p>然后重启 HA，并按上面的第 5–7 步添加 HACS 集成、完成 GitHub 授权。</p>
+
+      <div class="callout warn">
+        <span class="label">注意</span>
+        HACS 必须能访问 GitHub；授权失败或一直转圈时，先检查 HA 主机的网络与 DNS，再重试。安装完成后不要删除 <code>config/custom_components/hacs</code>。
+      </div>
+    </section>
+
+    <!-- ========== 4 ========== -->
+    <section id="install-integration">
+      <h2><span class="n">4</span>通过 HACS 安装 Conow Local</h2>
+      <p class="section-lead">演示使用仓库 <code>hongjiaweifox-wq/local-ha</code>；如果使用其他仓库地址，替换第 2 步的 URL 即可。</p>
+
+      <ol class="steps">
+        <li>
+          <strong>打开 HACS 集成页</strong>
+          左侧边栏 <strong>HACS → 集成</strong>。
+        </li>
+        <li>
+          <strong>添加自定义仓库</strong>
+          点击右上角 <strong>⋮ → 自定义仓库（Custom repositories）</strong>，填写：
+          <ul>
+            <li>仓库地址：<code>https://github.com/hongjiaweifox-wq/local-ha</code></li>
+            <li>类别：<strong>集成（Integration）</strong></li>
+          </ul>
+          点击 <strong>添加</strong>。
+        </li>
+        <li>
+          <strong>下载集成</strong>
+          回到 HACS 集成页，搜索 <strong>Conow Local</strong>，打开条目并点击 <strong>下载（Download）</strong>。
+        </li>
+        <li>
+          <strong>重启 Home Assistant</strong>
+          <strong>设置 → 系统 → 重启</strong>，等待启动完成。
+        </li>
+        <li>
+          <strong>验证安装</strong>
+          <strong>设置 → 设备与服务 → 添加集成</strong>，能搜索到 <strong>Conow Local</strong> 即安装成功。
+        </li>
+      </ol>
+
+      <div class="callout">
+        <span class="label">版本确认</span>
+        集成版本为 <strong>2.5.0</strong>，文件位于 <code>config/custom_components/conow_local/</code>。
+        如果 HACS 提示 HA 版本过低，请先把 HA 升级到 <strong>2026.6</strong> 或更高。
+      </div>
+
+      <div class="callout warn">
+        <span class="label">现场演示建议</span>
+        下载和重启都比较耗时，建议提前完成本节。现场只需打开 HACS 展示“已下载”，或直接从“添加集成”开始。
+      </div>
+    </section>
+
+    <!-- ========== 5 ========== -->
+    <section id="add-device">
+      <h2><span class="n">5</span>添加设备（三种连接方式）</h2>
+      <p class="section-lead">先选连接方式，再填写对应参数。三种方式的区别只在“HA 如何连到设备”，进入面板后的操作完全一致。</p>
+
+      <p><strong>设置 → 设备与服务 → 添加集成 → 搜索 Conow Local</strong>，在“连接方式”中选择：</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>方式</th>
+              <th>适用场景</th>
+              <th>必填参数</th>
+              <th>验证码</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Modbus TCP（直连一体机）</strong></td>
+              <td>一体机自带 Modbus TCP 网口，中间没有转换器</td>
+              <td>设备名称、主机/IP、TCP 端口 <code>502</code>、从站 <code>160</code></td>
+              <td><span class="pill warn">需要</span> 一体机屏幕上的 6 位码</td>
+            </tr>
+            <tr>
+              <td><strong>Modbus TCP（以太网适配器）</strong></td>
+              <td>RS-485 ↔ 以太网转换器，设备仍走 RTU</td>
+              <td>设备名称、适配器 IP、TCP 端口 <code>502</code>、从站 <code>160</code></td>
+              <td><span class="pill ok">不需要</span></td>
+            </tr>
+            <tr>
+              <td><strong>Modbus RTU（串口）</strong></td>
+              <td>USB 转 RS-485 直接接在 HA 主机上</td>
+              <td>设备名称、串口路径、从站 <code>160</code>、波特率 <code>38400</code></td>
+              <td><span class="pill ok">不需要</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>直连一体机（带验证码）</h3>
+      <ol class="steps">
+        <li>连接方式选择 <strong>Modbus TCP（直连一体机）</strong>。</li>
+        <li>填写设备名称、一体机 IP、TCP 端口 <code>502</code>、从站地址 <code>160</code>。</li>
+        <li>输入一体机上显示的 <strong>6 位验证码</strong>，提交。</li>
+        <li>集成会把验证码写入保持寄存器 <code>0x045C–0x045D</code>；设备确认通过后才会创建设备条目。</li>
+      </ol>
+      <div class="callout danger">
+        <span class="label">验证失败</span>
+        提示“设备校验未通过”时，核对屏幕上的 6 位码是否变化，重新输入；提示“验证码必须是 6 位数字”时，去掉空格或字母再提交。
+      </div>
+
+      <h3>以太网适配器 / RS-485 串口</h3>
+      <ul>
+        <li><strong>适配器方式：</strong>适配器的串口侧配置为 <strong>38400 8N1</strong>，并透传从站地址 <code>160</code>；HA 侧填写适配器 IP 和 TCP 端口。</li>
+        <li><strong>串口方式：</strong>串口路径示例：Linux / HA OS 为 <code>/dev/ttyUSB0</code>，macOS 为 <code>/dev/cu.usbserial-*</code>；Docker 需把设备直通进容器。</li>
+        <li>无论哪种方式，都必须在 App 中开启 <strong>启用外部控制 / ModBus RTU</strong>。</li>
+      </ul>
+
+      <h3>添加成功后的固件路由</h3>
+      <p>集成启动时会读取 <code>10083–10084</code>（<code>0x2763</code>）的 4 字节 ASCII 固件版本，并据此选择寄存器表：</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>固件版本</th><th>使用的映射</th><th>效果</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>≥ 1.2</strong></td>
+              <td><code>panel_registers.json</code>（v2）</td>
+              <td>启用分组面板与面板实体，日志显示 <code>Map: firmware=1.2 -&gt; v2</code></td>
+            </tr>
+            <tr>
+              <td><strong>&lt; 1.2 / 读取不到</strong></td>
+              <td><code>registers.json</code>（v1）</td>
+              <td>只有 v1 实体（10000–10036 / 10100–10107），面板提示“分组面板不可用”</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warn">
+        <span class="label">演示必须</span>
+        分组面板只在固件 <strong>≥ 1.2</strong> 时可用。演示前请在设备页或日志中确认版本，避免现场打开面板却是 v1 提示。
+      </div>
+    </section>
+
+    <!-- ========== 6 ========== -->
+    <section id="jump">
+      <h2><span class="n">6</span>从设备详情跳转到分组面板</h2>
+      <p class="section-lead">面板有三个入口，演示时建议依次展示：设备页“访问” → 侧边栏入口 → 写入拦截提示。</p>
+
+      <div class="flow" aria-label="跳转路径">
+        <div class="node"><b>设置 → 设备与服务</b><span>Conow Local</span></div>
+        <div class="arrow">→</div>
+        <div class="node"><b>点击设备</b><span>进入设备详情</span></div>
+        <div class="arrow">→</div>
+        <div class="node"><b>点击「访问」</b><span>设备名称旁</span></div>
+        <div class="arrow">→</div>
+        <div class="node"><b>分组面板</b><span>自动选中该设备</span></div>
+      </div>
+
+      <h3>入口一：设备详情页「访问」</h3>
+      <ol class="steps">
+        <li>打开 <strong>设置 → 设备与服务 → Conow Local</strong>。</li>
+        <li>点击设备卡片或设备名称，进入设备详情页。</li>
+        <li>在设备名称旁点击 <strong>「访问」</strong>。</li>
+        <li>浏览器会打开 <code>/conow-local-panel?device_id=…</code>，面板顶部会自动选中这台设备。</li>
+      </ol>
+      <div class="callout tip">
+        <span class="label">为什么用这个链接</span>
+        该链接由集成写入设备信息，使用 <code>homeassistant://</code> 同源跳转，不依赖 HA 的内网 IP，换主机名或端口也能正常打开。
+      </div>
+
+      <h3>入口二：侧边栏</h3>
+      <p>左侧边栏点击 <strong>「Conow Local 分组」</strong>，在面板顶部工具栏的“设备”下拉框中选择要查看的设备。</p>
+
+      <h3>入口三：设备页写入拦截</h3>
+      <ol class="steps">
+        <li>在设备详情页找到任意一个可写的 number / switch / select 实体。</li>
+        <li>尝试修改并提交。</li>
+        <li>HA 会弹出提示：<strong>“为保证原子性，设备页上的单个控件不会直接下发；请在 Conow Local 面板中整组下发。”</strong></li>
+        <li>点击提示里的 <strong>「打开面板」</strong> 按钮，直接跳转到该设备的面板。</li>
+      </ol>
+      <div class="callout">
+        <span class="label">设计原因</span>
+        计划表、策略、功率限制等寄存器必须整组下发。设备页一次只改一个寄存器，会把一组配置拆成多帧，可能让设备短暂处于不一致状态，因此面板-backed 实体在设备页被统一拦截。
+      </div>
+    </section>
+
+    <!-- ========== 7 ========== -->
+    <section id="panel">
+      <h2><span class="n">7</span>分组面板使用与整组下发</h2>
+      <p class="section-lead">面板按“分组”组织寄存器：只读数据用于展示，可写分组在底部提供“批量下发”。</p>
+
+      <h3>工具栏与筛选</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>控件</th><th>作用</th></tr></thead>
+          <tbody>
+            <tr><td>设备</td><td>切换要查看的 Conow Local 设备</td></tr>
+            <tr><td>分组</td><td>只看某个分组，例如“TOU 计划表”</td></tr>
+            <tr><td>实体</td><td>按实体名称/编码定位寄存器行</td></tr>
+            <tr><td>访问权限</td><td>全部 / 仅可写 / 仅可读</td></tr>
+            <tr><td>刷新</td><td>立即重新读取设备数据</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>分组内容</h3>
+      <div class="two-col">
+        <div class="mini-card">
+          <h4>只读分组</h4>
+          <p>实时监控、电网详情、光伏详情、电池详情、旁路口、容量与功率能力、设备信息、累计电量。</p>
+          <p>数值直接来自设备，不支持在面板修改。</p>
+        </div>
+        <div class="mini-card">
+          <h4>可写分组</h4>
+          <p>功率与 SoC 设置、实时控制、工作模式与基础负载、备电 SoC、逆流控制、开关控制、Modbus 超时、柴发、DO 控制、基础负载、基础负载计划表、TOU 计划表。</p>
+          <p>修改后整组下发，连续寄存器合并为一帧 FC <code>0x10</code>。</p>
+        </div>
+      </div>
+
+      <h3>编辑与校验</h3>
+      <ul>
+        <li>number 类型可直接输入或拖动滑块，输入框与滑块双向同步。</li>
+        <li>超过允许范围会自动限制到边界，并提示“<em>已限制为 …</em>”。</li>
+        <li>时间寄存器只接受 <code>HH:MM</code>；非法读数会隐藏，需要重新设置。</li>
+        <li>分组底部会显示“无改动”“请填写完整”“超出允许范围”等状态；不满足条件时“批量下发”不可点击。</li>
+      </ul>
+
+      <h3>批量下发</h3>
+      <ol class="steps">
+        <li>修改该分组内需要调整的字段。</li>
+        <li>点击分组底部的 <strong>「批量下发」</strong>。</li>
+        <li>面板弹出确认框，只显示分组名称，不再列出全部寄存器值：
+          <div class="mock" aria-label="确认弹窗示意">
+            <div class="mock-dialog">
+              <h4>批量下发</h4>
+              <p>确认把分组「TOU 计划表」写入设备？</p>
+              <div class="mock-actions">
+                <span>取消</span>
+                <span class="primary">确定</span>
+              </div>
+            </div>
+          </div>
+        </li>
+        <li>点击 <strong>「确定」</strong>；<kbd>Esc</kbd>、点击遮罩或「取消」都会放弃本次下发。</li>
+        <li>成功后显示“<em>「TOU 计划表」：已下发</em>”；失败会显示设备返回的错误原因。</li>
+      </ol>
+      <div class="callout tip">
+        <span class="label">原子性</span>
+        同一分组内地址连续的寄存器会合并成一个 FC <code>0x10</code> 帧；地址有间隔时按计划连续发送多帧，顺序固定，不会只写一半。
+      </div>
+      <div class="callout">
+        <span class="label">数据刷新</span>
+        面板写入成功后会立即回读并刷新；面板后台约每 <strong>30 秒</strong>轮询一次设备（v1 实体为 5 秒轮询，但 v2 条目不会创建 v1 实体）。
+      </div>
+    </section>
+
+    <!-- ========== 8 ========== -->
+    <section id="faq">
+      <h2><span class="n">8</span>常见问题排查</h2>
+      <p class="section-lead">按“现象 → 常见原因 → 处理”快速定位。演示现场优先看 HA 的 <strong>设置 → 系统 → 日志</strong>，过滤 <code>conow_local</code>。</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>现象</th><th>常见原因</th><th>处理</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>添加集成提示“无法通过 Modbus 连接”</td>
+              <td>未开启外部控制、从站/波特率不对、A/B 接反、端口被占用</td>
+              <td>在 App 打开 <strong>启用外部控制 / ModBus RTU</strong>；确认从站 <code>160</code>、波特率 <code>38400</code>；检查 RS-485 极性与适配器</td>
+            </tr>
+            <tr>
+              <td>直连模式提示“设备校验未通过”</td>
+              <td>验证码过期或输入错误</td>
+              <td>核对一体机当前屏幕上的 6 位码，重新提交</td>
+            </tr>
+            <tr>
+              <td>提示“该设备已经配置过了”</td>
+              <td>同一连接参数已存在条目</td>
+              <td>直接使用现有条目；不需要重复添加时先删除旧条目</td>
+            </tr>
+            <tr>
+              <td>面板没有分组，提示“分组面板不可用”</td>
+              <td>固件低于 1.2，或 v2 地址读不到</td>
+              <td>把设备升级到 1.2+；查看日志是否出现 <code>Map: firmware=1.2 -&gt; v2</code></td>
+            </tr>
+            <tr>
+              <td>面板提示“设备有 Modbus 响应，但地址全部读不到”</td>
+              <td>设备仍是 v1 协议，或条目指向了 v1 服务端</td>
+              <td>确认固件与寄存器表匹配；演示时用 v2 映射启动设备/模拟器</td>
+            </tr>
+            <tr>
+              <td>设备页修改可写实体没有写入</td>
+              <td>面板-backed 实体的保护机制</td>
+              <td>点击提示里的 <strong>「打开面板」</strong>，在对应分组整组下发</td>
+            </tr>
+            <tr>
+              <td>HACS 搜索不到 Conow Local</td>
+              <td>未添加自定义仓库、类别选错、未重启</td>
+              <td>重新添加仓库并选择 <strong>Integration</strong>；重启 HA 后再搜索</td>
+            </tr>
+            <tr>
+              <td>HACS 下载失败 / 一直转圈</td>
+              <td>HA 主机无法访问 GitHub</td>
+              <td>检查网络、DNS 或代理；也可手动把集成目录放进 <code>custom_components/</code></td>
+            </tr>
+            <tr>
+              <td>面板还是旧界面（例如仍出现浏览器地址行）</td>
+              <td>浏览器缓存了旧版 JS</td>
+              <td>强制刷新（<kbd>Cmd/Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>）；确认集成已重启</td>
+            </tr>
+            <tr>
+              <td>侧边栏没有「Conow Local 分组」</td>
+              <td>集成未加载成功，或面板注册失败</td>
+              <td>重启 HA；查看日志中 <code>conow_local</code> 的 ERROR；确认 HA 版本 ≥ 2026.6</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <span class="label">日志关键字</span>
+        <code>Map: firmware=… -&gt; v2 (panel_registers.json)</code>、
+        <code>Finished fetching conow_local_panel_… (success: True)</code>、
+        <code>Control write … addr=…</code>。
+      </div>
+    </section>
+
+    <!-- ========== 9 ========== -->
+    <section id="script">
+      <h2><span class="n">9</span>演示流程速查（15 分钟）</h2>
+      <p class="section-lead">按时间轴推进；每一步都给出“要展示什么”和“观众应看到什么”。</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:110px">时间</th><th>操作</th><th>预期效果</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>0:00–1:30</td>
+              <td>打开 HA 概览，指出侧边栏 <strong>「Conow Local 分组」</strong></td>
+              <td>观众看到 HA 已就绪、面板入口存在</td>
+            </tr>
+            <tr>
+              <td>1:30–4:00</td>
+              <td>讲安装链路：HA OS → HACS → 自定义仓库 → Conow Local（展示 HACS 中已下载的条目）</td>
+              <td>理解“本地集成、不依赖云”的安装方式</td>
+            </tr>
+            <tr>
+              <td>4:00–7:00</td>
+              <td><strong>设置 → 设备与服务 → 添加集成 → Conow Local</strong>，演示直连 + 验证码（或模拟器用适配器方式）</td>
+              <td>设备创建成功，实体出现在设备页</td>
+            </tr>
+            <tr>
+              <td>7:00–9:00</td>
+              <td>进入设备详情，点击名称旁的 <strong>「访问」</strong></td>
+              <td>分组面板打开并自动选中该设备</td>
+            </tr>
+            <tr>
+              <td>9:00–12:00</td>
+              <td>面板筛选：只看“TOU 计划表”；修改时间/功率；点击 <strong>「批量下发」</strong>，确认弹窗点“确定”</td>
+              <td>提示“已下发”，数值回读刷新</td>
+            </tr>
+            <tr>
+              <td>12:00–13:30</td>
+              <td>回到设备页，尝试修改一个可写实体</td>
+              <td>出现原子性提示，点击「打开面板」跳回面板</td>
+            </tr>
+            <tr>
+              <td>13:30–15:00</td>
+              <td>展示只读分组（实时监控、累计电量），答疑</td>
+              <td>观众理解“只读展示 + 可写分组”的结构</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout tip">
+        <span class="label">控场提示</span>
+        安装与重启耗时不可控，尽量提前完成；现场重点放在“设备详情 → 访问 → 面板 → 整组下发”这条主线上。
+      </div>
+    </section>
+
+    <!-- ========== 10 ========== -->
+    <section id="appendix">
+      <h2><span class="n">10</span>附录：参数与模拟器</h2>
+
+      <h3>连接参数速查</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>参数</th><th>默认值</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td>TCP 端口</td><td><code>502</code></td><td>直连设备与以太网适配器通用</td></tr>
+            <tr><td>从站地址</td><td><code>160</code>（<code>0xA0</code>）</td><td>三种连接方式一致</td></tr>
+            <tr><td>波特率</td><td><code>38400</code>，8N1</td><td>仅 RTU / 适配器串口侧</td></tr>
+            <tr><td>轮询间隔</td><td>面板 30 秒 / v1 实体 5 秒</td><td>v2 面板由面板协调器轮询；写入后立即回读</td></tr>
+            <tr><td>固件门槛</td><td><code>1.2</code></td><td>低于该版本使用 v1，面板不可用</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>无真机演示：启动模拟器</h3>
+      <p>仓库自带 <code>tools/fake_modbus_server.py</code>，以 v2 寄存器表、固件 1.2 启动，效果与真机一致：</p>
+      <pre><code>python tools/fake_modbus_server.py \
+  --port 1504 \
+  --map custom_components/conow_local/panel/panel_registers.json \
+  --firmware-version 1.2 \
+  --verify-code 123456 \
+  --live</code></pre>
+      <ul>
+        <li>模拟器网页状态：<code>http://127.0.0.1:1604/api/state</code>，可确认 <code>map</code>、固件版本与当前验证码。</li>
+        <li>模拟器会自动加载 v1/v2 两张表：在网页 <code>http://127.0.0.1:1604/</code> 把 <strong>固件版本</strong>（<code>10083</code>，<code>0x2763</code>）改成低于 <code>1.2</code>（如 <code>1.1</code>）会立即切换到 v1 控制块，改回 <code>1.2</code> 及以上自动恢复到 v2，无需重启或更换 <code>--map</code>；状态页的 <code>map</code> 字段会实时反映当前使用的表。</li>
+        <li>切换固件后，HA 侧需要重新加载该集成（或重启 HA）以重新探测固件并重建实体。</li>
+        <li>在 HA 中添加集成时选择 <strong>Modbus TCP（以太网适配器）</strong>：主机填模拟器所在机器 IP（同机可填 <code>127.0.0.1</code>），端口 <code>1504</code>，从站 <code>160</code>，不需要验证码。</li>
+        <li>模拟器默认应答任意从站地址；如需严格匹配，追加 <code>--slave 160</code>。</li>
+        <li>直连演示时，验证码输入 <code>--verify-code</code> 指定的值（示例为 <code>123456</code>）；状态页会显示当前验证码。</li>
+      </ul>
+
+      <h3>关键地址</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>用途</th><th>地址</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td>固件版本</td><td><code>10083–10084</code>（<code>0x2763</code>）</td><td>4 字节 ASCII，决定 v1/v2</td></tr>
+            <tr><td>监控块（v2）</td><td><code>10000–10102</code></td><td>面板只读数据</td></tr>
+            <tr><td>控制块（v2）</td><td><code>10103–10215</code></td><td>面板可写分组</td></tr>
+            <tr><td>监控块（v1）</td><td><code>10000–10036</code></td><td>v1 实体</td></tr>
+            <tr><td>控制块（v1）</td><td><code>10100–10107</code></td><td>v1 可写实体</td></tr>
+            <tr><td>直连验证码</td><td><code>0x045C–0x045D</code></td><td>uint32，高字在前</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>完整寄存器地址文档</h3>
+      <p>
+        完整寄存器地址、数据类型与说明见飞书文档：
+        <a href="https://icn602w9tnqf.feishu.cn/sheets/HTTlsCjSLhxSCQtxbxUcaDiOn9c?sheet=4GpjEd"
+           target="_blank" rel="noopener">Conow 寄存器地址表（飞书）</a>。
+        该链接需要飞书登录权限。
+      </p>
+
+      <div class="callout">
+        <span class="label">手册版本</span>
+        对应集成 <strong>2.5.0</strong>，基于 2026-11-03 的代码与界面整理。界面文案可能随 HA 版本略有差异，以实际界面为准。
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    Conow Local × Home Assistant · 演示操作手册 · 2026-11-03
+  </footer>
+</div>
+</body>
+</html>

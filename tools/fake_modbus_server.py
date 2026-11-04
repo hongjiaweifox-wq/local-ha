@@ -33,6 +33,11 @@ Examples::
     python3 tools/fake_modbus_server.py \
         --map custom_components/conow_local/registers.json
 
+    # both maps are loaded automatically; setting the firmware-version register
+    # (0x2763, 10083) below 1.2 in the test page switches to the v1 control
+    # block, and >= 1.2 switches back to v2 -- no restart or --map change.
+    # Use --no-auto-map to keep serving exactly one map.
+
     # accept challenge code 000042 on direct connections (default 123456)
     python3 tools/fake_modbus_server.py --verify-code 000042
 
@@ -73,6 +78,10 @@ FC_WRITE_MULTIPLE = 0x10
 # Direct-connection challenge registers (0x045C–0x045D, uint32 high word first).
 VERIFY_CODE_ADDRESS = 0x045C
 VERIFY_CODE_DEFAULT = "123456"
+
+# Firmware version register used by the integration to pick the register map.
+FIRMWARE_VERSION_ADDRESS = 0x2763
+PANEL_MIN_VERSION = (1, 2)
 
 EXC_ILLEGAL_FUNCTION = 0x01
 EXC_ILLEGAL_ADDRESS = 0x02
@@ -385,8 +394,10 @@ class RegisterBank:
         ranges: tuple[tuple[int, int], ...],
         verify_code: str | None = VERIFY_CODE_DEFAULT,
         firmware_version: str | None = None,
+        map_path: Path | None = None,
     ) -> None:
         self._lock = threading.Lock()
+        self.map_path = map_path
         self._defs = defs
         self._by_code = {item.code: item for item in defs}
         self._by_address = {item.address: item for item in defs}
@@ -515,6 +526,11 @@ class RegisterBank:
         else:
             word |= 1 << 0
         self._words[status.address] = word & 0xFFFF
+
+    @property
+    def verify_code(self) -> str | None:
+        """Return the accepted direct-connection code, or None when disabled."""
+        return f"{self._verify_code:06d}" if self._verify_code is not None else None
 
     def has_code(self, code: str) -> bool:
         """Return whether the map defines this code."""
@@ -654,8 +670,190 @@ class RegisterBank:
             self._seed()
 
 
-def load_map(path: Path) -> tuple[list[RegisterDef], tuple[tuple[int, int], ...]]:
-    """Parse a registers.json file into definitions plus served ranges."""
+MAP_KINDS = {
+    "registers.json": "v1",
+    "panel_registers.json": "v2",
+}
+
+
+def map_kind(path: Path) -> str | None:
+    """Return ``v1``/``v2`` for a known map file name, else None."""
+    return MAP_KINDS.get(path.name)
+
+
+def sibling_map(path: Path) -> Path | None:
+    """Return the other map file next to an existing map, if it exists."""
+    kind = map_kind(path)
+    if kind == "v1":
+        candidate = path.parent / "panel" / "panel_registers.json"
+    elif kind == "v2":
+        candidate = path.parent.parent / "registers.json"
+    else:
+        return None
+    return candidate if candidate.is_file() else None
+
+
+def parse_firmware(text: str | None) -> tuple[int, ...] | None:
+    """Parse ``1.2`` (or ``V1.2.3``) into a comparable tuple, or None."""
+    value = str(text or "").strip()
+    start = next((index for index, char in enumerate(value) if char.isdigit()), None)
+    if start is None:
+        return None
+    parts: list[int] = []
+    for chunk in value[start:].split("."):
+        digits = "".join(char for char in chunk if char.isdigit())
+        if not digits:
+            break
+        parts.append(int(digits))
+    return tuple(parts) or None
+
+
+class AutoBank:
+    """Route Modbus traffic to the map matching the current firmware version.
+
+    Both maps are loaded at startup. Changing the firmware-version register
+    through the test UI re-selects the control block on the fly, so switching
+    between 1.1 and 1.2 no longer needs a restart with a different ``--map``.
+    """
+
+    def __init__(
+        self,
+        banks: dict[str, RegisterBank],
+        firmware_version: str | None = None,
+        *,
+        default_key: str = "v2",
+    ) -> None:
+        self._banks = banks
+        self.firmware_text = firmware_version
+        self._active_key = default_key if default_key in banks else next(iter(banks))
+        self._select()
+
+    # -- selection ---------------------------------------------------
+    @property
+    def active_key(self) -> str:
+        """Return the map currently served (``v1`` or ``v2``)."""
+        return self._active_key
+
+    @property
+    def _active(self) -> RegisterBank:
+        return self._banks[self._active_key]
+
+    @property
+    def map_path(self) -> Path | None:
+        """Return the map file of the active bank."""
+        return self._active.map_path
+
+    def _select(self) -> None:
+        parsed = parse_firmware(self.firmware_text)
+        if parsed is None:
+            return
+        wanted = "v2" if parsed >= PANEL_MIN_VERSION else "v1"
+        if wanted in self._banks:
+            self._active_key = wanted
+
+    # -- Modbus I/O --------------------------------------------------
+    def read(self, address: int, count: int) -> list[int]:
+        return self._active.read(address, count)
+
+    def write_single(self, address: int, value: int) -> None:
+        self._active.write_single(address, value)
+
+    def write_multiple(self, address: int, values: list[int]) -> None:
+        self._active.write_multiple(address, values)
+
+    # -- map helpers -------------------------------------------------
+    def coverage(self) -> str:
+        return self._active.coverage()
+
+    def snapshot(self) -> list[dict]:
+        return self._active.snapshot()
+
+    def has_code(self, code: str) -> bool:
+        return self._active.has_code(code)
+
+    def raw_of(self, code: str) -> int | None:
+        return self._active.raw_of(code)
+
+    @property
+    def verify_code(self) -> str | None:
+        return self._active.verify_code
+
+    def set_physical(self, code: str, value: float) -> bool:
+        changed = False
+        for bank in self._banks.values():
+            changed = bank.set_physical(code, value) or changed
+        return changed
+
+    # -- test UI -----------------------------------------------------
+    def set_by_address(
+        self,
+        address: int,
+        value: float | str,
+        *,
+        raw: bool = False,
+        code: str | None = None,
+        force: bool = False,
+    ) -> dict:
+        """Write a register, switching maps when the firmware changes."""
+        if code == "firmware_version" or int(address) == FIRMWARE_VERSION_ADDRESS:
+            return self._set_firmware(value)
+        result = self._active.set_by_address(
+            address, value, raw=raw, code=code, force=force
+        )
+        # Keep the other map in sync so values survive a map switch.
+        for key, bank in self._banks.items():
+            if key == self._active_key or not bank.has_code(result["code"]):
+                continue
+            try:
+                bank.set_by_address(
+                    address, value, raw=raw, code=result["code"], force=force
+                )
+            except (IllegalAddress, IllegalValue):
+                continue
+        return result
+
+    def _set_firmware(self, value: float | str) -> dict:
+        text = str(value)
+        self.firmware_text = text
+        for bank in self._banks.values():
+            if bank.has_code("firmware_version"):
+                bank.set_by_address(
+                    FIRMWARE_VERSION_ADDRESS,
+                    text,
+                    code="firmware_version",
+                    force=True,
+                )
+        self._select()
+        return self._active.set_by_address(
+            FIRMWARE_VERSION_ADDRESS,
+            text,
+            code="firmware_version",
+            force=True,
+        )
+
+    def reset(self) -> None:
+        for bank in self._banks.values():
+            bank.reset()
+        for bank in self._banks.values():
+            if bank.has_code("firmware_version") and self.firmware_text:
+                bank.set_by_address(
+                    FIRMWARE_VERSION_ADDRESS,
+                    self.firmware_text,
+                    code="firmware_version",
+                    force=True,
+                )
+        self._select()
+
+
+def load_map(
+    path: Path, *, with_firmware: bool = False
+) -> tuple[list[RegisterDef], tuple[tuple[int, int], ...]]:
+    """Parse a registers.json file into definitions plus served ranges.
+
+    ``with_firmware`` makes the firmware-version register readable even on maps
+    that do not define it (v1), so the test UI can always change it and let the
+    server pick the matching control block.
+    """
     data = json.loads(path.read_text(encoding="utf-8"))
     defs: list[RegisterDef] = []
     for item in data["registers"]:
@@ -689,6 +887,24 @@ def load_map(path: Path) -> tuple[list[RegisterDef], tuple[tuple[int, int], ...]
         end = max((item.address + item.count - 1 for item in members), default=start)
         ranges.append((min(start, end), end))
     ranges.sort()
+    if with_firmware and not any(
+        item.address == FIRMWARE_VERSION_ADDRESS for item in defs
+    ):
+        defs.append(
+            RegisterDef(
+                code="firmware_version",
+                address=FIRMWARE_VERSION_ADDRESS,
+                count=2,
+                dtype="string",
+                scale=1.0,
+                offset=0.0,
+                unit="",
+                writable=False,
+                block="monitoring",
+                name="固件版本",
+            )
+        )
+        ranges.append((FIRMWARE_VERSION_ADDRESS, FIRMWARE_VERSION_ADDRESS + 1))
     # The direct-connection challenge is outside the register map file but must
     # be writable for config-flow verification tests.
     defs.append(
@@ -705,6 +921,7 @@ def load_map(path: Path) -> tuple[list[RegisterDef], tuple[tuple[int, int], ...]
         )
     )
     ranges.append((VERIFY_CODE_ADDRESS, VERIFY_CODE_ADDRESS + 1))
+    ranges.sort()
     return defs, tuple(ranges)
 
 
@@ -1100,6 +1317,7 @@ let filter = "";
 let onlyWritable = false;
 let rawMode = false;
 let tableKey = "";
+let mapPath = "";
 let fetchingLogs = false;
 
 function hex(value) {
@@ -1435,8 +1653,14 @@ async function loadState() {
   try {
     const state = await api("/api/state");
     const mapName = String(state.map).split("/").pop();
+    if (mapPath && state.map !== mapPath) {
+      tableKey = "";
+      toast("固件版本切换，已改用 " + mapName);
+    }
+    mapPath = state.map;
     $("meta").textContent = mapName + " · Modbus :" + state.modbus_port +
-      " · 从站 " + (state.slave || "任意") + " · 服务范围 " + state.coverage;
+      " · 从站 " + (state.slave || "任意") + " · 验证码 " +
+      (state.verify_code || "关闭") + " · 服务范围 " + state.coverage;
     $("meta").title = state.map;
     registers = state.registers;
     updateStats();
@@ -1707,10 +1931,12 @@ class TestHTTPServer(ThreadingHTTPServer):
     def state(self) -> dict:
         """Return everything the page needs for one refresh."""
         return {
-            "map": str(self.map_path),
-            "coverage": self.coverage,
+            "map": str(self.bank.map_path or self.map_path),
+            "coverage": self.bank.coverage(),
+            "active_map": getattr(self.bank, "active_key", None),
             "modbus_port": self.modbus_port,
             "slave": self.slave,
+            "verify_code": self.bank.verify_code,
             "server_time": time.strftime("%H:%M:%S"),
             "registers": self.bank.snapshot(),
             "rules": self.monitor.rules(),
@@ -1749,6 +1975,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--map", type=Path, default=DEFAULT_MAP, help=f"register map JSON (default {DEFAULT_MAP})"
+    )
+    parser.add_argument(
+        "--no-auto-map",
+        action="store_true",
+        help="serve only --map; do not switch to the sibling map when the firmware changes",
     )
     parser.add_argument(
         "--slave",
@@ -1794,17 +2025,34 @@ def main(argv: list[str] | None = None) -> int:
         print(f"register map not found: {args.map}", file=sys.stderr)
         return 2
 
-    defs, ranges = load_map(args.map)
     code = str(args.verify_code).strip()
     if len(code) != 6 or not code.isdigit():
         print("--verify-code must be exactly 6 digits", file=sys.stderr)
         return 2
-    bank = RegisterBank(
-        defs,
-        ranges,
-        verify_code=code,
-        firmware_version=args.firmware_version,
-    )
+
+    def build_bank(path: Path) -> RegisterBank:
+        m_defs, m_ranges = load_map(path, with_firmware=True)
+        return RegisterBank(
+            m_defs,
+            m_ranges,
+            verify_code=code,
+            firmware_version=args.firmware_version,
+            map_path=path,
+        )
+
+    kind = None if args.no_auto_map else map_kind(args.map)
+    other = sibling_map(args.map) if kind else None
+    banks: dict[str, RegisterBank] = {}
+    bank: RegisterBank | AutoBank
+    if kind and other is not None:
+        maps = {kind: args.map}
+        maps[map_kind(other)] = other
+        banks = {key: build_bank(path) for key, path in maps.items()}
+        bank = AutoBank(banks, args.firmware_version, default_key=kind)
+    else:
+        single = build_bank(args.map)
+        banks = {kind or "map": single}
+        bank = single
     monitor = Monitor()
 
     RequestHandler.bank = bank
@@ -1839,8 +2087,18 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
 
-    print(f"map      {args.map} ({len(defs)} registers)")
+    for key, item in banks.items():
+        print(
+            f"map[{key}]  {item.map_path} "
+            f"({len(item.snapshot())} registers)"
+        )
     print(f"serving  {bank.coverage()}")
+    if isinstance(bank, AutoBank):
+        print(
+            "auto-map firmware >= "
+            f"{PANEL_MIN_VERSION[0]}.{PANEL_MIN_VERSION[1]} -> v2, "
+            "lower/unknown -> v1"
+        )
     print(f"listen   {args.host}:{args.port}  unit={'any' if not args.slave else args.slave}")
     print(f"mode     {'live values' if args.live else 'static'}")
     if http_server is not None:
@@ -1849,7 +2107,8 @@ def main(argv: list[str] | None = None) -> int:
     print("Ctrl+C to stop", flush=True)
 
     if args.live:
-        start_live_thread(bank)
+        for item in banks.values():
+            start_live_thread(item)
 
     if http_server is not None:
         threading.Thread(
