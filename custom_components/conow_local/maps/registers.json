@@ -1,5 +1,10 @@
 {
   "version": 1,
+  "meta": {
+    "source": "registers.json（v1 协议表）",
+    "status": "v1：固件 < 1.2 使用的寄存器表；结构与 panel_registers.json 一致",
+    "byte_order": "big-endian，32 位高字在前"
+  },
   "blocks": {
     "monitoring": {
       "start": 10000
@@ -8,294 +13,470 @@
       "start": 10100
     }
   },
-  "sequences": {
-    "force_mode": {
-      "registers": [
-        "battery_target_power",
-        "charge_discharge_direction",
-        "battery_cutoff_soc"
-      ],
-      "idle_register": "charge_discharge_direction",
-      "idle_value": 0
-    }
-  },
   "registers": [
     {
       "code": "system_status",
+      "name": "系统状态",
       "address": 10000,
+      "address_hex": "0x2710",
       "block": "monitoring",
+      "category": "系统",
       "dtype": "uint16",
-      "decode": "bitmask",
-      "name": "系统状态"
+      "length": 1,
+      "writable": false,
+      "bits": [
+        {
+          "code": "system_status_standby",
+          "name": "系统-待机",
+          "bit": 0,
+          "device_class": "running"
+        },
+        {
+          "code": "system_status_fault",
+          "name": "系统-故障",
+          "bit": 2,
+          "device_class": "problem"
+        },
+        {
+          "code": "system_status_charging",
+          "name": "系统-充电中",
+          "bit": 3,
+          "device_class": "battery_charging"
+        },
+        {
+          "code": "system_status_discharging",
+          "name": "系统-放电中",
+          "bit": 4
+        }
+      ]
     },
     {
       "code": "fault_code",
+      "name": "设备故障码",
       "address": 10001,
+      "address_hex": "0x2711",
       "block": "monitoring",
+      "category": "系统",
       "dtype": "uint16",
-      "name": "设备故障码"
+      "length": 1,
+      "writable": false,
+      "entity_category": "diagnostic"
     },
     {
       "code": "battery_voltage",
+      "name": "电池电压",
       "address": 10002,
+      "address_hex": "0x2712",
       "block": "monitoring",
+      "category": "详细监控数据",
       "dtype": "uint16",
+      "length": 1,
+      "writable": false,
       "scale": 0.01,
       "unit": "V",
-      "name": "电池电压"
+      "device_class": "voltage"
     },
     {
       "code": "battery_soc",
+      "name": "电池 SOC",
       "address": 10003,
+      "address_hex": "0x2713",
       "block": "monitoring",
+      "category": "实时监控数据",
       "dtype": "uint16",
+      "length": 1,
+      "writable": false,
       "scale": 1,
       "unit": "%",
-      "name": "电池 SOC"
+      "device_class": "battery"
     },
     {
       "code": "battery_design_capacity",
+      "name": "电池额定容量",
       "address": 10004,
+      "address_hex": "0x2714",
       "block": "monitoring",
+      "category": "运行参数与设备信息",
       "dtype": "uint16",
+      "length": 1,
+      "writable": false,
       "scale": 0.001,
       "unit": "kWh",
-      "name": "电池额定容量"
+      "device_class": "energy"
     },
     {
       "code": "battery_cell_temp_max",
+      "name": "电池最高单体温度",
       "address": 10005,
+      "address_hex": "0x2715",
       "block": "monitoring",
+      "category": "详细监控数据",
       "dtype": "uint16",
+      "length": 1,
+      "writable": false,
       "scale": 0.1,
       "offset": 500,
       "unit": "°C",
-      "name": "电池最高单体温度"
+      "device_class": "temperature"
     },
     {
       "code": "battery_cell_temp_min",
+      "name": "电池最低单体温度",
       "address": 10006,
+      "address_hex": "0x2716",
       "block": "monitoring",
+      "category": "详细监控数据",
       "dtype": "uint16",
+      "length": 1,
+      "writable": false,
       "scale": 0.1,
       "offset": 500,
       "unit": "°C",
-      "name": "电池最低单体温度"
+      "device_class": "temperature"
     },
     {
       "code": "battery_cumulative_charge_energy",
+      "name": "电池累计充电量",
       "address": 10007,
+      "address_hex": "0x2717",
       "block": "monitoring",
+      "category": "累计电量",
       "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10008,
       "scale": 0.01,
       "unit": "kWh",
-      "name": "电池累计充电量"
+      "device_class": "energy",
+      "state_class": "total_increasing"
     },
     {
       "code": "battery_cumulative_discharge_energy",
+      "name": "电池累计放电量",
       "address": 10009,
+      "address_hex": "0x2719",
       "block": "monitoring",
+      "category": "累计电量",
       "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10010,
       "scale": 0.01,
       "unit": "kWh",
-      "name": "电池累计放电量"
+      "device_class": "energy",
+      "state_class": "total_increasing"
     },
     {
       "code": "grid_active_power",
+      "name": "电网有功功率",
       "address": 10011,
+      "address_hex": "0x271B",
       "block": "monitoring",
+      "category": "实时监控数据",
       "dtype": "int16",
+      "length": 1,
+      "writable": false,
       "scale": 1,
       "unit": "W",
-      "name": "电网有功功率"
+      "device_class": "power"
     },
     {
       "code": "grid_frequency",
+      "name": "电网频率",
       "address": 10012,
+      "address_hex": "0x271C",
       "block": "monitoring",
+      "category": "详细监控数据",
       "dtype": "uint16",
+      "length": 1,
+      "writable": false,
       "scale": 0.01,
       "unit": "Hz",
-      "name": "电网频率"
+      "device_class": "frequency"
     },
     {
       "code": "grid_cumulative_import_energy",
+      "name": "电网累计买电量",
       "address": 10013,
+      "address_hex": "0x271D",
       "block": "monitoring",
+      "category": "累计电量",
       "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10014,
       "scale": 0.01,
       "unit": "kWh",
-      "name": "电网累计买电量"
+      "device_class": "energy",
+      "state_class": "total_increasing"
     },
     {
       "code": "grid_cumulative_export_energy",
+      "name": "电网累计卖电量",
       "address": 10015,
+      "address_hex": "0x271F",
       "block": "monitoring",
+      "category": "累计电量",
       "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10016,
       "scale": 0.01,
       "unit": "kWh",
-      "name": "电网累计卖电量"
+      "device_class": "energy",
+      "state_class": "total_increasing"
     },
     {
       "code": "backup_load_power",
+      "name": "备电负载功率",
       "address": 10017,
+      "address_hex": "0x2721",
       "block": "monitoring",
+      "category": "实时监控数据",
       "dtype": "int16",
+      "length": 1,
+      "writable": false,
       "scale": 1,
       "unit": "W",
-      "name": "备电负载功率"
+      "device_class": "power"
     },
     {
       "code": "backup_load_cumulative_export_energy",
+      "name": "备电负载累计输出电量",
       "address": 10018,
+      "address_hex": "0x2722",
       "block": "monitoring",
+      "category": "累计电量",
       "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10019,
       "scale": 0.01,
       "unit": "kWh",
-      "name": "备电负载累计输出电量"
+      "device_class": "energy",
+      "state_class": "total_increasing"
     },
     {
       "code": "backup_load_cumulative_import_energy",
+      "name": "备电负载累计输入电量",
       "address": 10020,
+      "address_hex": "0x2724",
       "block": "monitoring",
+      "category": "累计电量",
       "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10021,
       "scale": 0.01,
       "unit": "kWh",
-      "name": "备电负载累计输入电量"
+      "device_class": "energy",
+      "state_class": "total_increasing"
     },
     {
       "code": "pv_total_power",
+      "name": "PV 总功率",
       "address": 10022,
+      "address_hex": "0x2726",
       "block": "monitoring",
+      "category": "实时监控数据",
       "dtype": "uint16",
+      "length": 1,
+      "writable": false,
       "scale": 1,
       "unit": "W",
-      "name": "PV 总功率"
+      "device_class": "power"
     },
     {
       "code": "pv_total_cumulative_energy",
+      "name": "PV 累计发电量",
       "address": 10023,
+      "address_hex": "0x2727",
       "block": "monitoring",
+      "category": "累计电量",
       "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10024,
       "scale": 0.01,
       "unit": "kWh",
-      "name": "PV 累计发电量"
+      "device_class": "energy",
+      "state_class": "total_increasing"
     },
     {
       "code": "pv1_power",
+      "name": "PV1 功率",
       "address": 10025,
+      "address_hex": "0x2729",
       "block": "monitoring",
+      "category": "详细监控数据",
       "dtype": "uint16",
+      "length": 1,
+      "writable": false,
       "scale": 1,
       "unit": "W",
-      "name": "PV1 功率"
+      "device_class": "power"
     },
     {
       "code": "pv1_cumulative_energy",
+      "name": "PV1 累计发电量",
       "address": 10026,
+      "address_hex": "0x272A",
       "block": "monitoring",
+      "category": "详细监控数据",
       "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10027,
       "scale": 0.01,
       "unit": "kWh",
-      "name": "PV1 累计发电量"
+      "device_class": "energy",
+      "state_class": "total_increasing"
     },
     {
       "code": "pv2_power",
+      "name": "PV2 功率",
       "address": 10028,
+      "address_hex": "0x272C",
       "block": "monitoring",
+      "category": "详细监控数据",
       "dtype": "uint16",
+      "length": 1,
+      "writable": false,
       "scale": 1,
       "unit": "W",
-      "name": "PV2 功率"
+      "device_class": "power"
     },
     {
       "code": "pv2_cumulative_energy",
+      "name": "PV2 累计发电量",
       "address": 10029,
+      "address_hex": "0x272D",
       "block": "monitoring",
+      "category": "详细监控数据",
       "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10030,
       "scale": 0.01,
       "unit": "kWh",
-      "name": "PV2 累计发电量"
+      "device_class": "energy",
+      "state_class": "total_increasing"
     },
     {
       "code": "pv3_power",
+      "name": "PV3 功率",
       "address": 10031,
+      "address_hex": "0x272F",
       "block": "monitoring",
+      "category": "详细监控数据",
       "dtype": "uint16",
+      "length": 1,
+      "writable": false,
       "scale": 1,
       "unit": "W",
-      "name": "PV3 功率"
+      "device_class": "power"
     },
     {
       "code": "pv3_cumulative_energy",
+      "name": "PV3 累计发电量",
       "address": 10032,
+      "address_hex": "0x2730",
       "block": "monitoring",
+      "category": "详细监控数据",
       "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10033,
       "scale": 0.01,
       "unit": "kWh",
-      "name": "PV3 累计发电量"
+      "device_class": "energy",
+      "state_class": "total_increasing"
     },
     {
       "code": "pv4_power",
+      "name": "PV4 功率",
       "address": 10034,
+      "address_hex": "0x2732",
       "block": "monitoring",
+      "category": "详细监控数据",
       "dtype": "uint16",
+      "length": 1,
+      "writable": false,
       "scale": 1,
       "unit": "W",
-      "name": "PV4 功率"
+      "device_class": "power"
     },
     {
       "code": "pv4_cumulative_energy",
+      "name": "PV4 累计发电量",
       "address": 10035,
+      "address_hex": "0x2733",
       "block": "monitoring",
+      "category": "详细监控数据",
       "dtype": "uint32",
+      "length": 2,
+      "writable": false,
+      "end_address": 10036,
       "scale": 0.01,
       "unit": "kWh",
-      "name": "PV4 累计发电量"
+      "device_class": "energy",
+      "state_class": "total_increasing"
     },
     {
       "code": "grid_charge_power_limit",
+      "name": "电网充电功率上限",
       "address": 10100,
+      "address_hex": "0x2774",
       "block": "control",
+      "category": "工作策略",
       "dtype": "uint16",
+      "length": 1,
+      "writable": true,
       "scale": 1,
       "unit": "W",
-      "writable": true,
-      "name": "电网充电功率上限",
       "min": 0,
       "max": 30000
     },
     {
       "code": "battery_discharge_power_limit",
+      "name": "电池放电功率上限",
       "address": 10101,
+      "address_hex": "0x2775",
       "block": "control",
+      "category": "工作策略",
       "dtype": "uint16",
+      "length": 1,
+      "writable": true,
       "scale": 1,
       "unit": "W",
-      "writable": true,
-      "name": "电池放电功率上限",
       "min": 0,
       "max": 30000
     },
     {
       "code": "backup_soc",
+      "name": "备电 SoC",
       "address": 10102,
+      "address_hex": "0x2776",
       "block": "control",
+      "category": "工作策略",
       "dtype": "uint16",
+      "length": 1,
+      "writable": true,
       "scale": 1,
       "unit": "%",
-      "writable": true,
-      "name": "备电 SoC",
-      "min": 0,
+      "min": 10,
       "max": 100
     },
     {
       "code": "off_grid_output_enable",
-      "address": 10103,
-      "block": "control",
-      "dtype": "uint16",
-      "writable": true,
       "name": "离网口开关",
+      "address": 10103,
+      "address_hex": "0x2777",
+      "block": "control",
+      "category": "工作策略",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
       "values": {
         "0": "disable",
         "1": "enable"
@@ -304,11 +485,14 @@
     },
     {
       "code": "pv_curtailment_enable",
-      "address": 10104,
-      "block": "control",
-      "dtype": "uint16",
-      "writable": true,
       "name": "弃光开关",
+      "address": 10104,
+      "address_hex": "0x2778",
+      "block": "control",
+      "category": "工作策略",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
       "values": {
         "0": "disable",
         "1": "enable"
@@ -317,11 +501,14 @@
     },
     {
       "code": "charge_discharge_direction",
-      "address": 10105,
-      "block": "control",
-      "dtype": "uint16",
-      "writable": true,
       "name": "充放电方向",
+      "address": 10105,
+      "address_hex": "0x2779",
+      "block": "control",
+      "category": "实时控制",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
       "values": {
         "0": "idle",
         "1": "chg",
@@ -330,278 +517,33 @@
     },
     {
       "code": "battery_target_power",
+      "name": "目标充放电功率",
       "address": 10106,
+      "address_hex": "0x277A",
       "block": "control",
+      "category": "实时控制",
       "dtype": "uint16",
+      "length": 1,
+      "writable": true,
       "scale": 1,
       "unit": "W",
-      "writable": true,
-      "name": "目标充放电功率",
       "min": 0,
       "max": 30000
     },
     {
       "code": "battery_cutoff_soc",
+      "name": "充放电截止 SOC",
       "address": 10107,
+      "address_hex": "0x277B",
       "block": "control",
+      "category": "实时控制",
       "dtype": "uint16",
+      "length": 1,
+      "writable": true,
       "scale": 1,
       "unit": "%",
-      "writable": true,
-      "name": "放电截止 SoC",
       "min": 0,
       "max": 100
-    }
-  ],
-  "entities": [
-    {
-      "code": "fault_code",
-      "platform": "sensor",
-      "register": "fault_code",
-      "entity_category": "diagnostic"
-    },
-    {
-      "code": "battery_voltage",
-      "platform": "sensor",
-      "register": "battery_voltage",
-      "device_class": "voltage"
-    },
-    {
-      "code": "battery_soc",
-      "platform": "sensor",
-      "register": "battery_soc",
-      "device_class": "battery"
-    },
-    {
-      "code": "battery_design_capacity",
-      "platform": "sensor",
-      "register": "battery_design_capacity",
-      "device_class": "energy"
-    },
-    {
-      "code": "battery_cell_temp_max",
-      "platform": "sensor",
-      "register": "battery_cell_temp_max",
-      "device_class": "temperature"
-    },
-    {
-      "code": "battery_cell_temp_min",
-      "platform": "sensor",
-      "register": "battery_cell_temp_min",
-      "device_class": "temperature"
-    },
-    {
-      "code": "battery_cumulative_charge_energy",
-      "platform": "sensor",
-      "register": "battery_cumulative_charge_energy",
-      "device_class": "energy",
-      "state_class": "total_increasing"
-    },
-    {
-      "code": "battery_cumulative_discharge_energy",
-      "platform": "sensor",
-      "register": "battery_cumulative_discharge_energy",
-      "device_class": "energy",
-      "state_class": "total_increasing"
-    },
-    {
-      "code": "grid_active_power",
-      "platform": "sensor",
-      "register": "grid_active_power",
-      "device_class": "power"
-    },
-    {
-      "code": "grid_frequency",
-      "platform": "sensor",
-      "register": "grid_frequency",
-      "device_class": "frequency"
-    },
-    {
-      "code": "grid_cumulative_import_energy",
-      "platform": "sensor",
-      "register": "grid_cumulative_import_energy",
-      "device_class": "energy",
-      "state_class": "total_increasing"
-    },
-    {
-      "code": "grid_cumulative_export_energy",
-      "platform": "sensor",
-      "register": "grid_cumulative_export_energy",
-      "device_class": "energy",
-      "state_class": "total_increasing"
-    },
-    {
-      "code": "backup_load_power",
-      "platform": "sensor",
-      "register": "backup_load_power",
-      "device_class": "power"
-    },
-    {
-      "code": "backup_load_cumulative_export_energy",
-      "platform": "sensor",
-      "register": "backup_load_cumulative_export_energy",
-      "device_class": "energy",
-      "state_class": "total_increasing"
-    },
-    {
-      "code": "backup_load_cumulative_import_energy",
-      "platform": "sensor",
-      "register": "backup_load_cumulative_import_energy",
-      "device_class": "energy",
-      "state_class": "total_increasing"
-    },
-    {
-      "code": "pv_total_power",
-      "platform": "sensor",
-      "register": "pv_total_power",
-      "device_class": "power"
-    },
-    {
-      "code": "pv_total_cumulative_energy",
-      "platform": "sensor",
-      "register": "pv_total_cumulative_energy",
-      "device_class": "energy",
-      "state_class": "total_increasing"
-    },
-    {
-      "code": "pv1_power",
-      "platform": "sensor",
-      "register": "pv1_power",
-      "device_class": "power"
-    },
-    {
-      "code": "pv1_cumulative_energy",
-      "platform": "sensor",
-      "register": "pv1_cumulative_energy",
-      "device_class": "energy",
-      "state_class": "total_increasing"
-    },
-    {
-      "code": "pv2_power",
-      "platform": "sensor",
-      "register": "pv2_power",
-      "device_class": "power"
-    },
-    {
-      "code": "pv2_cumulative_energy",
-      "platform": "sensor",
-      "register": "pv2_cumulative_energy",
-      "device_class": "energy",
-      "state_class": "total_increasing"
-    },
-    {
-      "code": "pv3_power",
-      "platform": "sensor",
-      "register": "pv3_power",
-      "device_class": "power"
-    },
-    {
-      "code": "pv3_cumulative_energy",
-      "platform": "sensor",
-      "register": "pv3_cumulative_energy",
-      "device_class": "energy",
-      "state_class": "total_increasing"
-    },
-    {
-      "code": "pv4_power",
-      "platform": "sensor",
-      "register": "pv4_power",
-      "device_class": "power"
-    },
-    {
-      "code": "pv4_cumulative_energy",
-      "platform": "sensor",
-      "register": "pv4_cumulative_energy",
-      "device_class": "energy",
-      "state_class": "total_increasing"
-    },
-    {
-      "code": "system_status_standby",
-      "platform": "binary_sensor",
-      "register": "system_status",
-      "bit": 0,
-      "device_class": "running"
-    },
-    {
-      "code": "system_status_fault",
-      "platform": "binary_sensor",
-      "register": "system_status",
-      "bit": 2,
-      "device_class": "problem"
-    },
-    {
-      "code": "system_status_charging",
-      "platform": "binary_sensor",
-      "register": "system_status",
-      "bit": 3,
-      "device_class": "battery_charging"
-    },
-    {
-      "code": "system_status_discharging",
-      "platform": "binary_sensor",
-      "register": "system_status",
-      "bit": 4
-    },
-    {
-      "code": "grid_charge_power_limit",
-      "platform": "number",
-      "register": "grid_charge_power_limit",
-      "min": 0,
-      "max": 30000,
-      "step": 1
-    },
-    {
-      "code": "battery_discharge_power_limit",
-      "platform": "number",
-      "register": "battery_discharge_power_limit",
-      "min": 0,
-      "max": 30000,
-      "step": 1
-    },
-    {
-      "code": "backup_soc",
-      "platform": "number",
-      "register": "backup_soc",
-      "min": 0,
-      "max": 100,
-      "step": 1
-    },
-    {
-      "code": "battery_target_power",
-      "platform": "number",
-      "register": "battery_target_power",
-      "min": 0,
-      "max": 30000,
-      "step": 1
-    },
-    {
-      "code": "battery_cutoff_soc",
-      "platform": "number",
-      "register": "battery_cutoff_soc",
-      "min": 0,
-      "max": 100,
-      "step": 1
-    },
-    {
-      "code": "off_grid_output_enable",
-      "platform": "switch",
-      "register": "off_grid_output_enable"
-    },
-    {
-      "code": "pv_curtailment_enable",
-      "platform": "switch",
-      "register": "pv_curtailment_enable"
-    },
-    {
-      "code": "charge_discharge_direction",
-      "platform": "select",
-      "register": "charge_discharge_direction",
-      "options": {
-        "idle": 0,
-        "force_charge": 1,
-        "force_discharge": 2
-      },
-      "write_handler": "force_mode"
     }
   ],
   "groups": [
@@ -629,16 +571,15 @@
       "order": 20,
       "atomic": false,
       "members": [
-        "battery_voltage",
         "battery_soc",
         "grid_active_power",
         "backup_load_power",
         "pv_total_power"
       ],
       "span": {
-        "start": 10002,
+        "start": 10003,
         "end": 10022,
-        "registers": 21
+        "registers": 20
       },
       "note": "只读实时值，一次连续读取"
     },
@@ -665,6 +606,7 @@
       "order": 40,
       "atomic": false,
       "members": [
+        "battery_voltage",
         "battery_cell_temp_max",
         "battery_cell_temp_min",
         "grid_frequency",
@@ -678,11 +620,11 @@
         "pv4_cumulative_energy"
       ],
       "span": {
-        "start": 10005,
+        "start": 10002,
         "end": 10036,
-        "registers": 32
+        "registers": 35
       },
-      "note": "只读；温度、频率与各路 PV 明细"
+      "note": "只读；电压、温度、频率与各路 PV 明细"
     },
     {
       "id": "lifetime_energy",

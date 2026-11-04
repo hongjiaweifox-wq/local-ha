@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 import voluptuous as vol
@@ -15,9 +16,10 @@ from homeassistant.components.frontend import (
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import HomeAssistant, callback
 
-from . import panel_map
+from ..maps import model as map_model
 from ..client import ConowModbusError
 from ..const import DOMAIN, LOGGER, PANEL_URL_PATH
+from ..maps.registry import MAP_PATHS
 from .panel_functions import (
     async_build_panel_state,
     async_write_panel_group,
@@ -27,7 +29,26 @@ from .panel_functions import (
 
 URL_BASE = "/conow_local_panel_static"
 PANEL_WEBCOMPONENT = "conow-local-panel"
-PANEL_STATIC_VERSION = "50"
+_FRONTEND_DIR = Path(__file__).parent / "frontend"
+
+
+def _static_version() -> str:
+    """Return a content hash so a changed asset always reloads in browsers."""
+    digest = hashlib.sha256()
+    assets = [
+        _FRONTEND_DIR / "conow-local-panel.js",
+        _FRONTEND_DIR / "conow-local-notify.js",
+        *sorted((_FRONTEND_DIR / "i18n").glob("*.json")),
+    ]
+    for path in assets:
+        try:
+            digest.update(path.read_bytes())
+        except OSError:
+            LOGGER.debug("Panel: cannot hash %s", path)
+    return digest.hexdigest()[:8]
+
+
+PANEL_STATIC_VERSION = _static_version()
 PANEL_SCRIPT_URL = f"{URL_BASE}/conow-local-panel.js?v={PANEL_STATIC_VERSION}"
 NOTIFY_SCRIPT_URL = f"{URL_BASE}/conow-local-notify.js?v={PANEL_STATIC_VERSION}"
 PANEL_SIDEBAR_ENABLED = True
@@ -50,14 +71,19 @@ async def websocket_get_panel_devices(
 
 
 @websocket_api.websocket_command(
-    {vol.Required("type"): f"{DOMAIN}/get_panel_map"}
+    {
+        vol.Required("type"): f"{DOMAIN}/get_panel_map",
+        vol.Optional("map_version"): vol.In(list(MAP_PATHS)),
+    }
 )
 @websocket_api.async_response
 async def websocket_get_panel_map(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
 ) -> None:
-    """Return the grouped finalized map without device values."""
-    result = await hass.async_add_executor_job(build_panel_map)
+    """Return the grouped map (v1 or v2) without device values."""
+    result = await hass.async_add_executor_job(
+        build_panel_map, msg.get("map_version")
+    )
     connection.send_result(msg["id"], result)
 
 
@@ -123,14 +149,14 @@ def _register_websocket_api(hass: HomeAssistant) -> None:
 
 async def async_register_local_panel(hass: HomeAssistant) -> None:
     """Register the grouping panel, its static assets and websocket API."""
-    # Parse and validate the map off the event loop so WS calls stay cheap.
+    # Parse and validate the maps off the event loop so WS calls stay cheap.
     try:
-        await hass.async_add_executor_job(panel_map.preload)
+        await hass.async_add_executor_job(map_model.preload)
     except (OSError, ValueError, KeyError) as err:
         LOGGER.error("Panel: cannot load the grouped register maps: %s", err)
     _register_websocket_api(hass)
 
-    frontend_dir = Path(__file__).parent / "frontend"
+    frontend_dir = _FRONTEND_DIR
     if not hass.data.get(f"{DOMAIN}_panel_static_registered"):
         await hass.http.async_register_static_paths(
             [StaticPathConfig(URL_BASE, str(frontend_dir), cache_headers=False)]

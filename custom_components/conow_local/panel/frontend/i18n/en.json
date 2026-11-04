@@ -25,7 +25,10 @@
     "warningInvalidTime": "Invalid reading — set again",
     "noticeClamped": "{name} limited to {value} ({min}–{max})",
     "noticeTimeClamped": "Time limited to {value} (valid range 00:00–23:59)",
-    "confirmWrite": "Write group “{group}” to the device?\n\n{preview}",
+    "confirmWriteTitle": "Confirm write",
+    "confirmWrite": "Write group “{group}” to the device?",
+    "actionCancel": "Cancel",
+    "actionConfirm": "Confirm",
     "noticeApplied": "{group}: sent",
     "noticeFailed": "{group}: {error}",
     "actionApplying": "Sending…",
@@ -242,7 +245,11 @@
     "pv4_cumulative_energy": "PV4 Total Generated Energy",
     "grid_charge_power_limit": "Grid Charge Power Limit",
     "battery_discharge_power_limit": "Battery Discharge Power Limit",
-    "battery_cutoff_soc": "Discharge Cutoff SoC"
+    "battery_cutoff_soc": "Charge/Discharge Cutoff SoC",
+    "system_status_standby": "System–Standby",
+    "system_status_fault": "System–Fault",
+    "system_status_charging": "System–Charging",
+    "system_status_discharging": "System–Discharging"
   },
   "values": {
     "meter_connection_state": {
@@ -251,24 +258,24 @@
       "2": "Unpaired, not connected"
     },
     "battery_work_state": {
-      "0": "idle",
-      "1": "chg",
-      "2": "dchg"
+      "0": "Idle",
+      "1": "Charging",
+      "2": "Discharging"
     },
     "bypass_switch_state": {
-      "0": "off",
-      "1": "on"
+      "0": "Off",
+      "1": "On"
     },
     "charge_discharge_direction": {
-      "0": "idle",
-      "1": "chg",
-      "2": "dchg",
-      "3": "exit"
+      "0": "Idle",
+      "1": "Charging",
+      "2": "Discharging",
+      "3": "Exit"
     },
     "work_mode": {
       "1": "Self-consumption",
       "2": "Manual schedule",
-      "3": "idle"
+      "3": "Idle"
     },
     "allow_battery_export": {
       "0": "Battery export disabled",
@@ -291,12 +298,12 @@
       "1": "Enabled"
     },
     "do1_state": {
-      "0": "off",
-      "1": "on"
+      "0": "Off",
+      "1": "On"
     },
     "do2_state": {
-      "0": "off",
-      "1": "on"
+      "0": "Off",
+      "1": "On"
     },
     "tou_slot1_mode": {
       "0": "Charge",
@@ -329,6 +336,22 @@
     "tou_slot8_mode": {
       "0": "Charge",
       "1": "Discharge"
+    },
+    "system_status_standby": {
+      "0": "Not in standby",
+      "1": "Standby"
+    },
+    "system_status_fault": {
+      "0": "OK",
+      "1": "Fault"
+    },
+    "system_status_charging": {
+      "0": "Not charging",
+      "1": "Charging"
+    },
+    "system_status_discharging": {
+      "0": "Not discharging",
+      "1": "Discharging"
     }
   }
 }

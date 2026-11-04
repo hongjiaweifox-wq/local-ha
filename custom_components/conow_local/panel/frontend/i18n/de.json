@@ -25,7 +25,10 @@
     "warningInvalidTime": "Ungültiger Wert – erneut einstellen",
     "noticeClamped": "{name} auf {value} begrenzt ({min}–{max})",
     "noticeTimeClamped": "Zeit auf {value} begrenzt (gültig 00:00–23:59)",
-    "confirmWrite": "Gruppe „{group}“ auf das Gerät schreiben?\n\n{preview}",
+    "confirmWriteTitle": "Schreiben bestätigen",
+    "confirmWrite": "Gruppe „{group}“ auf das Gerät schreiben?",
+    "actionCancel": "Abbrechen",
+    "actionConfirm": "Bestätigen",
     "noticeApplied": "{group}: gesendet",
     "noticeFailed": "{group}: {error}",
     "actionApplying": "Wird gesendet…",
@@ -242,7 +245,11 @@
     "pv4_cumulative_energy": "PV4-Gesamtenergie",
     "grid_charge_power_limit": "Netzladungsleistungsgrenze",
     "battery_discharge_power_limit": "Batterieentladungsleistungsgrenze",
-    "battery_cutoff_soc": "Entladeabschalt-SoC"
+    "battery_cutoff_soc": "Lade-/Entlade-Abschalt-SoC",
+    "system_status_standby": "System–Standby",
+    "system_status_fault": "System–Fehler",
+    "system_status_charging": "System–Laden",
+    "system_status_discharging": "System–Entladen"
   },
   "values": {
     "meter_connection_state": {
@@ -251,24 +258,24 @@
       "2": "Nicht gekoppelt, nicht verbunden"
     },
     "battery_work_state": {
-      "0": "idle",
-      "1": "chg",
-      "2": "dchg"
+      "0": "Leerlauf",
+      "1": "Laden",
+      "2": "Entladen"
     },
     "bypass_switch_state": {
-      "0": "aus",
-      "1": "an"
+      "0": "Aus",
+      "1": "An"
     },
     "charge_discharge_direction": {
-      "0": "idle",
-      "1": "chg",
-      "2": "dchg",
-      "3": "exit"
+      "0": "Leerlauf",
+      "1": "Laden",
+      "2": "Entladen",
+      "3": "Beenden"
     },
     "work_mode": {
       "1": "Eigenverbrauch",
       "2": "Manueller Zeitplan",
-      "3": "idle"
+      "3": "Leerlauf"
     },
     "allow_battery_export": {
       "0": "Batterieeinspeisung deaktiviert",
@@ -291,12 +298,12 @@
       "1": "Aktiviert"
     },
     "do1_state": {
-      "0": "aus",
-      "1": "an"
+      "0": "Aus",
+      "1": "An"
     },
     "do2_state": {
-      "0": "aus",
-      "1": "an"
+      "0": "Aus",
+      "1": "An"
     },
     "tou_slot1_mode": {
       "0": "Laden",
@@ -329,6 +336,22 @@
     "tou_slot8_mode": {
       "0": "Laden",
       "1": "Entladen"
+    },
+    "system_status_standby": {
+      "0": "Nicht im Standby",
+      "1": "Standby"
+    },
+    "system_status_fault": {
+      "0": "OK",
+      "1": "Fehler"
+    },
+    "system_status_charging": {
+      "0": "Nicht ladend",
+      "1": "Ladend"
+    },
+    "system_status_discharging": {
+      "0": "Nicht entladend",
+      "1": "Entladend"
     }
   }
 }

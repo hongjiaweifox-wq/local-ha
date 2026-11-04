@@ -364,7 +364,7 @@ const PANEL_STYLE = `
   }
 `;
 
-const I18N_VERSION = "5";
+const ASSET_VERSION = new URL(import.meta.url).searchParams.get("v") || "";
 const FALLBACK_LANGUAGE = "en";
 
 class ConowLocalPanel extends HTMLElement {
@@ -376,6 +376,7 @@ class ConowLocalPanel extends HTMLElement {
     this._devices = [];
     this._state = null;
     this._mapState = null;
+    this._mapVersion = null;
     this._i18n = null;
     this._language = null;
     this._i18nReady = Promise.resolve();
@@ -437,7 +438,7 @@ class ConowLocalPanel extends HTMLElement {
   async _loadI18n(language) {
     const load = async (lang) => {
       const url = new URL(
-        `i18n/${lang}.json?v=${I18N_VERSION}`,
+        `i18n/${lang}.json?v=${ASSET_VERSION}`,
         import.meta.url
       );
       const response = await fetch(url);
@@ -492,10 +493,22 @@ class ConowLocalPanel extends HTMLElement {
     return label !== undefined ? label : String(raw);
   }
 
-  async _loadMap() {
+  _bitLabel(register, value) {
+    const on = String(value) === "1" || value === true;
+    const translated = this._i18n?.values?.[register.code]?.[on ? "1" : "0"];
+    if (translated !== undefined) {
+      return translated;
+    }
+    return this._t(on ? "valueOn" : "valueOff");
+  }
+
+  async _loadMap(mapVersion = null) {
     await this._i18nReady;
     try {
-      this._mapState = await this._callWS("conow_local/get_panel_map");
+      this._mapState = await this._callWS(
+        "conow_local/get_panel_map",
+        mapVersion ? { map_version: mapVersion } : {}
+      );
       this._render();
     } catch (err) {
       this._error = this._errorText(err);
@@ -611,6 +624,13 @@ class ConowLocalPanel extends HTMLElement {
       this._pendingGroups.clear();
       this._notice = null;
       this._error = null;
+      const mapVersion = state.map_version === 1 ? "v1" : "v2";
+      if (mapVersion !== this._mapVersion) {
+        // Request the same map the device uses; without a device the server
+        // returns an empty map instead of flashing the v2 groups.
+        this._mapVersion = mapVersion;
+        this._loadMap(mapVersion);
+      }
       this._notifyInvalidTimes();
     } catch (err) {
       this._state = null;
@@ -700,6 +720,14 @@ class ConowLocalPanel extends HTMLElement {
           : "mdi:toggle-switch-variant-off";
       case "enum":
         return "mdi:format-list-bulleted";
+      case "bit": {
+        const icons = BINARY_SENSOR_DEVICE_CLASS_ICONS[register.device_class];
+        const key = register.raw ? "on" : "off";
+        return (
+          (icons && icons[key]) ||
+          (register.raw ? "mdi:checkbox-marked-circle" : "mdi:radiobox-blank")
+        );
+      }
       case "text":
         return "mdi:form-textbox";
       default:
@@ -740,14 +768,15 @@ class ConowLocalPanel extends HTMLElement {
       invalidTime
         ? "mdi:alert-outline"
         : this._entityIcon(register) || this._controlIcon(register);
-    const slider = this._sliderEnabled(register) ? " has-slider" : "";
+    const bounds = this._effectiveBounds(group.id, register);
+    const slider = this._sliderEnabled(register, bounds) ? " has-slider" : "";
     const value = this._controlValue(group.id, register);
     const editable = Boolean(register.writable && this._state?.map_readable);
     const entity = register.entity_id
       ? ` data-entity="${this._escape(register.entity_id)}"`
       : "";
     const control = editable
-      ? `<div class="reg-control${slider}" data-group="${group.id}" data-code="${register.code}" data-value="${this._escape(value)}" data-editable="1">${this._renderControl(register, group.id)}</div>`
+      ? `<div class="reg-control${slider}" data-group="${group.id}" data-code="${register.code}" data-value="${this._escape(value)}" data-editable="1">${this._renderControl(register, group.id, bounds)}</div>`
       : this._renderReadonlyValue(register);
     return `
       <div class="register-row${register.entity_id ? " linkable" : ""}${
@@ -930,17 +959,17 @@ class ConowLocalPanel extends HTMLElement {
     return `${value}${register?.unit || ""}`;
   }
 
-  _sliderEnabled(register) {
+  _sliderEnabled(register, bounds = register.bounds) {
     if (
       register.control !== "number" ||
       register.unit !== "%" ||
       !register.writable ||
       !this._state?.map_readable ||
-      !Array.isArray(register.bounds)
+      !Array.isArray(bounds)
     ) {
       return false;
     }
-    const [min, max] = register.bounds;
+    const [min, max] = bounds;
     return Number.isFinite(Number(min)) && Number.isFinite(Number(max));
   }
 
@@ -965,6 +994,156 @@ class ConowLocalPanel extends HTMLElement {
     return register.values ? register.raw : register.value;
   }
 
+  _findMember(code) {
+    for (const group of Object.values(this._state?.groups || {})) {
+      const member = (group.members || []).find((item) => item.code === code);
+      if (member) {
+        return member;
+      }
+    }
+    return null;
+  }
+
+  _draftNumber(code) {
+    for (const drafts of Object.values(this._drafts)) {
+      const value = drafts?.[code];
+      if (value === undefined || value === "") {
+        continue;
+      }
+      const numeric = Number(value);
+      if (Number.isFinite(numeric)) {
+        return numeric;
+      }
+    }
+    return null;
+  }
+
+  _liveNumber(code) {
+    const numeric = Number(this._findMember(code)?.value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  _socNumber(...codes) {
+    for (const code of codes) {
+      const drafted = this._draftNumber(code);
+      if (drafted !== null) {
+        return drafted;
+      }
+      const live = this._liveNumber(code);
+      if (live !== null) {
+        return live;
+      }
+    }
+    return null;
+  }
+
+  _effectiveBounds(groupId, register) {
+    // The cutoff SoC range follows the forced direction: charging runs from
+    // the current battery SoC up to 100 %, discharging stops at the cutoff so
+    // it must stay between the backup reserve and the current battery SoC.
+    if (!register || !String(register.code).endsWith("cutoff_soc")) {
+      return register?.bounds || null;
+    }
+    const bounds = Array.isArray(register.bounds) ? register.bounds : null;
+    const staticMin = bounds ? bounds[0] : 0;
+    const staticMax = bounds ? bounds[1] : 100;
+    const step = bounds ? bounds[2] : 1;
+    const drafted = this._drafts[groupId]?.["charge_discharge_direction"];
+    const direction = Number(
+      drafted !== undefined && drafted !== ""
+        ? drafted
+        : this._findMember("charge_discharge_direction")?.raw
+    );
+    if (direction !== 1 && direction !== 2) {
+      return bounds;
+    }
+    const soc = this._socNumber("battery_soc", "system_soc");
+    if (soc === null) {
+      return bounds;
+    }
+    let min;
+    let max = staticMax;
+    if (direction === 1) {
+      min = Math.max(staticMin, soc);
+    } else {
+      const backup = this._socNumber("backup_soc");
+      if (backup === null) {
+        return bounds;
+      }
+      min = Math.max(staticMin, backup);
+      max = Math.min(staticMax, soc);
+    }
+    if (max < min) {
+      max = min;
+    }
+    return [min, max, step ?? 1];
+  }
+
+  _syncCutoffControls() {
+    for (const group of Object.values(this._state?.groups || {})) {
+      for (const register of group.members || []) {
+        if (!register.writable || !String(register.code).endsWith("cutoff_soc")) {
+          continue;
+        }
+        const bounds = this._effectiveBounds(group.id, register);
+        if (!Array.isArray(bounds)) {
+          continue;
+        }
+        const control = this._root.querySelector(
+          `.reg-control[data-group="${group.id}"][data-code="${register.code}"]`
+        );
+        if (!control) {
+          continue;
+        }
+        const [min, max, step] = bounds;
+        for (const element of [
+          control.querySelector("ha-slider"),
+          control.querySelector("ha-input"),
+        ]) {
+          if (!element) {
+            continue;
+          }
+          element.setAttribute("min", min);
+          element.setAttribute("max", max);
+          if (step !== undefined) {
+            element.setAttribute("step", step);
+          }
+        }
+        const current = this._draftValue(group.id, register);
+        const numeric = Number(current);
+        if (
+          current !== "" &&
+          current !== null &&
+          current !== undefined &&
+          Number.isFinite(numeric) &&
+          (numeric < min || numeric > max)
+        ) {
+          const clamped = Math.min(Math.max(numeric, min), max);
+          this._drafts[group.id] = this._drafts[group.id] || {};
+          this._drafts[group.id][register.code] = String(clamped);
+          const slider = control.querySelector("ha-slider");
+          if (slider) {
+            slider.value = clamped;
+          }
+          const badge = control.querySelector(".reg-slider-value");
+          if (badge) {
+            badge.textContent = this._sliderText(register, clamped);
+          }
+          this._notify(
+            this._t("noticeClamped", {
+              name: this._regName(register),
+              value: clamped,
+              min,
+              max,
+            }),
+            3000
+          );
+        }
+        this._refreshApply(group.id);
+      }
+    }
+  }
+
   _changedRegisters(group) {
     return (group.members || []).filter((register) => {
       if (!register.writable) {
@@ -983,6 +1162,9 @@ class ConowLocalPanel extends HTMLElement {
   _formatRegisterValue(register, value) {
     if (value === null || value === undefined || value === "") {
       return "—";
+    }
+    if (register.control === "bit") {
+      return this._bitLabel(register, value);
     }
     if (register.control === "switch") {
       return String(value) === "1" || value === true
@@ -1122,7 +1304,11 @@ class ConowLocalPanel extends HTMLElement {
         if (!Number.isFinite(numeric)) {
           return false;
         }
-        const [min, max] = register.bounds;
+        const bounds = this._effectiveBounds(group.id, register);
+        if (!Array.isArray(bounds)) {
+          return false;
+        }
+        const [min, max] = bounds;
         return numeric < min || numeric > max;
       })
       .map((register) => register.code);
@@ -1205,8 +1391,9 @@ class ConowLocalPanel extends HTMLElement {
             return false;
           }
           if (register.bounds) {
-            const [min, max] = register.bounds;
-            if (numeric < min || numeric > max) {
+            const bounds = this._effectiveBounds(group.id, register);
+            const [min, max] = bounds || [];
+            if (Number.isFinite(min) && Number.isFinite(max) && (numeric < min || numeric > max)) {
               return false;
             }
           }
@@ -1221,7 +1408,7 @@ class ConowLocalPanel extends HTMLElement {
       });
   }
 
-  _renderControl(register, groupId) {
+  _renderControl(register, groupId, bounds = register.bounds) {
     const editable = Boolean(register.writable && this._state?.map_readable);
     const pending = this._pendingGroups.has(groupId);
     const unit = register.unit
@@ -1248,8 +1435,8 @@ class ConowLocalPanel extends HTMLElement {
         editable && !pending ? "" : "disabled"
       }></ha-time-input>${warning}`;
     }
-    const [min, max, step] = register.bounds || [];
-    const bounds = [
+    const [min, max, step] = bounds || [];
+    const boundsAttributes = [
       min !== undefined ? `min="${min}"` : "",
       max !== undefined ? `max="${max}"` : "",
       step !== undefined ? `step="${step}"` : "",
@@ -1257,16 +1444,16 @@ class ConowLocalPanel extends HTMLElement {
       .filter(Boolean)
       .join(" ");
     const state = editable ? (pending ? "disabled" : "") : "readonly";
-    if (this._sliderEnabled(register)) {
+    if (this._sliderEnabled(register, bounds)) {
       // Slider rows keep a compact read-only value next to the track: the
       // native tooltip only appears while dragging, and a second editable
       // number box for a percentage setting is redundant.
-      return `<ha-slider labeled ${bounds} ${
+      return `<ha-slider labeled ${boundsAttributes} ${
         editable ? (pending ? "disabled" : "") : "disabled"
       }></ha-slider><span class="reg-slider-value"></span>`;
     }
     const type = register.control === "number" ? 'type="number"' : "";
-    return `<ha-input ${type} ${bounds} ${state}>${unit}</ha-input>`;
+    return `<ha-input ${type} ${boundsAttributes} ${state}>${unit}</ha-input>`;
   }
 
   _ensureTimeInput() {
@@ -1419,14 +1606,18 @@ class ConowLocalPanel extends HTMLElement {
         const register = this._findRegister(groupId, code);
         const handle = (raw) => {
           let value = raw === undefined || raw === null ? "" : raw;
+          const bounds =
+            register?.control === "number"
+              ? this._effectiveBounds(groupId, register)
+              : null;
           if (
             register?.control === "number" &&
-            Array.isArray(register.bounds) &&
+            Array.isArray(bounds) &&
             String(value).trim() !== ""
           ) {
             const numeric = Number(value);
             if (Number.isFinite(numeric)) {
-              const [min, max] = register.bounds;
+              const [min, max] = bounds;
               const clamped = Math.min(Math.max(numeric, min), max);
               if (clamped !== numeric) {
                 value = String(clamped);
@@ -1470,6 +1661,11 @@ class ConowLocalPanel extends HTMLElement {
           }
           if (badge) {
             badge.textContent = this._sliderText(register, value);
+          }
+          if (code === "charge_discharge_direction" || code === "backup_soc") {
+            // The cutoff SoC range depends on the direction and the backup
+            // reserve; refresh it as soon as either draft changes.
+            this._syncCutoffControls();
           }
           if (code === this._state?.groups?.[groupId]?.count_register) {
             this._syncSlotVisibility(groupId);

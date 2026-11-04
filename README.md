@@ -146,6 +146,46 @@ If setup fails with *cannot connect*, or sensor values look wrong (e.g. extremel
 
 
 
+## Project layout
+
+The integration is organised by the five pipeline layers, so the directory
+name tells you which stage a module belongs to:
+
+```text
+custom_components/conow_local/
+├── maps/                      # Layers 1-2: map registration and parsing
+│   ├── registry.py            # L1  v1/v2 files, firmware probe and routing
+│   ├── model.py               # L2  JSON → registers/blocks, decode, bounds, encode
+│   ├── entity_model.py        # L2  register → EntitySpec (platform, unique id, name key)
+│   ├── registers.json         # L1  v1 map data
+│   └── panel_registers.json   # L1  v2 map data
+├── device/                    # Layer 3: Home Assistant device page helpers
+│   ├── coordinator.py         #     polls the active map and serves decoded values
+│   ├── descriptions.py        #     EntitySpec → HA entity descriptions
+│   └── guard.py               #     refuses device-page writes and links to the panel
+├── panel/                     # Layer 4: the Conow Local panel
+│   ├── panel_api.py           #     websocket API, static assets, panel registration
+│   ├── panel_functions.py     #     group rendering, validation and atomic writes
+│   └── frontend/              #     panel JS and generated UI translations
+├── sensor.py … time.py        # Layer 3: HA platform implementations
+│                              #   sensor, binary_sensor, number, select,
+│                              #   switch and time
+├── strings.json               # Layer 5: source Home Assistant entity strings
+├── translations/              # Layer 5: generated Home Assistant translations
+├── __init__.py                # Home Assistant integration entry point
+├── client.py                  # shared raw Modbus RTU/TCP I/O
+├── const.py                   # shared constants
+└── config_flow.py             # setup and reconfiguration dialog
+```
+
+Home Assistant imports platform modules by the path
+`custom_components.conow_local.<platform>`, so the six platform modules
+(`sensor.py`, `binary_sensor.py`, `number.py`, `select.py`, `switch.py`,
+`time.py`) at the integration root are the platform entry points and entity
+implementations; they use the helpers in `device/` for polling and entity
+descriptions. All translations are generated from one catalog by
+`tools/i18n/build_panel_i18n.py`.
+
 ## Polling & control read-back
 
 
@@ -154,28 +194,29 @@ If setup fails with *cannot connect*, or sensor values look wrong (e.g. extremel
 
 The integration polls the device on a fixed interval and refreshes all entities:
 
+| Map | Interval | Meaning |
+| --- | -------- | ------- |
+| v1 (`maps/registers.json`) | **5 s** | Background read of every block of the v1 map |
+| v2 (`maps/panel_registers.json`) | **30 s** | Background read of every block of the v2 map |
 
-| Constant               | Default | Meaning                                                        |
-| ---------------------- | ------- | -------------------------------------------------------------- |
-| `MODBUS_POLL_INTERVAL` | **5 s** | Background read of monitoring + control registers (`read_all`) |
+Protocol docs require a polling interval of **at least 2 s**; v1 keeps **5 s**
+to reduce RS-485 bus load when communication is unstable. Each poll issues one
+FC `0x03` read per map `blocks` entry; the read count is derived from the
+highest register address in that block. Frames are spaced by a short
+inter-frame delay.
 
+### Writes
 
-Protocol docs require a polling interval of **at least 2 s**; the default is **5 s** to reduce RS-485 bus load when communication is unstable.
+Device-page controls are **visible but do not write directly**: numbers,
+selects, switches and times all refuse the write with a notification that links
+to the grouping panel. All writes go through that panel, which sends a **whole
+group** at once:
 
-Each poll issues two Modbus reads (FC `0x03`):
-
-1. Registers **10000–10036** (monitoring)
-2. After **0.15 s** inter-frame delay → registers **10100–10107** (control)
-
-
-
-### After a control write (UI / service call)
-
-When you change a number, switch, or select, the integration does **not** wait for the next 5 s poll. In one locked serial session it:
-
-1. **Writes** the control register(s) (FC `0x06`; force charge/discharge writes **10106 → 10105 → 10107**)
-2. Waits **0.3 s** (`POST_WRITE_DELAY_S`)
-3. **Reads back** the full monitoring + control blocks (`read_all`) and updates entities immediately
+1. The group's writable registers are validated against their live limits
+2. Contiguous registers are merged into one atomic FC `0x10` frame; groups with
+   gaps fall back to back-to-back FC `0x06` writes
+3. The panel state is re-read immediately, so the UI does not wait for the next
+   poll
 
 ## Logging & Modbus frames
 
@@ -227,16 +268,16 @@ On success, the device normally **echoes the same 8 bytes** as the response.
 
 ## Register map routing
 
-Two maps ship with the integration:
+Two maps ship with the integration. They now share one schema, one model and
+one entity classifier; only the data differs:
 
 | Map | File | Used for |
 |-----|------|----------|
-| v1 (default) | `registers.json` | HA entity platforms (sensor / binary_sensor / number / switch / select), always the fallback |
-| v2 (finalized) | `panel/panel_registers.json` | Grouping panel plus its on/off and time entities |
+| v1 | `maps/registers.json` | Firmware < 1.2 (also the fallback) |
+| v2 (finalized) | `maps/panel_registers.json` | Firmware ≥ 1.2 |
 
-The two maps are **mutually exclusive** for an entry: firmware ≥ 1.2 selects
-v2, and the v1 entity platforms are not set up at all; otherwise the entry
-stays on v1 and no v2 block is read or written.
+The two maps are **mutually exclusive** for an entry: exactly one is loaded,
+polled and rendered. The selection is made once at setup:
 
 After setup begins, the integration reads the 4-byte ASCII firmware version
 at **10062–10063 (0x274E–0x274F)** before the first poll. The v2 map and its
@@ -245,61 +286,80 @@ panel features are used only when the parsed version is **≥ 1.2**
 `registers.json`; the integration never falls forward to the finalized control
 addresses by accident.
 
+The panel asks for the map version reported by the active device, so it never
+briefly renders the other map's groups. Every map file path lives in
+`maps/registry.py`; no other module hardcodes a filename.
+
 ## Adding registers & entities
 
-After installation, **new Modbus points only require editing two places**:
+Entity platforms are **derived from the register metadata**, so adding a
+Modbus point means editing JSON plus translations — no Python changes:
 
-1. **`custom_components/conow_local/registers.json`** — register address, scale, HA platform, options, etc.
-2. **Translations** — `strings.json`, `translations/en.json`, `translations/zh-Hans.json` (entity display names)
+1. **`maps/registers.json` and/or `maps/panel_registers.json`** — address, scale,
+   unit, `writable`, `device_class`/`state_class`, enum `values`, `bits`, etc.
+2. **`tools/i18n/build_panel_i18n.py`** — add the register name (and enum labels,
+   if any) to its catalogs for en/de/nl.
+3. Run `python3 tools/i18n/build_panel_i18n.py` — it regenerates the panel i18n
+   files **and** the `entity` sections of `strings.json` /
+   `translations/*.json`.
 
-No Python changes are needed for typical sensor / number / switch / binary_sensor entries.
+The tool fails loudly when a register, group, enum or entity name is missing a
+translation, so a half-translated map cannot ship. Chinese names come straight
+from the map's `name`/`values` fields.
+
+### Entity classification
+
+| Register shape | Entity created |
+| -------------- | -------------- |
+| has `bits[]` | one read-only `binary_sensor` per bit (no raw register entity) |
+| `writable` boolean | `switch` (device-page write refused; use the panel) |
+| `format: "hhmm"` | `time` (device-page write refused; use the panel) |
+| other `writable` numeric | `number` (device-page write refused; use the panel) |
+| `writable` enum | `select` (device-page write refused; use the panel) |
+| read-only boolean | `binary_sensor` |
+| anything else read-only | `sensor` |
 
 ### `registers.json` structure
 
 | Section | Purpose |
 |---------|---------|
-| `blocks` | Modbus read block start addresses (`monitoring`, `control`); read count is **auto-calculated** from register addresses |
-| `sequences` | Special multi-register write order (e.g. `force_mode`) |
-| `registers` | Modbus definitions: `code`, `address`, `block`, `dtype`, `scale`, `unit`, `writable` |
-| `entities` | Home Assistant entities: `platform`, `register`, `device_class`, `min`/`max`, `bit`, `options` |
+| `version` | Schema version |
+| `meta` | Map label, source/firmware notes |
+| `blocks` | Modbus read block names and start addresses; read count is **auto-calculated** from register addresses |
+| `registers` | Modbus definition **and** entity metadata: `code`, `address`, `block`, `dtype`, `scale`, `unit`, `writable`, `name`, `device_class`, `state_class`, `entity_category`, `values`, `bits`, `format` |
+| `groups` | Grouping-panel layout: members, subgroups, atomic write spans |
 
 ### Example — add a read-only sensor
 
-In `registers`:
+In the map's `registers`:
 
 ```json
 {
   "code": "new_metric",
+  "name": "New Metric",
   "address": 10037,
   "block": "monitoring",
   "dtype": "uint16",
   "scale": 0.1,
-  "unit": "W"
+  "unit": "W",
+  "device_class": "power",
+  "state_class": "measurement",
+  "writable": false
 }
 ```
 
-In `entities`:
+Add `"new_metric": ("New Metric", "Neue Metrik", "Nieuwe metriek")` to the
+tool's `REGISTERS` catalog (the Chinese name comes from `name`), then run the
+i18n tool and **reload the integration**.
 
-```json
-{
-  "code": "new_metric",
-  "platform": "sensor",
-  "register": "new_metric",
-  "device_class": "power"
-}
-```
+### Platform-specific fields
 
-Add `"new_metric": { "name": "..." }` under `entity.sensor` in all three translation files, then **reload the integration**.
-
-### Platform-specific JSON fields
-
-| Platform | Extra `entities` fields |
-|----------|-------------------------|
-| `sensor` | `device_class`, `state_class`, `suggested_display_precision`, `entity_category` |
-| `binary_sensor` | `register` (bitmask source), `bit`, `device_class` |
-| `number` | `min`, `max`, `step` |
-| `switch` | — (writes `0` / `1`) |
-| `select` | `options` (`"label": raw_value`), optional `write_handler`: `"force_mode"` |
+| Platform | Source fields |
+|----------|---------------|
+| `sensor` | `device_class`, `state_class`, `entity_category`, `unit`, `values` (enum/boolean) |
+| `binary_sensor` | `bits[]` (`code`, `bit`, `name`, `device_class`) or boolean register `device_class` |
+| `switch` | `writable: true` on a boolean register |
+| `time` | `format: "hhmm"` |
 
 ## Q&A
 

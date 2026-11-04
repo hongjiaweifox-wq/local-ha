@@ -1,24 +1,40 @@
-"""Generate the grouping panel's i18n JSON files.
+"""Generate the panel i18n JSON and the Home Assistant entity strings.
 
 Run from the repository root:
-    python tools/build_panel_i18n.py
+    python tools/i18n/build_panel_i18n.py
 
-Chinese names/labels come straight from ``panel_registers.json``; English,
-German and Dutch are looked up here so the panel can follow the Home
-Assistant language instead of always rendering Chinese.
+Chinese names/labels come straight from the map JSON files; English, German
+and Dutch are looked up here so the panel and the device page can follow the
+Home Assistant language instead of always rendering Chinese.
+
+This is the single translation catalog: one run writes
+``panel/frontend/i18n/{en,de,nl,zh-Hans}.json`` and the ``entity`` section of
+``strings.json`` / ``translations/*.json``.  Missing entries are hard errors —
+the tool never falls back to a previous output file.
 """
 
 from __future__ import annotations
 
 import json
+import sys
+import types
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-MAP_PATH = ROOT / "custom_components/conow_local/panel/panel_registers.json"
-V1_MAP_PATH = ROOT / "custom_components/conow_local/registers.json"
-OUT_DIR = ROOT / "custom_components/conow_local/panel/frontend/i18n"
+ROOT = Path(__file__).resolve().parent.parent.parent
+COMPONENT_DIR = ROOT / "custom_components/conow_local"
+OUT_DIR = COMPONENT_DIR / "panel/frontend/i18n"
+
+# Import the integration's stdlib-only layer-1+2 package (maps.registry,
+# maps.model, maps.entity_model) without installing Home Assistant.
+if "conow_local" not in sys.modules:
+    _package = types.ModuleType("conow_local")
+    _package.__path__ = [str(COMPONENT_DIR)]
+    sys.modules["conow_local"] = _package
+
+from conow_local.maps import entity_model, registry  # noqa: E402
 
 LANGS = ("en", "de", "nl")
+ALL_LANGS = ("en", "de", "nl", "zh-Hans")
 
 # ---------------------------------------------------------------------------
 # Groups
@@ -260,6 +276,11 @@ REGISTERS = {
         "Lade-/Entlade-Abschalt-SoC",
         "Laad-/ontlaadafslag-SoC",
     ),
+    "battery_cutoff_soc": (
+        "Charge/Discharge Cutoff SoC",
+        "Lade-/Entlade-Abschalt-SoC",
+        "Laad-/ontlaadafslag-SoC",
+    ),
     "charge_discharge_duration": (
         "Charge/Discharge Duration",
         "Lade-/Entladedauer",
@@ -322,6 +343,104 @@ REGISTERS = {
     "tou_slot_count": ("TOU Slot Count", "Anzahl TOU-Zeitfenster", "Aantal TOU-tijdsloten"),
 }
 
+# v1-only register names (registers.json used to carry them in entities[]).
+REGISTERS.update(
+    {
+        "system_status": ("System Status", "Systemstatus", "Systeemstatus"),
+        "fault_code": ("Fault Code", "Fehlercode", "Foutcode"),
+        "battery_soc": ("Battery SoC", "Batterie-SoC", "Accu-SoC"),
+        "battery_design_capacity": (
+            "Battery Rated Capacity",
+            "Nennkapazität der Batterie",
+            "Nominale batterijcapaciteit",
+        ),
+        "battery_cell_temp_max": (
+            "Max Cell Temperature",
+            "Maximale Zelltemperatur",
+            "Maximale celtemperatuur",
+        ),
+        "battery_cell_temp_min": (
+            "Min Cell Temperature",
+            "Minimale Zelltemperatur",
+            "Minimale celtemperatuur",
+        ),
+        "battery_cumulative_charge_energy": (
+            "Battery Total Charged Energy",
+            "Gesamt geladene Batterieenergie",
+            "Totaal geladen batterij-energie",
+        ),
+        "battery_cumulative_discharge_energy": (
+            "Battery Total Discharged Energy",
+            "Gesamt entladene Batterieenergie",
+            "Totaal ontladen batterij-energie",
+        ),
+        "grid_cumulative_import_energy": (
+            "Grid Total Import Energy",
+            "Netzbezug gesamt",
+            "Totaal netafname",
+        ),
+        "grid_cumulative_export_energy": (
+            "Grid Total Export Energy",
+            "Netzeinspeisung gesamt",
+            "Totaal netteruglevering",
+        ),
+        "backup_load_power": (
+            "Backup Load Power",
+            "Notstromlast-Leistung",
+            "Noodstroombelasting-vermogen",
+        ),
+        "backup_load_cumulative_export_energy": (
+            "Backup Load Total Output Energy",
+            "Notstromlast Gesamtausgangsenergie",
+            "Noodstroombelasting totale uitgangsenergie",
+        ),
+        "backup_load_cumulative_import_energy": (
+            "Backup Load Total Input Energy",
+            "Notstromlast Gesamteingangsenergie",
+            "Noodstroombelasting totale ingangsenergie",
+        ),
+        "pv_total_cumulative_energy": (
+            "PV Total Generated Energy",
+            "PV-Gesamtenergie",
+            "PV totale energie",
+        ),
+        "pv1_power": ("PV1 Power", "PV1-Leistung", "PV1-vermogen"),
+        "pv1_cumulative_energy": (
+            "PV1 Total Generated Energy",
+            "PV1-Gesamtenergie",
+            "PV1 totale energie",
+        ),
+        "pv2_power": ("PV2 Power", "PV2-Leistung", "PV2-vermogen"),
+        "pv2_cumulative_energy": (
+            "PV2 Total Generated Energy",
+            "PV2-Gesamtenergie",
+            "PV2 totale energie",
+        ),
+        "pv3_power": ("PV3 Power", "PV3-Leistung", "PV3-vermogen"),
+        "pv3_cumulative_energy": (
+            "PV3 Total Generated Energy",
+            "PV3-Gesamtenergie",
+            "PV3 totale energie",
+        ),
+        "pv4_power": ("PV4 Power", "PV4-Leistung", "PV4-vermogen"),
+        "pv4_cumulative_energy": (
+            "PV4 Total Generated Energy",
+            "PV4-Gesamtenergie",
+            "PV4 totale energie",
+        ),
+        "grid_charge_power_limit": (
+            "Grid Charge Power Limit",
+            "Netzladungsleistungsgrenze",
+            "Netlaadvermogenslimiet",
+        ),
+        "battery_discharge_power_limit": (
+            "Battery Discharge Power Limit",
+            "Batterieentladungsleistungsgrenze",
+            "Batterij-ontlaadvermogenslimiet",
+        ),
+    }
+)
+
 # Formulaic slot registers (1-8) are generated.
 BASE_SLOT_TEMPLATES = {
     "start": (
@@ -379,6 +498,210 @@ for _n in range(1, 9):
         )
 
 # ---------------------------------------------------------------------------
+# Bit entities: binary sensors split out of the v1 system_status bitmask
+# ---------------------------------------------------------------------------
+# The panel renders each bit as its own read-only row, so these codes need
+# names and on/off labels in every language even though they are not registers.
+# Each entry: code -> language -> (name, off label, on label).
+BITS = {
+    "system_status_standby": {
+        "en": ("System–Standby", "Not in standby", "Standby"),
+        "de": ("System–Standby", "Nicht im Standby", "Standby"),
+        "nl": ("Systeem–Stand-by", "Niet in stand-by", "Stand-by"),
+        "zh-Hans": ("系统-待机", "未待机", "待机中"),
+    },
+    "system_status_fault": {
+        "en": ("System–Fault", "OK", "Fault"),
+        "de": ("System–Fehler", "OK", "Fehler"),
+        "nl": ("Systeem–Fout", "OK", "Storing"),
+        "zh-Hans": ("系统-故障", "OK", "故障"),
+    },
+    "system_status_charging": {
+        "en": ("System–Charging", "Not charging", "Charging"),
+        "de": ("System–Laden", "Nicht ladend", "Ladend"),
+        "nl": ("Systeem–Laden", "Niet aan het laden", "Aan het laden"),
+        "zh-Hans": ("系统-充电中", "未充电", "充电中"),
+    },
+    "system_status_discharging": {
+        "en": ("System–Discharging", "Not discharging", "Discharging"),
+        "de": ("System–Entladen", "Nicht entladend", "Entladend"),
+        "nl": ("Systeem–Ontladen", "Niet aan het ontladen", "Aan het ontladen"),
+        "zh-Hans": ("系统-放电中", "未放电", "放电中"),
+    },
+}
+
+# ---------------------------------------------------------------------------
+# Home Assistant entity names (device page): code -> (en, de, nl, zh-Hans)
+# ---------------------------------------------------------------------------
+# Seeded from the names the integration shipped before the maps were merged, so
+# existing device pages keep their wording.  Codes missing here fall back to
+# the panel catalog (REGISTERS/BITS) below.
+ENTITY_NAMES = {
+    "fault_code": ("Fault Code", "Fehlercode", "Foutcode", "故障码"),
+    "battery_voltage": ("Battery Voltage", "Batteriespannung", "Accuspanning", "电池电压"),
+    "battery_soc": ("Battery SoC", "Batterie-SoC", "Accu-SoC", "电池 SOC"),
+    "battery_design_capacity": (
+        "Design Capacity",
+        "Nennkapazität",
+        "Ontwerpcapaciteit",
+        "电池设计容量",
+    ),
+    "battery_cell_temp_max": (
+        "Max. Cell Temperature",
+        "Max. Zelltemperatur",
+        "Max. celtemperatuur",
+        "电芯最高温度",
+    ),
+    "battery_cell_temp_min": (
+        "Min. Cell Temperature",
+        "Min. Zelltemperatur",
+        "Min. celtemperatuur",
+        "电芯最低温度",
+    ),
+    "battery_cumulative_charge_energy": (
+        "Total Charge Energy",
+        "Gesamte Ladeenergie",
+        "Totale laadenergie",
+        "电池累计充电电量",
+    ),
+    "battery_cumulative_discharge_energy": (
+        "Total Discharge Energy",
+        "Gesamte Entladeenergie",
+        "Totale ontlaadenergie",
+        "电池累计放电电量",
+    ),
+    "grid_active_power": (
+        "Grid Active Power",
+        "Netz-Wirkleistung",
+        "Net actief vermogen",
+        "电网有功功率",
+    ),
+    "grid_frequency": ("Grid Frequency", "Netzfrequenz", "Netfrequentie", "电网频率"),
+    "grid_cumulative_import_energy": (
+        "Total Grid Import",
+        "Gesamter Netzbezug",
+        "Totale netafname",
+        "累计电网取电电量",
+    ),
+    "grid_cumulative_export_energy": (
+        "Total Grid Export",
+        "Gesamte Netzeinspeisung",
+        "Totale netinjectie",
+        "累计电网馈电电量",
+    ),
+    "backup_load_power": ("Bypass Power", "Bypass-Leistung", "Bypass-vermogen", "旁路功率"),
+    "backup_load_cumulative_export_energy": (
+        "Total Bypass Output",
+        "Gesamter Bypass-Ausgang",
+        "Totale bypass-output",
+        "旁路累计输出电量",
+    ),
+    "backup_load_cumulative_import_energy": (
+        "Total Bypass Input",
+        "Gesamter Bypass-Eingang",
+        "Totale bypass-input",
+        "旁路累计输入电量",
+    ),
+    "pv_total_power": (
+        "Total PV Input Power",
+        "PV-Gesamteingangsleistung",
+        "Totaal PV-ingangsvermogen",
+        "PV 总输入功率",
+    ),
+    "pv_total_cumulative_energy": (
+        "Total PV Yield",
+        "Gesamter PV-Ertrag",
+        "Totale PV-opbrengst",
+        "PV 累计总发电量",
+    ),
+    "pv1_power": ("PV1 Input Power", "PV1-Eingangsleistung", "PV1-ingangsvermogen", "PV1 输入功率"),
+    "pv1_cumulative_energy": (
+        "PV1 Total Yield",
+        "PV1-Gesamtertrag",
+        "PV1 totale opbrengst",
+        "PV1 累计发电量",
+    ),
+    "pv2_power": ("PV2 Input Power", "PV2-Eingangsleistung", "PV2-ingangsvermogen", "PV2 输入功率"),
+    "pv2_cumulative_energy": (
+        "PV2 Total Yield",
+        "PV2-Gesamtertrag",
+        "PV2 totale opbrengst",
+        "PV2 累计发电量",
+    ),
+    "pv3_power": ("PV3 Input Power", "PV3-Eingangsleistung", "PV3-ingangsvermogen", "PV3 输入功率"),
+    "pv3_cumulative_energy": (
+        "PV3 Total Yield",
+        "PV3-Gesamtertrag",
+        "PV3 totale opbrengst",
+        "PV3 累计发电量",
+    ),
+    "pv4_power": ("PV4 Input Power", "PV4-Eingangsleistung", "PV4-ingangsvermogen", "PV4 输入功率"),
+    "pv4_cumulative_energy": (
+        "PV4 Total Yield",
+        "PV4-Gesamtertrag",
+        "PV4 totale opbrengst",
+        "PV4 累计发电量",
+    ),
+    "system_status_standby": (
+        "System–Standby",
+        "System–Standby",
+        "Systeem–Standby",
+        "系统-待机",
+    ),
+    "system_status_fault": ("System–Fault", "System–Fehler", "Systeem–Fout", "系统-故障"),
+    "system_status_charging": (
+        "System–Charging",
+        "System–Lädt",
+        "Systeem–Opladen",
+        "系统-充电中",
+    ),
+    "system_status_discharging": (
+        "System–Discharging",
+        "System–Entlädt",
+        "Systeem–Ontladen",
+        "系统-放电中",
+    ),
+    "grid_charge_power_limit": (
+        "AC Charge Power Limit",
+        "AC-Ladeleistungslimit",
+        "AC-laadvermogenlimiet",
+        "交流充电功率限制",
+    ),
+    "battery_discharge_power_limit": (
+        "AC Discharge Power Limit",
+        "AC-Entladeleistungslimit",
+        "AC-Ontlaadvermogenlimiet",
+        "交流放电功率限制",
+    ),
+    "backup_soc": ("Backup SoC", "Backup-SoC", "Back-up SoC", "备电 SOC"),
+    "battery_target_power": (
+        "Target Charge / Discharge Power",
+        "Ziel-Lade-/Entladeleistung",
+        "Doel laad-/ontlaadvermogen",
+        "目标充放电功率",
+    ),
+    "battery_cutoff_soc": (
+        "Charge / Discharge Cut-off SoC",
+        "Lade-/Entlade-Abschalt-SoC",
+        "Laad-/Ontlaad-uitschakel-SoC",
+        "充放电截止 SOC",
+    ),
+    "off_grid_output_enable": (
+        "Off-Grid Output Switch",
+        "Off-Grid-Ausgangsschalter",
+        "Off-grid uitgangsschakelaar",
+        "离网输出开关",
+    ),
+    "pv_curtailment_enable": (
+        "PV Curtailment Switch",
+        "PV-Abregelungsschalter",
+        "PV-curtailmentschakelaar",
+        "PV 弃光开关",
+    ),
+}
+ENTITY_LANG_INDEX = {lang: index for index, lang in enumerate(ALL_LANGS)}
+
+# ---------------------------------------------------------------------------
 # Enum values: code -> raw -> (en, de, nl)
 # ---------------------------------------------------------------------------
 VALUES = {
@@ -396,24 +719,24 @@ VALUES = {
         ),
     },
     "battery_work_state": {
-        "0": ("idle", "idle", "idle"),
-        "1": ("chg", "chg", "chg"),
-        "2": ("dchg", "dchg", "dchg"),
+        "0": ("Idle", "Leerlauf", "Inactief"),
+        "1": ("Charging", "Laden", "Laden"),
+        "2": ("Discharging", "Entladen", "Ontladen"),
     },
     "bypass_switch_state": {
-        "0": ("off", "aus", "uit"),
-        "1": ("on", "an", "aan"),
+        "0": ("Off", "Aus", "Uit"),
+        "1": ("On", "An", "Aan"),
     },
     "charge_discharge_direction": {
-        "0": ("idle", "idle", "idle"),
-        "1": ("chg", "chg", "chg"),
-        "2": ("dchg", "dchg", "dchg"),
-        "3": ("exit", "exit", "exit"),
+        "0": ("Idle", "Leerlauf", "Inactief"),
+        "1": ("Charging", "Laden", "Laden"),
+        "2": ("Discharging", "Entladen", "Ontladen"),
+        "3": ("Exit", "Beenden", "Afsluiten"),
     },
     "work_mode": {
         "1": ("Self-consumption", "Eigenverbrauch", "Eigen verbruik"),
         "2": ("Manual schedule", "Manueller Zeitplan", "Handmatig schema"),
-        "3": ("idle", "idle", "idle"),
+        "3": ("Idle", "Leerlauf", "Inactief"),
     },
     "allow_battery_export": {
         "0": (
@@ -443,14 +766,34 @@ VALUES = {
         "0": ("Disabled", "Deaktiviert", "Uitgeschakeld"),
         "1": ("Enabled", "Aktiviert", "Ingeschakeld"),
     },
-    "do1_state": {"0": ("off", "aus", "uit"), "1": ("on", "an", "aan")},
-    "do2_state": {"0": ("off", "aus", "uit"), "1": ("on", "an", "aan")},
+    "do1_state": {"0": ("Off", "Aus", "Uit"), "1": ("On", "An", "Aan")},
+    "do2_state": {"0": ("Off", "Aus", "Uit"), "1": ("On", "An", "Aan")},
 }
 for _n in range(1, 9):
     VALUES[f"tou_slot{_n}_mode"] = {
         "0": ("Charge", "Laden", "Laden"),
         "1": ("Discharge", "Entladen", "Ontladen"),
     }
+
+# Chinese labels for enums whose map labels are still protocol abbreviations
+# ("idle"/"chg"/"disable").  Registers keep their Chinese map label otherwise.
+ZH_VALUES = {
+    "battery_work_state": {"0": "空闲", "1": "充电", "2": "放电"},
+    "bypass_switch_state": {"0": "关", "1": "开"},
+    "charge_discharge_direction": {
+        "0": "空闲",
+        "1": "充电",
+        "2": "放电",
+        "3": "退出",
+    },
+    "work_mode": {"3": "空闲"},
+    "bypass_enable": {"0": "关闭", "1": "开启"},
+    "off_grid_output_enable": {"0": "关闭", "1": "开启"},
+    "pv_curtailment_enable": {"0": "关闭", "1": "开启"},
+    "generator_enable": {"0": "关闭", "1": "开启"},
+    "do1_state": {"0": "关", "1": "开"},
+    "do2_state": {"0": "关", "1": "开"},
+}
 
 # ---------------------------------------------------------------------------
 # UI strings
@@ -490,7 +833,10 @@ UI = {
         "warningInvalidTime": "Invalid reading — set again",
         "noticeClamped": "{name} limited to {value} ({min}–{max})",
         "noticeTimeClamped": "Time limited to {value} (valid range 00:00–23:59)",
-        "confirmWrite": "Write group “{group}” to the device?\n\n{preview}",
+        "confirmWriteTitle": "Confirm write",
+        "confirmWrite": "Write group “{group}” to the device?",
+        "actionCancel": "Cancel",
+        "actionConfirm": "Confirm",
         "noticeApplied": "{group}: sent",
         "noticeFailed": "{group}: {error}",
         "actionApplying": "Sending…",
@@ -560,7 +906,10 @@ UI = {
         "warningInvalidTime": "Ungültiger Wert – erneut einstellen",
         "noticeClamped": "{name} auf {value} begrenzt ({min}–{max})",
         "noticeTimeClamped": "Zeit auf {value} begrenzt (gültig 00:00–23:59)",
-        "confirmWrite": "Gruppe „{group}“ auf das Gerät schreiben?\n\n{preview}",
+        "confirmWriteTitle": "Schreiben bestätigen",
+        "confirmWrite": "Gruppe „{group}“ auf das Gerät schreiben?",
+        "actionCancel": "Abbrechen",
+        "actionConfirm": "Bestätigen",
         "noticeApplied": "{group}: gesendet",
         "noticeFailed": "{group}: {error}",
         "actionApplying": "Wird gesendet…",
@@ -631,7 +980,10 @@ UI = {
         "warningInvalidTime": "Ongeldige waarde — opnieuw instellen",
         "noticeClamped": "{name} beperkt tot {value} ({min}–{max})",
         "noticeTimeClamped": "Tijd beperkt tot {value} (geldig 00:00–23:59)",
-        "confirmWrite": "Groep “{group}” naar het apparaat schrijven?\n\n{preview}",
+        "confirmWriteTitle": "Schrijven bevestigen",
+        "confirmWrite": "Groep “{group}” naar het apparaat schrijven?",
+        "actionCancel": "Annuleren",
+        "actionConfirm": "Bevestigen",
         "noticeApplied": "{group}: verzonden",
         "noticeFailed": "{group}: {error}",
         "actionApplying": "Verzenden…",
@@ -697,7 +1049,10 @@ UI = {
         "warningInvalidTime": "读数非法，请重新设置",
         "noticeClamped": "{name} 已限制为 {value}（{min}–{max}）",
         "noticeTimeClamped": "时间已限制为 {value}（有效范围 00:00–23:59）",
-        "confirmWrite": "确认把分组「{group}」写入设备？\n\n{preview}",
+        "confirmWriteTitle": "确认下发",
+        "confirmWrite": "确认把分组「{group}」写入设备？",
+        "actionCancel": "取消",
+        "actionConfirm": "确认",
         "noticeApplied": "{group}：已下发",
         "noticeFailed": "{group}：{error}",
         "actionApplying": "下发中…",
@@ -732,17 +1087,66 @@ UI = {
 }
 
 
-def _existing_translations(lang: str) -> dict:
-    """Load the current output file so v1-only names survive regeneration."""
-    path = OUT_DIR / f"{lang}.json"
-    if not path.exists():
-        return {}
-    return json.loads(path.read_text(encoding="utf-8"))
+def _localized_value(
+    code: str, raw: int, lang: str, fallback: str
+) -> str:
+    """Return the catalog translation of one enum label, if it exists."""
+    if lang == "zh-Hans":
+        return ZH_VALUES.get(code, {}).get(str(raw), fallback)
+    options = VALUES.get(code)
+    if options is not None and str(raw) in options:
+        return options[str(raw)][LANGS.index(lang)]
+    return fallback
+
+
+def _entity_name(code: str, lang: str, zh_registers: dict[str, str]) -> str:
+    """Return the device-page name of an entity in one language."""
+    if code in ENTITY_NAMES:
+        return ENTITY_NAMES[code][ENTITY_LANG_INDEX[lang]]
+    if code in BITS:
+        return BITS[code][lang][0]
+    if code in REGISTERS:
+        if lang == "zh-Hans":
+            return zh_registers.get(code, code)
+        return REGISTERS[code][LANGS.index(lang)]
+    raise SystemExit(f"Missing entity name for {code} ({lang})")
+
+
+def _load_maps() -> tuple[dict, dict]:
+    v1 = json.loads(registry.map_path(registry.MAP_V1).read_text(encoding="utf-8"))
+    v2 = json.loads(registry.map_path(registry.MAP_V2).read_text(encoding="utf-8"))
+    return v1, v2
+
+
+def _write_entity_sections(
+    sections: dict[str, dict[str, dict]], lang: str
+) -> None:
+    """Replace the entity section, preserving config/exceptions verbatim.
+
+    English is written to both ``strings.json`` (the source catalog) and
+    ``translations/en.json`` (what Home Assistant actually loads at runtime).
+    """
+    sources = [COMPONENT_DIR / "translations" / f"{lang}.json"]
+    if lang == "en":
+        sources.insert(0, COMPONENT_DIR / "strings.json")
+    for path in sources:
+        existing = (
+            json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+        )
+        payload = {
+            "exceptions": existing.get("exceptions", {}),
+            "config": existing.get("config", {}),
+            "entity": sections[lang],
+        }
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
 
 
 def main() -> None:
-    v2 = json.loads(MAP_PATH.read_text(encoding="utf-8"))
-    v1 = json.loads(V1_MAP_PATH.read_text(encoding="utf-8"))
+    v1, v2 = _load_maps()
     entries = {
         item["code"]: item
         for item in (*v1["registers"], *v2["registers"])
@@ -757,46 +1161,47 @@ def main() -> None:
         for item in v1["groups"]
         if item["id"] not in {group["id"] for group in v2["groups"]}
     ]
-    existing = {
-        lang: _existing_translations(lang) for lang in (*LANGS, "zh-Hans")
-    }
 
-    missing = [
-        code
-        for code in all_codes
-        if code not in REGISTERS
-        and code not in existing["en"].get("registers", {})
-    ]
+    # Chinese: names/labels/enums come straight from the maps (v2 wins).
+    zh_registers = {item["code"]: item["name"] for item in v1["registers"]}
+    zh_registers.update({item["code"]: item["name"] for item in v2["registers"]})
+    zh_groups = {item["id"]: item["label"] for item in v1["groups"]}
+    zh_groups.update({item["id"]: item["label"] for item in v2["groups"]})
+
+    missing = [code for code in all_codes if code not in REGISTERS]
     if missing:
         raise SystemExit(f"Missing register translations: {missing}")
     unknown = [code for code in REGISTERS if code not in entries]
     if unknown:
         raise SystemExit(f"Unknown register translations: {unknown}")
-    missing_groups = [
-        group
-        for group in group_ids
-        if group not in GROUPS and group not in existing["en"].get("groups", {})
-    ]
+    missing_groups = [group for group in group_ids if group not in GROUPS]
     if missing_groups:
         raise SystemExit(f"Missing group translations: {missing_groups}")
     for code, item in entries.items():
         if item.get("values") and code not in VALUES:
             raise SystemExit(f"Missing enum translations: {code}")
+    spec_codes = {
+        spec.code
+        for map_version in (registry.MAP_V1, registry.MAP_V2)
+        for spec in entity_model.build_entity_specs(map_version)
+    }
+    for code in BITS:
+        if code not in spec_codes:
+            raise SystemExit(f"Bit translation without an entity: {code}")
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Chinese: names/labels/enums come straight from the maps (v2 wins).
-    zh_registers = {item["code"]: item["name"] for item in v1["registers"]}
-    zh_registers.update(
-        {item["code"]: item["name"] for item in v2["registers"]}
-    )
-    zh_groups = {item["id"]: item["label"] for item in v1["groups"]}
-    zh_groups.update({item["id"]: item["label"] for item in v2["groups"]})
     zh_values = {
         code: {str(raw): label for raw, label in item["values"].items()}
         for code, item in entries.items()
         if item.get("values")
     }
+    for code, labels in ZH_VALUES.items():
+        zh_values.setdefault(code, {}).update(labels)
+    for code, translations in BITS.items():
+        name, off_label, on_label = translations["zh-Hans"]
+        zh_registers[code] = name
+        zh_values[code] = {"0": off_label, "1": on_label}
     zh_payload = {
         "language": "zh-Hans",
         "ui": UI["zh-Hans"],
@@ -811,25 +1216,16 @@ def main() -> None:
     )
 
     for index, lang in enumerate(LANGS):
-        registers_out = {}
-        for code in all_codes:
-            if code in REGISTERS:
-                registers_out[code] = REGISTERS[code][index]
-            else:
-                registers_out[code] = existing[lang]["registers"][code]
-        groups_out = {}
-        for group in group_ids:
-            if group in GROUPS:
-                groups_out[group] = GROUPS[group][index]
-            else:
-                groups_out[group] = existing[lang]["groups"][group]
+        registers_out = {code: REGISTERS[code][index] for code in all_codes}
+        groups_out = {group: GROUPS[group][index] for group in group_ids}
         values_out = {
             code: {raw: labels[index] for raw, labels in options.items()}
             for code, options in VALUES.items()
         }
-        for code, item in entries.items():
-            if item.get("values") and code not in VALUES:
-                values_out[code] = existing[lang]["values"][code]
+        for code, translations in BITS.items():
+            name, off_label, on_label = translations[lang]
+            registers_out[code] = name
+            values_out[code] = {"0": off_label, "1": on_label}
         payload = {
             "language": lang,
             "ui": UI[lang],
@@ -842,7 +1238,79 @@ def main() -> None:
             json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
-    print(f"Wrote {len(all_codes)} register names and {len(group_ids)} groups to {OUT_DIR}")
+
+    # ------------------------------------------------------------------
+    # Home Assistant device-page strings, one section per platform.
+    # ------------------------------------------------------------------
+    specs_by_code = {}
+    for map_version in (registry.MAP_V1, registry.MAP_V2):
+        for spec in entity_model.build_entity_specs(map_version):
+            previous = specs_by_code.setdefault(spec.code, spec)
+            if previous.platform != spec.platform:
+                raise SystemExit(
+                    f"{spec.code}: platform {previous.platform} on one map, "
+                    f"{spec.platform} on {map_version}"
+                )
+
+    sections_by_lang: dict[str, dict[str, dict[str, dict]]] = {}
+    for lang in ALL_LANGS:
+        sections: dict[str, dict[str, dict]] = {
+            platform: {}
+            for platform in (
+                "sensor",
+                "binary_sensor",
+                "number",
+                "select",
+                "switch",
+                "time",
+            )
+        }
+        for code, spec in specs_by_code.items():
+            entry: dict[str, object] = {
+                "name": _entity_name(code, lang, zh_registers)
+            }
+            if spec.platform == "binary_sensor":
+                bit_labels = BITS.get(code)
+                if bit_labels is not None:
+                    entry["state"] = {
+                        "on": bit_labels[lang][2],
+                        "off": bit_labels[lang][1],
+                    }
+                elif code in VALUES and set(VALUES[code]) == {"0", "1"}:
+                    map_labels = spec.register.values or {}
+                    entry["state"] = {
+                        "on": _localized_value(
+                            code, 1, lang, map_labels.get(1, "on")
+                        ),
+                        "off": _localized_value(
+                            code, 0, lang, map_labels.get(0, "off")
+                        ),
+                    }
+            register = spec.register
+            if (
+                spec.platform == "sensor"
+                and register.device_class == "enum"
+                and register.values
+            ):
+                entry["state"] = {
+                    label: _localized_value(code, raw, lang, label)
+                    for raw, label in register.values.items()
+                }
+            sections[spec.platform][code] = entry
+        # Stable, reviewable ordering inside every platform section.
+        sections = {
+            platform: dict(sorted(entries.items()))
+            for platform, entries in sections.items()
+        }
+        sections_by_lang[lang] = sections
+
+    for lang in ALL_LANGS:
+        _write_entity_sections(sections_by_lang, lang)
+
+    print(
+        f"Wrote {len(all_codes)} register names, {len(group_ids)} groups and "
+        f"{len(specs_by_code)} entity names to {COMPONENT_DIR}"
+    )
 
 
 if __name__ == "__main__":

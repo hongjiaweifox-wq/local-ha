@@ -5,30 +5,12 @@ from __future__ import annotations
 import logging
 import struct
 import time
-from typing import Any
 
 from pymodbus.client import ModbusSerialClient, ModbusTcpClient
 from pymodbus.exceptions import ModbusException
 
-from .const import DEFAULT_TCP_PORT, MODBUS_MODE_RTU, MODBUS_MODE_TCP
-from .register_map import (
-    CONTROL_COUNT,
-    CONTROL_REGISTERS,
-    CONTROL_START,
-    DEFAULT_BAUDRATE,
-    DEFAULT_SLAVE,
-    DIRECTION_FORCE_CHARGE,
-    DIRECTION_FORCE_DISCHARGE,
-    DIRECTION_IDLE,
-    MONITORING_COUNT,
-    MONITORING_REGISTERS,
-    MONITORING_START,
-    REGISTERS_BY_ADDRESS,
-    REGISTERS_BY_NAME,
-    SYSTEM_STATUS_BITS,
-    RegisterDef,
-    get_force_mode_sequence,
-)
+from .const import DEFAULT_BAUDRATE, DEFAULT_SLAVE, DEFAULT_TCP_PORT, MODBUS_MODE_RTU, MODBUS_MODE_TCP
+from .maps.registry import CONNECTION_PROBE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -428,165 +410,6 @@ class ConowModbusClient:
             f"{last_error}"
         ) from last_error
 
-    @staticmethod
-    def decode_raw(dtype: str, registers: list[int], index: int) -> int:
-        """Decode one field from a contiguous register block."""
-        if dtype == "uint32":
-            if index + 1 >= len(registers):
-                raise ConowModbusError("uint32 decode out of range")
-            high = registers[index]
-            low = registers[index + 1]
-            return (high << 16) | low
-        raw = registers[index]
-        if dtype == "int16":
-            return struct.unpack(">h", struct.pack(">H", raw & 0xFFFF))[0]
-        return raw
-
-    @staticmethod
-    def to_physical(defn: RegisterDef, raw: int) -> float:
-        """Convert raw register value to physical quantity."""
-        return (raw - defn.offset) * defn.scale
-
-    @staticmethod
-    def to_raw(defn: RegisterDef, physical: float) -> int:
-        """Convert physical quantity to raw register value."""
-        if defn.scale == 0:
-            raise ConowModbusError(f"Invalid scale for {defn.name}")
-        raw = round(physical / defn.scale + defn.offset)
-        if defn.dtype == "int16" and not -32768 <= raw <= 32767:
-            raise ConowModbusError(f"Value out of int16 range for {defn.name}: {raw}")
-        if defn.dtype != "int16" and raw < 0:
-            raise ConowModbusError(f"Value out of range for {defn.name}: {raw}")
-        return int(raw) & 0xFFFF
-
-    def decode_block(
-        self, definitions: list[RegisterDef], block_start: int, registers: list[int]
-    ) -> dict[str, Any]:
-        """Decode a register block into named values."""
-        result: dict[str, Any] = {}
-        index = 0
-        while index < len(registers):
-            address = block_start + index
-            defn = REGISTERS_BY_ADDRESS.get(address)
-            if defn is None:
-                index += 1
-                continue
-            raw = self.decode_raw(defn.dtype, registers, index)
-            physical = self.to_physical(defn, raw)
-            entry: dict[str, Any] = {
-                "address": defn.address,
-                "raw": raw,
-                "value": physical,
-                "unit": defn.unit,
-            }
-            if defn.decode == "bitmask":
-                entry["bits"] = decode_system_status(raw)
-            result[defn.name] = entry
-            index += defn.register_count
-        return result
-
-    def read_monitoring(self) -> dict[str, Any]:
-        """Read real-time status block (registers 10000–10036)."""
-        registers = self.read_holding_registers(MONITORING_START, MONITORING_COUNT)
-        return self.decode_block(MONITORING_REGISTERS, MONITORING_START, registers)
-
-    def read_control(self) -> dict[str, Any]:
-        """Read parameter / control block (registers 10100–10107)."""
-        registers = self.read_holding_registers(CONTROL_START, CONTROL_COUNT)
-        return self.decode_block(CONTROL_REGISTERS, CONTROL_START, registers)
-
-    def read_all(self) -> dict[str, Any]:
-        """Read monitoring and control blocks."""
-        monitoring = self.read_monitoring()
-        time.sleep(INTER_FRAME_DELAY_S)
-        control = self.read_control()
-        return {
-            "monitoring": monitoring,
-            "control": control,
-        }
-
-    def write_named_register_raw(self, name: str, raw_value: int) -> None:
-        """Write a single control register using raw Modbus integer."""
-        defn = REGISTERS_BY_NAME.get(name)
-        if defn is None:
-            raise ConowModbusError(f"Unknown register name: {name}")
-        if not defn.writable:
-            raise ConowModbusError(f"Register {name} is read-only")
-        _LOGGER.info(
-            "Control write %s: addr=%s raw=%s",
-            name,
-            defn.address,
-            raw_value,
-        )
-        self.write_register(defn.address, raw_value)
-
-    def write_named_register(self, name: str, physical_value: float) -> None:
-        """Write a single control register by physical value."""
-        defn = REGISTERS_BY_NAME.get(name)
-        if defn is None:
-            raise ConowModbusError(f"Unknown register name: {name}")
-        if not defn.writable:
-            raise ConowModbusError(f"Register {name} is read-only")
-        raw = self.to_raw(defn, physical_value)
-        _LOGGER.info(
-            "Control write %s: addr=%s physical=%s raw=%s",
-            name,
-            defn.address,
-            physical_value,
-            raw,
-        )
-        self.write_register(defn.address, raw)
-
-    def write_force_mode(self, direction: int, power_w: int, cutoff_soc: int) -> None:
-        """Write forced charge/discharge or idle using registers.json sequence."""
-        valid_directions = {
-            DIRECTION_IDLE,
-            DIRECTION_FORCE_CHARGE,
-            DIRECTION_FORCE_DISCHARGE,
-        }
-        if direction not in valid_directions:
-            raise ConowModbusError(f"Invalid direction: {direction}")
-        if not 0 <= cutoff_soc <= 100:
-            raise ConowModbusError("cutoff_soc must be 0–100")
-        if power_w < 0:
-            raise ConowModbusError("power_w must be >= 0")
-
-        sequence = get_force_mode_sequence()
-        if direction == DIRECTION_IDLE:
-            idle_reg = REGISTERS_BY_NAME[sequence.idle_register]
-            _LOGGER.info(
-                "Force mode idle: write addr=%s value=%s",
-                idle_reg.address,
-                sequence.idle_value,
-            )
-            self.write_register(idle_reg.address, sequence.idle_value)
-            return
-
-        values_by_name = {
-            sequence.register_names[0]: power_w,
-            sequence.register_names[1]: direction,
-            sequence.register_names[2]: cutoff_soc,
-        }
-        _LOGGER.info(
-            "Force mode sequence: power=%s direction=%s cutoff_soc=%s (addrs %s)",
-            power_w,
-            direction,
-            cutoff_soc,
-            "→".join(str(REGISTERS_BY_NAME[name].address) for name in sequence.register_names),
-        )
-        for name in sequence.register_names:
-            register = REGISTERS_BY_NAME[name]
-            self.write_register(register.address, values_by_name[name])
-
-
-def decode_system_status(raw: int) -> dict[str, bool]:
-    """Parse system status bitmask (register 10000)."""
-    return {
-        label: bool(raw & (1 << bit))
-        for bit, label in SYSTEM_STATUS_BITS.items()
-    }
-
-
 def probe_connection(
     port: str | None = None,
     *,
@@ -595,12 +418,12 @@ def probe_connection(
     slave: int = DEFAULT_SLAVE,
     baudrate: int = DEFAULT_BAUDRATE,
 ) -> None:
-    """Verify Modbus connectivity by reading battery SOC."""
-    soc_address = REGISTERS_BY_NAME["battery_soc"].address
+    """Verify Modbus connectivity by reading a register both maps implement."""
+    address, count = CONNECTION_PROBE
     with ConowModbusClient(
         port, host=host, tcp_port=tcp_port, slave=slave, baudrate=baudrate
     ) as client:
-        client.read_holding_registers(soc_address, 1)
+        client.read_holding_registers(address, count)
 
 
 def probe_direct_connection(
@@ -619,9 +442,9 @@ def probe_direct_connection(
     an error response is treated as verification failure.
     """
     words = encode_verify_code(verify_code)
-    soc_address = REGISTERS_BY_NAME["battery_soc"].address
+    address, count = CONNECTION_PROBE
     with ConowModbusClient(host=host, tcp_port=tcp_port, slave=slave) as client:
-        client.read_holding_registers(soc_address, 1)
+        client.read_holding_registers(address, count)
         try:
             client.write_registers(VERIFY_CODE_START, words, retries=1)
         except ConowModbusError as err:

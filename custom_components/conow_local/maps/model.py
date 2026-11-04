@@ -1,9 +1,13 @@
-"""Read-only view of the grouped register maps.
+"""Unified register-map model for v1 and v2.
 
-``panel_registers.json`` (v2, finalized protocol) is the default.  The v1 map
-``registers.json`` is loaded with the same schema, so both firmware branches
-render the same grouped panel; callers pass the map id selected by
-``map_router.select_map``.
+Both map files use one schema: every register carries its own ``name``,
+decoding metadata (``device_class``, ``state_class``, ``values``, ...),
+optional ``bits`` and write bounds.  The model decodes blocks, computes
+panel bounds and encodes submitted values; it is the single parser shared
+by the coordinator, the HA entity layer and the grouping panel.
+
+The map version is mandatory everywhere: a forgotten argument must fail
+loudly instead of silently reading the v2 map.
 """
 
 from __future__ import annotations
@@ -12,14 +16,9 @@ import json
 import struct
 from dataclasses import dataclass
 from functools import lru_cache
-from pathlib import Path
 from typing import Any
 
-from ..map_router import MAP_V1, MAP_V2
-
-MAP_PATH = Path(__file__).with_name("panel_registers.json")
-V1_MAP_PATH = Path(__file__).parent.parent / "registers.json"
-MAP_PATHS = {MAP_V1: V1_MAP_PATH, MAP_V2: MAP_PATH}
+from .registry import MAP_PATHS, map_path, map_source
 
 SUPPORTED_DTYPES = ("uint16", "int16", "uint32", "int32", "string")
 MAX_BLOCK_REGISTERS = 125  # Modbus FC 0x03 limit
@@ -33,8 +32,18 @@ DTYPE_RANGES: dict[str, tuple[int, int]] = {
 
 
 @dataclass(frozen=True, slots=True)
+class PanelBit:
+    """One binary sensor decomposed from a bitmask register."""
+
+    code: str
+    name: str
+    bit: int
+    device_class: str
+
+
+@dataclass(frozen=True, slots=True)
 class PanelRegister:
-    """One register (or multi-register field) from the finalized map."""
+    """One register (or multi-register field) from a map."""
 
     code: str
     name: str
@@ -49,12 +58,14 @@ class PanelRegister:
     unit: str
     device_class: str
     state_class: str
+    entity_category: str
     values: dict[int, str] | None
     note: str
     fmt: str
     min: float | None
     max: float | None
     boolean: bool
+    bits: tuple[PanelBit, ...] = ()
 
     @property
     def register_count(self) -> int:
@@ -94,18 +105,18 @@ class PanelGroup:
     count_register: str
 
 
-@lru_cache(maxsize=2)
-def _load(map_version: str = MAP_V2) -> dict[str, Any]:
-    path = MAP_PATHS.get(map_version, MAP_PATH)
-    with path.open(encoding="utf-8") as handle:
+@lru_cache(maxsize=len(MAP_PATHS))
+def _load(map_version: str) -> dict[str, Any]:
+    with map_path(map_version).open(encoding="utf-8") as handle:
         return json.load(handle)
 
 
-@lru_cache(maxsize=2)
-def get_registers(map_version: str = MAP_V2) -> tuple[PanelRegister, ...]:
+@lru_cache(maxsize=len(MAP_PATHS))
+def get_registers(map_version: str) -> tuple[PanelRegister, ...]:
     """Return every register of one map, ordered by address."""
+    data = _load(map_version)
     registers: list[PanelRegister] = []
-    for item in _load(map_version)["registers"]:
+    for item in data["registers"]:
         dtype = item["dtype"]
         if dtype not in SUPPORTED_DTYPES:
             raise ValueError(f"Unsupported dtype {dtype!r} for {item['code']}")
@@ -114,6 +125,17 @@ def get_registers(map_version: str = MAP_V2) -> tuple[PanelRegister, ...]:
             raise ValueError(
                 f"{item['code']}: boolean registers need exactly 0/1 values"
             )
+        bits = tuple(
+            PanelBit(
+                code=bit["code"],
+                name=bit.get("name") or bit["code"],
+                bit=int(bit["bit"]),
+                device_class=str(bit.get("device_class") or ""),
+            )
+            for bit in item.get("bits", ())
+        )
+        if len({bit.bit for bit in bits}) != len(bits):
+            raise ValueError(f"{item['code']}: duplicate bit index in bits[]")
         registers.append(
             PanelRegister(
                 code=item["code"],
@@ -129,6 +151,7 @@ def get_registers(map_version: str = MAP_V2) -> tuple[PanelRegister, ...]:
                 unit=item.get("unit", ""),
                 device_class=str(item.get("device_class") or ""),
                 state_class=str(item.get("state_class") or ""),
+                entity_category=str(item.get("entity_category") or ""),
                 values=(
                     {int(key): str(value) for key, value in item["values"].items()}
                     if item.get("values")
@@ -138,20 +161,21 @@ def get_registers(map_version: str = MAP_V2) -> tuple[PanelRegister, ...]:
                 fmt=str(item.get("format", "")),
                 min=None if item.get("min") is None else float(item["min"]),
                 max=None if item.get("max") is None else float(item["max"]),
-                boolean=bool(item.get("boolean", False)),
+                boolean=boolean,
+                bits=bits,
             )
         )
     registers.sort(key=lambda reg: reg.address)
     return tuple(registers)
 
 
-@lru_cache(maxsize=2)
-def get_register_index(map_version: str = MAP_V2) -> dict[str, PanelRegister]:
+@lru_cache(maxsize=len(MAP_PATHS))
+def get_register_index(map_version: str) -> dict[str, PanelRegister]:
     return {reg.code: reg for reg in get_registers(map_version)}
 
 
-@lru_cache(maxsize=2)
-def get_groups(map_version: str = MAP_V2) -> tuple[PanelGroup, ...]:
+@lru_cache(maxsize=len(MAP_PATHS))
+def get_groups(map_version: str) -> tuple[PanelGroup, ...]:
     """Return groups ordered by ``order``."""
     index = get_register_index(map_version)
     groups: list[PanelGroup] = []
@@ -204,14 +228,14 @@ def get_groups(map_version: str = MAP_V2) -> tuple[PanelGroup, ...]:
     return tuple(groups)
 
 
-def get_group(group_id: str, map_version: str = MAP_V2) -> PanelGroup | None:
+def get_group(group_id: str, map_version: str) -> PanelGroup | None:
     return next(
         (group for group in get_groups(map_version) if group.id == group_id), None
     )
 
 
-@lru_cache(maxsize=2)
-def get_block_spans(map_version: str = MAP_V2) -> dict[str, tuple[int, int]]:
+@lru_cache(maxsize=len(MAP_PATHS))
+def get_block_spans(map_version: str) -> dict[str, tuple[int, int]]:
     """Return ``block -> (start, register count)`` for FC 0x03 reads."""
     spans: dict[str, tuple[int, int]] = {}
     for register in get_registers(map_version):
@@ -221,11 +245,14 @@ def get_block_spans(map_version: str = MAP_V2) -> dict[str, tuple[int, int]]:
         spans[register.block] = (start, end - start)
     for block, (_, count) in spans.items():
         if not 1 <= count <= MAX_BLOCK_REGISTERS:
-            raise ValueError(f"Block {block!r} spans {count} registers (FC 0x03 max {MAX_BLOCK_REGISTERS})")
+            raise ValueError(
+                f"Block {block!r} spans {count} registers (FC 0x03 max "
+                f"{MAX_BLOCK_REGISTERS})"
+            )
     return spans
 
 
-def get_map_meta(map_version: str = MAP_V2) -> dict[str, Any]:
+def get_map_meta(map_version: str) -> dict[str, Any]:
     """Return version/meta/protocol information for the frontend."""
     data = _load(map_version)
     return {
@@ -233,12 +260,12 @@ def get_map_meta(map_version: str = MAP_V2) -> dict[str, Any]:
         "meta": data.get("meta", {}),
         "protocol": data.get("protocol", {}),
         "blocks": data.get("blocks", {}),
-        "source": MAP_PATHS.get(map_version, MAP_PATH).name,
+        "source": map_source(map_version),
     }
 
 
 def preload() -> None:
-    """Load and validate both maps; call from an executor thread, not the loop."""
+    """Load and validate every map; call from an executor thread, not the loop."""
     for map_version in MAP_PATHS:
         get_registers(map_version)
         get_register_index(map_version)
@@ -299,16 +326,60 @@ def _max_ac_power(values: dict[str, dict[str, Any]]) -> float | None:
     return max(limits) if limits else None
 
 
+def _cutoff_direction(values: dict[str, dict[str, Any]]) -> int | None:
+    """Return the forced charge/discharge direction (1=charge, 2=discharge)."""
+    direction = _physical_value(values, "charge_discharge_direction")
+    return int(direction) if direction is not None else None
+
+
+def _cutoff_soc_min(values: dict[str, dict[str, Any]]) -> float | None:
+    """Lower bound of the cutoff SoC while a forced run is active.
+
+    Charging starts at the current battery SoC, discharging may not go below
+    the backup reserve.
+    """
+    direction = _cutoff_direction(values)
+    if direction == 1:
+        return _battery_soc(values)
+    if direction == 2:
+        return _physical_value(values, "backup_soc")
+    return None
+
+
+def _cutoff_soc_max(values: dict[str, dict[str, Any]]) -> float | None:
+    """Upper bound of the cutoff SoC while a forced run is active.
+
+    Charging may go up to 100 %; a forced discharge stops at the cutoff, so
+    it cannot be set above the current battery SoC.
+    """
+    direction = _cutoff_direction(values)
+    if direction == 2:
+        return _battery_soc(values)
+    return None
+
+
+def _battery_soc(values: dict[str, dict[str, Any]]) -> float | None:
+    """Return the live battery SoC, favouring the v2 ``system_soc`` code."""
+    for code in ("system_soc", "battery_soc"):
+        soc = _physical_value(values, code)
+        if soc is not None:
+            return soc
+    return None
+
+
 # Some writable registers are not bounded by the protocol table alone: their
 # limit comes from another register's live value (hardware capability, grid
 # code, safety SoC).  Keys are the constrained register; each callable returns
 # the effective lower or upper limit in physical units.  Read-only registers
 # are decoded from the same block read, so no extra Modbus traffic is needed.
 _DYNAMIC_MIN = {
-    "charge_discharge_cutoff_soc": lambda values: _physical_value(values, "safety_soc"),
+    "battery_cutoff_soc": _cutoff_soc_min,
+    "charge_discharge_cutoff_soc": _cutoff_soc_min,
     "backup_soc": lambda values: _physical_value(values, "safety_soc"),
 }
 _DYNAMIC_MAX = {
+    "battery_cutoff_soc": _cutoff_soc_max,
+    "charge_discharge_cutoff_soc": _cutoff_soc_max,
     "ac_charge_power_limit": lambda values: _positive_value(
         values, "hardware_max_ac_charge_power"
     ),
@@ -465,7 +536,7 @@ def describe_value(register: PanelRegister, raw: int | str | None) -> str:
 
 
 def decode_block(
-    block: str, words: list[int], map_version: str = MAP_V2
+    block: str, words: list[int], map_version: str
 ) -> dict[str, dict[str, Any]]:
     """Decode a raw block read into ``{code: {raw, value, display}}``."""
     result: dict[str, dict[str, Any]] = {}

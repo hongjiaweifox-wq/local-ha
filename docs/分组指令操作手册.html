@@ -639,13 +639,13 @@ rm hacs.zip</code></pre>
           <tbody>
             <tr>
               <td><strong>≥ 1.2</strong></td>
-              <td><code>panel_registers.json</code>（v2）</td>
+              <td><code>maps/panel_registers.json</code>（v2）</td>
               <td>启用分组面板与面板实体，11 个分组，与定稿表格的「分类」列一一对应，覆盖 10000–10081 与 10100–10189 的全部功能</td>
             </tr>
             <tr>
               <td><strong>&lt; 1.2 / 读取不到</strong></td>
-              <td><code>registers.json</code>（v1）</td>
-              <td>照常显示 v1 实体；分组面板显示 v1 的 7 个分组（系统、实时监控数据、运行参数与设备信息、详细监控数据、累计电量、工作策略、实时控制）</td>
+              <td><code>maps/registers.json</code>（v1）</td>
+              <td>照常显示 v1 实体；分组面板显示 v1 的 7 个分组（系统、实时监控数据、运行参数与设备信息、详细监控数据、累计电量、工作策略、实时控制）；「系统」分组把系统状态位掩码拆成待机、故障、充电中、放电中 4 个只读值</td>
             </tr>
           </tbody>
         </table>
@@ -688,14 +688,14 @@ rm hacs.zip</code></pre>
 
       <h3>入口三：设备页写入拦截</h3>
       <ol class="steps">
-        <li>在设备详情页找到任意一个可写的 number / switch / select 实体。</li>
-        <li>尝试修改并提交。</li>
+        <li>设备详情页会显示全部可写控件：数值（number）、枚举（select）、开关（switch）和时间（time），但所有控件都拒绝直接下发。</li>
+        <li>尝试修改任意一个可写控件并提交。</li>
         <li>HA 会弹出提示：<strong>“为保证原子性，设备页上的单个控件不会直接下发；请在 Conow Local 面板中整组下发。”</strong></li>
         <li>点击提示里的 <strong>「打开面板」</strong> 按钮，直接跳转到该设备的面板。</li>
       </ol>
       <div class="callout">
         <span class="label">设计原因</span>
-        计划表、策略、功率限制等寄存器必须整组下发。设备页一次只改一个寄存器，会把一组配置拆成多帧，可能让设备短暂处于不一致状态，因此面板-backed 实体在设备页被统一拦截。
+        计划表、策略、功率限制等寄存器必须整组下发。设备页一次只改一个寄存器，会把一组配置拆成多帧，可能让设备短暂处于不一致状态，因此 v1 与 v2 的设备页写入行为完全一致，统一引导到面板。
       </div>
     </section>
 
@@ -765,7 +765,7 @@ rm hacs.zip</code></pre>
       </div>
       <div class="callout">
         <span class="label">数据刷新</span>
-        面板写入成功后会立即回读并刷新；面板后台约每 <strong>30 秒</strong>轮询一次设备（v1 实体为 5 秒轮询，但 v2 条目不会创建 v1 实体）。
+        面板写入成功后会立即回读并刷新；后台轮询间隔由当前地图决定：v2 约每 <strong>30 秒</strong>，v1 每 <strong>5 秒</strong>。两版使用同一个协调器，按活动地图的读取块轮询。
       </div>
     </section>
 
@@ -906,7 +906,7 @@ rm hacs.zip</code></pre>
             <tr><td>TCP 端口</td><td><code>502</code></td><td>直连设备与以太网适配器通用</td></tr>
             <tr><td>从站地址</td><td><code>160</code>（<code>0xA0</code>）</td><td>三种连接方式一致</td></tr>
             <tr><td>波特率</td><td><code>38400</code>，8N1</td><td>仅 RTU / 适配器串口侧</td></tr>
-            <tr><td>轮询间隔</td><td>面板 30 秒 / v1 实体 5 秒</td><td>v2 面板由面板协调器轮询；写入后立即回读</td></tr>
+            <tr><td>轮询间隔</td><td>v2 30 秒 / v1 5 秒</td><td>两版共用同一协调器，按活动地图的块读取；写入后立即回读</td></tr>
             <tr><td>固件门槛</td><td><code>1.2</code></td><td>≥ 1.2 使用 v2 完整分组；低于该版本使用 v1 的 7 个分组</td></tr>
           </tbody>
         </table>
@@ -916,7 +916,7 @@ rm hacs.zip</code></pre>
       <p>仓库自带 <code>tools/fake_modbus_server.py</code>，以 v2 寄存器表、固件 1.2 启动，效果与真机一致：</p>
       <pre><code>python tools/fake_modbus_server.py \
   --port 1504 \
-  --map custom_components/conow_local/panel/panel_registers.json \
+  --map custom_components/conow_local/maps/panel_registers.json \
   --firmware-version 1.2 \
   --verify-code 123456 \
   --live</code></pre>

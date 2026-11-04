@@ -25,7 +25,10 @@
     "warningInvalidTime": "Ongeldige waarde — opnieuw instellen",
     "noticeClamped": "{name} beperkt tot {value} ({min}–{max})",
     "noticeTimeClamped": "Tijd beperkt tot {value} (geldig 00:00–23:59)",
-    "confirmWrite": "Groep “{group}” naar het apparaat schrijven?\n\n{preview}",
+    "confirmWriteTitle": "Schrijven bevestigen",
+    "confirmWrite": "Groep “{group}” naar het apparaat schrijven?",
+    "actionCancel": "Annuleren",
+    "actionConfirm": "Bevestigen",
     "noticeApplied": "{group}: verzonden",
     "noticeFailed": "{group}: {error}",
     "actionApplying": "Verzenden…",
@@ -220,7 +223,7 @@
     "tou_slot8_power": "Handmatige laad-/ontlaadstrategie 8 ontlaadvermogen",
     "system_status": "Systeemstatus",
     "fault_code": "Foutcode",
-    "battery_soc": "Batterij-SoC",
+    "battery_soc": "Accu-SoC",
     "battery_design_capacity": "Nominale batterijcapaciteit",
     "battery_cell_temp_max": "Maximale celtemperatuur",
     "battery_cell_temp_min": "Minimale celtemperatuur",
@@ -242,7 +245,11 @@
     "pv4_cumulative_energy": "PV4 totale energie",
     "grid_charge_power_limit": "Netlaadvermogenslimiet",
     "battery_discharge_power_limit": "Batterij-ontlaadvermogenslimiet",
-    "battery_cutoff_soc": "Ontlaad-afschakel-SoC"
+    "battery_cutoff_soc": "Laad-/ontlaadafslag-SoC",
+    "system_status_standby": "Systeem–Stand-by",
+    "system_status_fault": "Systeem–Fout",
+    "system_status_charging": "Systeem–Laden",
+    "system_status_discharging": "Systeem–Ontladen"
   },
   "values": {
     "meter_connection_state": {
@@ -251,24 +258,24 @@
       "2": "Niet gekoppeld, niet verbonden"
     },
     "battery_work_state": {
-      "0": "idle",
-      "1": "chg",
-      "2": "dchg"
+      "0": "Inactief",
+      "1": "Laden",
+      "2": "Ontladen"
     },
     "bypass_switch_state": {
-      "0": "uit",
-      "1": "aan"
+      "0": "Uit",
+      "1": "Aan"
     },
     "charge_discharge_direction": {
-      "0": "idle",
-      "1": "chg",
-      "2": "dchg",
-      "3": "exit"
+      "0": "Inactief",
+      "1": "Laden",
+      "2": "Ontladen",
+      "3": "Afsluiten"
     },
     "work_mode": {
       "1": "Eigen verbruik",
       "2": "Handmatig schema",
-      "3": "idle"
+      "3": "Inactief"
     },
     "allow_battery_export": {
       "0": "Accu-export uitgeschakeld",
@@ -291,12 +298,12 @@
       "1": "Ingeschakeld"
     },
     "do1_state": {
-      "0": "uit",
-      "1": "aan"
+      "0": "Uit",
+      "1": "Aan"
     },
     "do2_state": {
-      "0": "uit",
-      "1": "aan"
+      "0": "Uit",
+      "1": "Aan"
     },
     "tou_slot1_mode": {
       "0": "Laden",
@@ -329,6 +336,22 @@
     "tou_slot8_mode": {
       "0": "Laden",
       "1": "Ontladen"
+    },
+    "system_status_standby": {
+      "0": "Niet in stand-by",
+      "1": "Stand-by"
+    },
+    "system_status_fault": {
+      "0": "OK",
+      "1": "Storing"
+    },
+    "system_status_charging": {
+      "0": "Niet aan het laden",
+      "1": "Aan het laden"
+    },
+    "system_status_discharging": {
+      "0": "Niet aan het ontladen",
+      "1": "Aan het ontladen"
     }
   }
 }

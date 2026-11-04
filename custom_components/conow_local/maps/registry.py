@@ -1,27 +1,57 @@
-"""Select the register map from the device's reported firmware version.
+"""Register-map registry: map ids, files and firmware routing.
 
-``registers.json`` (map version 1, the July protocol) is always the default.
-``panel/panel_registers.json`` (map version 2, the finalized protocol) is only
-used when the firmware version read from ``0x274E-0x274F`` (10062-10063) is at
-least ``PANEL_MAP_MIN_FIRMWARE``.  A failed or unparsable probe therefore falls
-back to the v1 map, never to the newer addresses.
+This module is the only place that knows which JSON file backs which map
+version.  Every other module asks it for the path/source, so a future map
+only changes this file.
+
+``registers.json`` (map version 1, the July protocol) is the default.
+``panel_registers.json`` (map version 2, the finalized protocol) is
+only used when the firmware version read from ``0x274E-0x274F``
+(10062-10063) is at least ``PANEL_MAP_MIN_FIRMWARE``.  A failed or
+unparsable probe therefore falls back to the v1 map, never to the newer
+addresses.
+
+The module deliberately imports stdlib only: ``tools/i18n/build_panel_i18n.py``
+imports it outside Home Assistant.
 """
 
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 MAP_V1 = "v1"
 MAP_V2 = "v2"
 
+_MAPS_DIR = Path(__file__).resolve().parent
+MAP_PATHS: dict[str, Path] = {
+    MAP_V1: _MAPS_DIR / "registers.json",
+    MAP_V2: _MAPS_DIR / "panel_registers.json",
+}
+MAP_SOURCES: dict[str, str] = {key: path.name for key, path in MAP_PATHS.items()}
+
 FIRMWARE_VERSION_ADDRESS = 10062  # 0x274E, two 16-bit registers, 4-byte ASCII
 FIRMWARE_VERSION_REGISTERS = 2
+
+# A register both maps implement; used as the connectivity probe so the
+# config flow works before the map (and its firmware) is known.
+CONNECTION_PROBE = (10000, 1)
 
 # The finalized register map ships with firmware v1.2 and later.  Change this
 # tuple if the vendor moves the cut-over.
 PANEL_MAP_MIN_FIRMWARE = (1, 2)
 
 _VERSION_TEXT = re.compile(r"^[Vv]?(\d{1,2}(?:\.\d{1,2}){0,3}|\d{3,4})$")
+
+
+def map_path(map_version: str) -> Path:
+    """Return the JSON file backing a map version."""
+    return MAP_PATHS[map_version]
+
+
+def map_source(map_version: str) -> str:
+    """Return the file name shown in logs and in the panel."""
+    return MAP_SOURCES[map_version]
 
 
 def parse_firmware_version(words: list[int] | tuple[int, ...]) -> tuple[int, ...] | None:

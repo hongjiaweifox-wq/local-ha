@@ -1,4 +1,4 @@
-"""Time entities for the HH:MM registers of the finalized panel map."""
+"""Time entities for HH:MM registers of the active register map."""
 
 from __future__ import annotations
 
@@ -10,36 +10,35 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .entity_factory import build_device_info
-from .panel import panel_map
-from .panel.panel_coordinator import ConowPanelCoordinator, get_panel_coordinator
-from .panel.panel_guard import async_refuse_device_write
+from .device.coordinator import ConowLocalCoordinator
+from .device.descriptions import build_device_info, build_time_description
+from .device.guard import async_refuse_device_write
+from .maps.entity_model import TIME, EntitySpec, specs_for_platform
 
 
-class ConowPanelTime(CoordinatorEntity[ConowPanelCoordinator], TimeEntity):
+class ConowTime(CoordinatorEntity[ConowLocalCoordinator], TimeEntity):
     """Schedule register (high byte hour, low byte minute) as a time entity."""
 
     _attr_has_entity_name = True
 
     def __init__(
         self,
-        coordinator: ConowPanelCoordinator,
+        coordinator: ConowLocalCoordinator,
         entry: ConfigEntry,
-        register: panel_map.PanelRegister,
+        spec: EntitySpec,
     ) -> None:
         """Initialize time entity."""
         super().__init__(coordinator)
         self._entry = entry
-        self._register = register
-        self._attr_unique_id = f"{entry.entry_id}_{register.code}"
-        self._attr_name = register.name
-        self._attr_suggested_object_id = register.code
+        self._spec = spec
+        self.entity_description = build_time_description(spec)
+        self._attr_unique_id = f"{entry.entry_id}_{spec.unique_code}"
         self._attr_device_info = build_device_info(coordinator.hass, entry)
 
     @property
     def native_value(self) -> dt_time | None:
         """Return the current HH:MM value."""
-        raw = (self.coordinator.data or {}).get(self._register.code, {}).get("raw")
+        raw = self.coordinator.get_raw(self._spec.register.code)
         if not isinstance(raw, int):
             return None
         hour = (raw >> 8) & 0xFF
@@ -58,13 +57,9 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up one time entity per HH:MM register in the panel map."""
-    coordinator = get_panel_coordinator(hass, entry.entry_id)
-    if coordinator is None:
-        # RTU entries have no finalized map; TCP entries with an unreadable map
-        # are skipped as well.
-        return
-    registers = [register for register in panel_map.get_registers() if register.is_time]
+    """Set up one time entity per HH:MM spec of the active map."""
+    coordinator: ConowLocalCoordinator = entry.runtime_data
     async_add_entities(
-        ConowPanelTime(coordinator, entry, register) for register in registers
+        ConowTime(coordinator, entry, spec)
+        for spec in specs_for_platform(coordinator.map_version, TIME)
     )

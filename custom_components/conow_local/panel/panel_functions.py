@@ -1,4 +1,10 @@
-"""Build the read model for the Conow Local grouping panel."""
+"""Build the read model for the Conow Local grouping panel.
+
+The panel consumes the same unified map model and entity specs as the HA
+device page.  Loaded entries read through the main coordinator; entries that
+are not loaded may be inspected over a short-lived TCP connection (never a
+second serial handle).
+"""
 
 from __future__ import annotations
 
@@ -10,13 +16,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
-from . import panel_map
-from ..client import (
-    INTER_FRAME_DELAY_S,
-    POST_WRITE_DELAY_S,
-    ConowModbusClient,
-    ConowModbusError,
-)
+from ..maps import model as map_model
+from ..client import ConowModbusClient, ConowModbusError
 from ..const import (
     CONF_MODBUS_HOST,
     CONF_MODBUS_MODE,
@@ -27,20 +28,27 @@ from ..const import (
     LOGGER,
     MODBUS_TCP_MODES,
 )
-from ..map_router import (
+from ..device.coordinator import (
+    ConowLocalCoordinator,
+    decode_map_blocks,
+    read_map_blocks,
+    write_register_ops,
+)
+from ..maps.entity_model import panel_code_map
+from ..maps.registry import (
     FIRMWARE_VERSION_ADDRESS,
     FIRMWARE_VERSION_REGISTERS,
+    MAP_PATHS,
     MAP_V1,
-    MAP_V2,
     PANEL_MAP_MIN_FIRMWARE,
     format_version,
+    map_source,
     parse_firmware_version,
     select_map,
 )
-from .panel_coordinator import get_panel_coordinator
 
 
-def _control_kind(register: panel_map.PanelRegister) -> str:
+def _control_kind(register: map_model.PanelRegister) -> str:
     """Return the editor type the panel should render for this register."""
     if register.is_time:
         return "time"
@@ -51,6 +59,18 @@ def _control_kind(register: panel_map.PanelRegister) -> str:
     if register.dtype == "string":
         return "text"
     return "number"
+
+
+def _enum_raw(register: map_model.PanelRegister, value: Any) -> int | None:
+    """Resolve a submitted enum value (raw number or translated label)."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        pass
+    for raw, label in (register.values or {}).items():
+        if label == value:
+            return raw
+    return None
 
 
 def _device_name(entry, device_entry) -> str:
@@ -75,40 +95,30 @@ ENTITY_CODE_ALIASES = {
 }
 
 
-def _entity_code_map(hass: HomeAssistant, entry_id: str, device_entry) -> dict[str, str]:
+def _entity_code_map(
+    hass: HomeAssistant, entry_id: str, device_entry, map_version: str
+) -> dict[str, str]:
     """Map register/entity codes to the entity_id backing them on this device."""
     registry = er.async_get(hass)
     if device_entry is not None:
         entries = er.async_entries_for_device(registry, device_entry.id)
     else:
-        prefix = f"{entry_id}_"
-        entries = [
-            item
-            for item in registry.entities.values()
-            if (item.unique_id or "").startswith(prefix)
-        ]
-    prefix = f"{entry_id}_"
+        entries = er.async_entries_for_config_entry(registry, entry_id)
+    unique_prefix = f"{entry_id}_"
+    by_unique = {
+        (item.unique_id or "")[len(unique_prefix) :]: item.entity_id
+        for item in entries
+        if (item.unique_id or "").startswith(unique_prefix)
+    }
     mapping: dict[str, str] = {}
-    panel_overrides: dict[str, str] = {}
-    for item in entries:
-        unique_id = item.unique_id or ""
-        if not unique_id.startswith(prefix):
-            continue
-        code = unique_id[len(prefix) :]
-        if code.startswith("status_"):
-            # Bit sensors share one status register; they have no panel row.
-            continue
-        if code.startswith("panel_"):
-            # finalized-map entity whose code also exists in the v1 map; this is
-            # the entity that actually points at the panel register.
-            panel_overrides[code[len("panel_") :]] = item.entity_id
-            continue
-        mapping.setdefault(code, item.entity_id)
-    mapping.update(panel_overrides)
+    for code, unique_code in panel_code_map(map_version).items():
+        entity_id = by_unique.get(unique_code)
+        if entity_id is not None:
+            mapping[code] = entity_id
     return mapping
 
 
-def _entity_id_for(register: panel_map.PanelRegister, mapping: dict[str, str]) -> str | None:
+def _entity_id_for(register: map_model.PanelRegister, mapping: dict[str, str]) -> str | None:
     """Return the entity_id for a panel register, if one exists."""
     if register.code in mapping:
         return mapping[register.code]
@@ -117,18 +127,49 @@ def _entity_id_for(register: panel_map.PanelRegister, mapping: dict[str, str]) -
 
 
 def _serialize_group(
-    group: panel_map.PanelGroup,
+    group: map_model.PanelGroup,
     decoded: dict[str, dict[str, Any]] | None = None,
     entities: dict[str, str] | None = None,
-    map_version: str = MAP_V2,
+    *,
+    map_version: str,
 ) -> dict[str, Any]:
     decoded = decoded or {}
     entities = entities or {}
-    index = panel_map.get_register_index(map_version)
+    index = map_model.get_register_index(map_version)
     members: list[dict[str, Any]] = []
     for code in group.members:
         register = index[code]
         value = decoded.get(code, {})
+        if register.bits:
+            # The register is a bitmask; expose the individual bits as
+            # read-only boolean rows instead of the raw number.
+            raw = value.get("raw")
+            known = isinstance(raw, int)
+            for bit in register.bits:
+                is_on = known and bool(raw & (1 << bit.bit))
+                members.append(
+                    {
+                        "code": bit.code,
+                        "name": bit.name,
+                        "address": register.address,
+                        "address_hex": register.address_hex,
+                        "dtype": register.dtype,
+                        "length": 1,
+                        "writable": False,
+                        "unit": "",
+                        "scale": 1,
+                        "values": None,
+                        "note": "",
+                        "control": "bit",
+                        "device_class": bit.device_class,
+                        "bounds": None,
+                        "raw": (1 if is_on else 0) if known else None,
+                        "value": is_on if known else None,
+                        "display": ("1" if is_on else "0") if known else "",
+                        "entity_id": entities.get(bit.code),
+                    }
+                )
+            continue
         members.append(
             {
                 "code": register.code,
@@ -143,7 +184,7 @@ def _serialize_group(
                 "values": register.values,
                 "note": register.note,
                 "control": _control_kind(register),
-                "bounds": panel_map.numeric_bounds(register, decoded),
+                "bounds": map_model.numeric_bounds(register, decoded),
                 "raw": value.get("raw"),
                 "value": value.get("value"),
                 "display": value.get("display", ""),
@@ -177,23 +218,26 @@ def _serialize_group(
     }
 
 
-def build_panel_map() -> dict[str, Any]:
-    """Return the static grouped map (no device values)."""
+def build_panel_map(map_version: str | None = None) -> dict[str, Any]:
+    """Return the static grouped map of one map version (no device values).
+
+    Without a known map version the result is empty: the frontend requests the
+    map again once the device state tells it whether this is v1 or v2, so it
+    never flashes the wrong map's groups.
+    """
+    if map_version not in MAP_PATHS:
+        return {"map": {}, "groups": {}}
     return {
-        "map": panel_map.get_map_meta(),
+        "map": map_model.get_map_meta(map_version),
         "groups": {
-            group.id: _serialize_group(group) for group in panel_map.get_groups()
+            group.id: _serialize_group(group, map_version=map_version)
+            for group in map_model.get_groups(map_version)
         },
     }
 
 
 def get_panel_devices(hass: HomeAssistant) -> list[dict[str, Any]]:
-    """List config entries that can be inspected through the grouping panel.
-
-    Entries are listed even when the v1 coordinator is not loaded: the panel
-    reads the selected grouped map independently, so a device that only
-    speaks one of the two protocols can still be inspected.
-    """
+    """List config entries that can be inspected through the grouping panel."""
     device_registry = dr.async_get(hass)
     devices: list[dict[str, Any]] = []
     for entry in hass.config_entries.async_entries(DOMAIN):
@@ -202,15 +246,6 @@ def get_panel_devices(hass: HomeAssistant) -> list[dict[str, Any]]:
         )
         coordinator = getattr(entry, "runtime_data", None)
         loaded = entry.state is ConfigEntryState.LOADED
-        map_version = getattr(coordinator, "map_version", MAP_V1)
-        panel_coordinator = (
-            get_panel_coordinator(hass, entry.entry_id)
-            if loaded and map_version == MAP_V2
-            else None
-        )
-        # On v2 the main coordinator does not poll, so its last_update_success
-        # would stay True forever; the panel coordinator owns device health.
-        online_coordinator = panel_coordinator or coordinator
         devices.append(
             {
                 "device_id": device_entry.id if device_entry else entry.entry_id,
@@ -218,8 +253,8 @@ def get_panel_devices(hass: HomeAssistant) -> list[dict[str, Any]]:
                 "name": _device_name(entry, device_entry) if device_entry else entry.title,
                 "online": bool(
                     loaded
-                    and online_coordinator is not None
-                    and online_coordinator.last_update_success
+                    and coordinator is not None
+                    and coordinator.last_update_success
                 ),
                 "loaded": loaded,
                 "mode": entry.data.get(CONF_MODBUS_MODE, "rtu"),
@@ -277,10 +312,11 @@ MAX_WRITE_REGISTERS = 123  # FC 0x10 quantity limit
 
 
 def plan_group_writes(
-    group: panel_map.PanelGroup,
+    group: map_model.PanelGroup,
     values: dict[str, Any],
     live: dict[str, dict[str, Any]] | None = None,
-    map_version: str = MAP_V2,
+    *,
+    map_version: str,
 ) -> list[tuple[int, list[int]]]:
     """Validate a group submission and return ``(address, words)`` writes.
 
@@ -290,17 +326,28 @@ def plan_group_writes(
     limits that depend on another register (safety SoC, hardware power
     capability) can be enforced before anything is sent.
     """
-    index = panel_map.get_register_index(map_version)
+    index = map_model.get_register_index(map_version)
     registers = [index[code] for code in group.members if index[code].writable]
     if not registers:
         raise ValueError(f"Group {group.id} has no writable registers")
     missing = [register.code for register in registers if register.code not in values]
     if missing:
         raise ValueError("Missing value for " + ", ".join(missing))
+    if live is not None:
+        # The cutoff SoC limits depend on the direction being written in this
+        # same group, so validate against the submitted value, not the stale
+        # reading.
+        direction = index.get("charge_discharge_direction")
+        submitted = values.get("charge_discharge_direction")
+        if direction is not None and submitted is not None:
+            raw = _enum_raw(direction, submitted)
+            if raw is not None:
+                live = dict(live)
+                live["charge_discharge_direction"] = {"value": float(raw)}
     ops: list[tuple[int, list[int]]] = []
     for register in registers:
         value = values[register.code]
-        bounds = panel_map.numeric_bounds(register, live)
+        bounds = map_model.numeric_bounds(register, live)
         if bounds is not None and not register.values and not register.is_time:
             try:
                 physical = float(value)
@@ -313,7 +360,7 @@ def plan_group_writes(
                         f"{register.code}: {physical:g} is outside the allowed "
                         f"range {low:g}–{high:g}"
                     )
-        ops.append((register.address, panel_map.encode_value(register, value)))
+        ops.append((register.address, map_model.encode_value(register, value)))
     if len(ops) > 1:
         merged = _merge_contiguous(ops)
         if merged is not None and len(merged[1]) <= MAX_WRITE_REGISTERS:
@@ -329,14 +376,7 @@ def _write_ops_direct(entry, ops: list[tuple[int, list[int]]]) -> None:
     tcp_port = entry.data.get(CONF_MODBUS_TCP_PORT, DEFAULT_TCP_PORT)
     slave = entry.data[CONF_MODBUS_SLAVE]
     with ConowModbusClient(host=host, tcp_port=tcp_port, slave=slave) as client:
-        for index, (address, words) in enumerate(ops):
-            if index:
-                time.sleep(INTER_FRAME_DELAY_S)
-            if len(words) == 1:
-                client.write_register(address, words[0])
-            else:
-                client.write_registers(address, words)
-            time.sleep(POST_WRITE_DELAY_S)
+        write_register_ops(client, ops)
 
 
 async def async_write_panel_group(
@@ -350,28 +390,24 @@ async def async_write_panel_group(
     if entry is None:
         raise LookupError(f"No {DOMAIN} entry for {device_id}")
 
-    coordinator = getattr(entry, "runtime_data", None)
+    coordinator: ConowLocalCoordinator | None = getattr(entry, "runtime_data", None)
     loaded = entry.state is ConfigEntryState.LOADED and coordinator is not None
     live: dict[str, dict[str, Any]] = {}
     if loaded:
-        map_version = getattr(coordinator, "map_version", MAP_V1)
-        panel_coordinator = get_panel_coordinator(hass, entry.entry_id)
-        live = dict(getattr(panel_coordinator, "data", None) or {})
+        map_version = coordinator.map_version
+        live = dict(coordinator.data or {})
     else:
         try:
-            map_version, _firmware, raw_blocks = await hass.async_add_executor_job(
+            map_version, _firmware, live = await hass.async_add_executor_job(
                 _read_blocks_direct, entry
             )
         except (ConowModbusError, OSError):
-            map_version, raw_blocks = MAP_V1, {}
-        for block, words in raw_blocks.items():
-            if words is not None:
-                live.update(panel_map.decode_block(block, words, map_version))
+            map_version, live = MAP_V1, {}
 
-    group = panel_map.get_group(group_id, map_version)
+    group = map_model.get_group(group_id, map_version)
     if group is None:
         raise LookupError(f"Unknown group {group_id}")
-    ops = plan_group_writes(group, values, live, map_version)
+    ops = plan_group_writes(group, values, live, map_version=map_version)
 
     if loaded:
         await coordinator.async_write_panel_ops(ops)
@@ -387,27 +423,7 @@ async def async_write_panel_group(
     return await async_build_panel_state(hass, device_id)
 
 
-def _read_blocks(
-    client: ConowModbusClient, map_version: str = MAP_V2
-) -> dict[str, list[int] | None]:
-    """Read every block of one map with one connected client."""
-    blocks: dict[str, list[int] | None] = {}
-    for index, (block, (start, count)) in enumerate(
-        panel_map.get_block_spans(map_version).items()
-    ):
-        if index:
-            time.sleep(INTER_FRAME_DELAY_S)
-        try:
-            blocks[block] = client.read_holding_registers(start, count)
-        except ConowModbusError:
-            LOGGER.debug("Panel: block %s read failed", block)
-            blocks[block] = None
-    return blocks
-
-
-def _read_blocks_direct(
-    entry,
-) -> tuple[str, tuple[int, ...] | None, dict[str, list[int] | None]]:
+def _read_blocks_direct(entry) -> tuple[str, tuple[int, ...] | None, dict[str, dict[str, Any]]]:
     """Open a short-lived TCP client for entries the coordinator does not own."""
     if entry.data.get(CONF_MODBUS_MODE) not in MODBUS_TCP_MODES:
         # Never open a second handle on the serial port.
@@ -417,7 +433,8 @@ def _read_blocks_direct(
     slave = entry.data[CONF_MODBUS_SLAVE]
     with ConowModbusClient(host=host, tcp_port=tcp_port, slave=slave) as client:
         map_version, version = _probe_map_version(client)
-        return map_version, version, _read_blocks(client, map_version)
+        blocks = read_map_blocks(client, map_version)
+        return map_version, version, decode_map_blocks(blocks, map_version)
 
 
 async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[str, Any]:
@@ -429,44 +446,42 @@ async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[s
     device_entry = device_registry.async_get_device(
         identifiers={(DOMAIN, entry.entry_id)}
     )
-    entities = _entity_code_map(hass, entry.entry_id, device_entry)
 
-    coordinator = getattr(entry, "runtime_data", None)
+    coordinator: ConowLocalCoordinator | None = getattr(entry, "runtime_data", None)
     loaded = entry.state is ConfigEntryState.LOADED and coordinator is not None
+    read_ok = False
     if loaded:
-        map_version = getattr(coordinator, "map_version", MAP_V1)
-        firmware = getattr(coordinator, "firmware_version", None)
-        raw_blocks = await coordinator.async_read_panel_blocks(map_version)
+        map_version = coordinator.map_version
+        firmware = coordinator.firmware_version
+        try:
+            decoded = await coordinator.async_read_snapshot()
+            read_ok = bool(decoded)
+        except (ConowModbusError, OSError):
+            LOGGER.debug("Panel: fresh read failed for %s", entry.entry_id)
+            decoded = dict(coordinator.data or {})
     else:
         try:
-            map_version, firmware, raw_blocks = await hass.async_add_executor_job(
+            map_version, firmware, decoded = await hass.async_add_executor_job(
                 _read_blocks_direct, entry
             )
+            read_ok = bool(decoded)
         except (ConowModbusError, OSError):
             LOGGER.debug("Panel: direct read failed for %s", entry.entry_id)
-            map_version, firmware, raw_blocks = MAP_V1, None, {}
+            map_version, firmware, decoded = MAP_V1, None, {}
 
-    decoded: dict[str, dict[str, Any]] = {}
-    for block, words in raw_blocks.items():
-        if words is not None:
-            decoded.update(panel_map.decode_block(block, words, map_version))
-
+    entities = _entity_code_map(hass, entry.entry_id, device_entry, map_version)
     LOGGER.debug(
-        "Panel: read %s/%s blocks for %s (map=%s, firmware=%s)",
-        sum(1 for words in raw_blocks.values() if words is not None),
-        len(raw_blocks),
+        "Panel: read %s codes for %s (map=%s, firmware=%s)",
+        len(decoded),
         entry.entry_id,
         map_version,
         format_version(firmware) or "unknown",
     )
-    read_ok = any(words is not None for words in raw_blocks.values())
-    map_info = dict(panel_map.get_map_meta(map_version))
+    map_info = dict(map_model.get_map_meta(map_version))
     map_info.update(
         {
             "selected": map_version,
-            "source": (
-                "panel_registers.json" if map_version == MAP_V2 else "registers.json"
-            ),
+            "source": map_source(map_version),
             "firmware_version": format_version(firmware),
             "min_firmware": format_version(PANEL_MAP_MIN_FIRMWARE),
         }
@@ -476,26 +491,21 @@ async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[s
         "name": _device_name(entry, device_entry) if device_entry else entry.title,
         "online": bool(
             read_ok
-            or (
-                loaded
-                and coordinator is not None
-                and coordinator.last_update_success
-            )
+            or (loaded and coordinator.last_update_success)
             or firmware is not None
         ),
         "map_readable": read_ok,
-        "map_version": 2 if map_version == MAP_V2 else 1,
+        "map_version": 2 if map_version != MAP_V1 else 1,
         "map_source": map_info["source"],
         "firmware_version": map_info["firmware_version"],
         "min_firmware": map_info["min_firmware"],
         "mode": entry.data.get(CONF_MODBUS_MODE, "rtu"),
         "slave": entry.data.get(CONF_MODBUS_SLAVE),
         "map": map_info,
-        "blocks_read": {
-            block: words is not None for block, words in raw_blocks.items()
-        },
         "groups": {
-            group.id: _serialize_group(group, decoded, entities, map_version)
-            for group in panel_map.get_groups(map_version)
+            group.id: _serialize_group(
+                group, decoded, entities, map_version=map_version
+            )
+            for group in map_model.get_groups(map_version)
         },
     }

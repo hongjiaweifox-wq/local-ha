@@ -28,29 +28,18 @@ DEFAULT_TCP_PORT = 502
 
 MODBUS_POLL_INTERVAL = 5
 
+DEFAULT_SLAVE = 0xA0
+DEFAULT_BAUDRATE = 38400
+
+# One spec-driven entity layer for both maps.  Every writable register is
+# visible as a control (number/select/switch/time); the platform actions
+# refuse to write and point at the grouping panel instead.
 PLATFORMS = [
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
     Platform.NUMBER,
-    Platform.SWITCH,
     Platform.SELECT,
-    Platform.TIME,
-]
-
-# v2 (finalized map) is panel-first: the panel exposes v2 monitoring/control,
-# and its on/off, HH:MM and read-only registers become HA entities. The v1
-# entity platforms are intentionally not set up so exactly one map is active.
-PANEL_PLATFORMS = [
-    Platform.SENSOR,
-    Platform.BINARY_SENSOR,
     Platform.SWITCH,
     Platform.TIME,
 ]
-
-
-def platforms_for_map(map_version: str) -> list[Platform]:
-    """Return the HA platforms that belong to the selected register map."""
-    from .map_router import MAP_V2
-
-    return list(PANEL_PLATFORMS) if map_version == MAP_V2 else list(PLATFORMS)
 

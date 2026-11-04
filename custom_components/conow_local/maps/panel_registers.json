@@ -799,7 +799,8 @@
       "unit": "dBm",
       "device_class": "signal_strength",
       "state_class": "measurement",
-      "note": "负值，例如 −60 dBm"
+      "note": "负值，例如 −60 dBm",
+      "entity_category": "diagnostic"
     },
     {
       "code": "device_serial",
@@ -812,7 +813,8 @@
       "length": 8,
       "writable": false,
       "end_address": 10061,
-      "note": "U16[8] ASCII，主机 SN 不支持单独读"
+      "note": "U16[8] ASCII，主机 SN 不支持单独读",
+      "entity_category": "diagnostic"
     },
     {
       "code": "firmware_version",
@@ -825,7 +827,8 @@
       "length": 2,
       "writable": false,
       "end_address": 10063,
-      "note": "U16[2] ASCII，不支持单独读"
+      "note": "U16[2] ASCII，不支持单独读",
+      "entity_category": "diagnostic"
     },
     {
       "code": "grid_import_energy_total",

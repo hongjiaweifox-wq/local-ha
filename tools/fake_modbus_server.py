@@ -2,7 +2,7 @@
 """Fake Modbus TCP server for manual integration testing of conow_local.
 
 Serves the same register map the integration loads
-(``custom_components/conow_local/registers.json`` by default) with plausible
+(``custom_components/conow_local/maps/registers.json`` by default) with plausible
 values, so Home Assistant can connect exactly as it would to real hardware.
 
 Supported function codes: 0x03 read holding registers, 0x06 write single
@@ -26,12 +26,12 @@ Examples::
     # serve the finalized (v2) map and report firmware 1.2, so the integration
     # selects panel_registers.json and never touches the v1 addresses
     python3 tools/fake_modbus_server.py \
-        --map custom_components/conow_local/panel/panel_registers.json \
+        --map custom_components/conow_local/maps/panel_registers.json \
         --firmware-version 1.2
 
     # serve the v1 map with no readable version, so registers.json is selected
     python3 tools/fake_modbus_server.py \
-        --map custom_components/conow_local/registers.json
+        --map custom_components/conow_local/maps/registers.json
 
     # both maps are loaded automatically; setting the firmware-version register
     # (0x274E, 10062) below 1.2 in the test page switches to the v1 control
@@ -92,6 +92,7 @@ DEFAULT_MAP = (
     Path(__file__).resolve().parent.parent
     / "custom_components"
     / "conow_local"
+    / "maps"
     / "registers.json"
 )
 
@@ -685,9 +686,9 @@ def sibling_map(path: Path) -> Path | None:
     """Return the other map file next to an existing map, if it exists."""
     kind = map_kind(path)
     if kind == "v1":
-        candidate = path.parent / "panel" / "panel_registers.json"
+        candidate = path.parent / "panel_registers.json"
     elif kind == "v2":
-        candidate = path.parent.parent / "registers.json"
+        candidate = path.parent / "registers.json"
     else:
         return None
     return candidate if candidate.is_file() else None
