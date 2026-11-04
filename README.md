@@ -99,7 +99,7 @@ Use this when the all-in-one machine exposes its own Modbus TCP port, with no RS
 | Slave address   | `160`                                  |
 | Verification code | 6-digit code shown on the machine    |
 
-When you submit the form, the integration writes the verification code to holding registers **0x045C–0x045D** (uint32, high word first). The setup succeeds only when the device acknowledges the write; a rejected code shows a verification error instead of creating the entry.
+When you submit the form, the integration writes the verification code to holding registers **0x2701–0x2702** (9985–9986, uint32, high word first). The setup succeeds only when the device acknowledges the write; a rejected code shows a verification error instead of creating the entry.
 
 
 
@@ -232,17 +232,17 @@ Two maps ship with the integration:
 | Map | File | Used for |
 |-----|------|----------|
 | v1 (default) | `registers.json` | HA entity platforms (sensor / binary_sensor / number / switch / select), always the fallback |
-| v2 (October) | `panel/panel_registers.json` | Grouping panel plus its on/off and time entities |
+| v2 (finalized) | `panel/panel_registers.json` | Grouping panel plus its on/off and time entities |
 
 The two maps are **mutually exclusive** for an entry: firmware ≥ 1.2 selects
 v2, and the v1 entity platforms are not set up at all; otherwise the entry
 stays on v1 and no v2 block is read or written.
 
 After setup begins, the integration reads the 4-byte ASCII firmware version
-at **10083–10084 (0x2763–0x2764)** before the first poll. The v2 map and its
+at **10062–10063 (0x274E–0x274F)** before the first poll. The v2 map and its
 panel features are used only when the parsed version is **≥ 1.2**
 (`PANEL_MAP_MIN_FIRMWARE`). A missing, timed-out or unparsable value keeps
-`registers.json`; the integration never falls forward to the October control
+`registers.json`; the integration never falls forward to the finalized control
 addresses by accident.
 
 ## Adding registers & entities

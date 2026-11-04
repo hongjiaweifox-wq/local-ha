@@ -53,7 +53,7 @@
           "modbus_slave": "Slave-Adresse",
           "tcp_verify_code": "Bestätigungscode"
         },
-        "description": "Verbinde dich mit dem eigenen Ethernet-Anschluss des All-in-One-Geräts (TCP-Port standardmäßig **502**, Slave **0xA0**). Es wird kein RS-485↔Ethernet-Adapter verwendet. Gib den **6-stelligen Bestätigungscode** vom Gerät ein; er wird in die Holding-Register **0x045C–0x045D** geschrieben, und die Verbindung wird nur bei erfolgreicher Bestätigung akzeptiert."
+        "description": "Verbinde dich mit dem eigenen Ethernet-Anschluss des All-in-One-Geräts (TCP-Port standardmäßig **502**, Slave **0xA0**). Es wird kein RS-485↔Ethernet-Adapter verwendet. Gib den **6-stelligen Bestätigungscode** vom Gerät ein; er wird in die Holding-Register **0x2701–0x2702** (9985–9986) geschrieben, und die Verbindung wird nur bei erfolgreicher Bestätigung akzeptiert."
       }
     },
     "abort": {

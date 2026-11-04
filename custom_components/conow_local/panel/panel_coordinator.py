@@ -1,4 +1,4 @@
-"""Coordinator that polls the October map used by the grouping panel."""
+"""Coordinator that polls the finalized map used by the grouping panel."""
 
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ class ConowPanelCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
             if words is not None:
                 decoded.update(panel_map.decode_block(block, words))
         if not decoded:
-            raise UpdateFailed("October map is not readable on this device")
+            raise UpdateFailed("finalized register map is not readable on this device")
         return decoded
 
 
@@ -58,7 +58,7 @@ async def async_setup_panel_coordinator(
 ) -> ConowPanelCoordinator | None:
     """Create and refresh the entry's shared panel coordinator.
 
-    Only TCP entries whose firmware selected the v2 map expose the October
+    Only TCP entries whose firmware selected the v2 map expose the finalized
     map; everything else keeps the regular v1 entities and has no
     panel-backed entities.
     """

@@ -1,6 +1,6 @@
 """Entity descriptions for panel-backed read-only registers (v2 map).
 
-The October map marks each register read-only or writable. Writable on/off
+The finalized map marks each register read-only or writable. Writable on/off
 registers become switches and writable ``hhmm`` registers become time
 entities; every other read-only register is exposed as a sensor or binary
 sensor so the Home Assistant device page shows the same values as the panel.
@@ -9,8 +9,6 @@ through the grouping panel, but the entity gives the panel row a history.
 """
 
 from __future__ import annotations
-
-from functools import lru_cache
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -35,9 +33,10 @@ from homeassistant.helpers.entity import EntityCategory
 
 from . import panel_map
 
-# Device page groups that hold identification/hardware details rather than
-# live telemetry; HA renders these under the diagnostic section.
-DIAGNOSTIC_GROUPS = frozenset({"device_info"})
+# Registers that hold identification/hardware details rather than live
+# telemetry; HA renders these under the diagnostic section.  Keyed by code so
+# the wider "运行参数与设备信息" group keeps its capacity/power values visible.
+DIAGNOSTIC_CODES = frozenset({"wifi_signal", "device_serial", "firmware_version"})
 
 # Map unit strings from panel_registers.json onto HA units.  device_class and
 # state_class are read from the map itself, never inferred here.
@@ -79,14 +78,6 @@ BINARY_DEVICE_CLASSES: dict[str, BinarySensorDeviceClass] = {
 }
 
 
-@lru_cache(maxsize=1)
-def _group_ids() -> dict[str, str]:
-    """Return ``code -> group id`` for every grouped register."""
-    return {
-        code: group.id for group in panel_map.get_groups() for code in group.members
-    }
-
-
 def is_panel_setting_sensor(register: panel_map.PanelRegister) -> bool:
     """Return whether a writable numeric register needs a mirror sensor.
 
@@ -126,7 +117,7 @@ def panel_unique_code(
 def _entity_category(
     register: panel_map.PanelRegister,
 ) -> EntityCategory | None:
-    if _group_ids().get(register.code) in DIAGNOSTIC_GROUPS:
+    if register.code in DIAGNOSTIC_CODES:
         return EntityCategory.DIAGNOSTIC
     return None
 

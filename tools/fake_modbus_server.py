@@ -23,7 +23,7 @@ Examples::
     # only answer slave/unit id 160 (default A0)
     python3 tools/fake_modbus_server.py --slave 160
 
-    # serve the October (v2) map and report firmware 1.2, so the integration
+    # serve the finalized (v2) map and report firmware 1.2, so the integration
     # selects panel_registers.json and never touches the v1 addresses
     python3 tools/fake_modbus_server.py \
         --map custom_components/conow_local/panel/panel_registers.json \
@@ -34,7 +34,7 @@ Examples::
         --map custom_components/conow_local/registers.json
 
     # both maps are loaded automatically; setting the firmware-version register
-    # (0x2763, 10083) below 1.2 in the test page switches to the v1 control
+    # (0x274E, 10062) below 1.2 in the test page switches to the v1 control
     # block, and >= 1.2 switches back to v2 -- no restart or --map change.
     # Use --no-auto-map to keep serving exactly one map.
 
@@ -75,12 +75,12 @@ FC_READ_HOLDING = 0x03
 FC_WRITE_SINGLE = 0x06
 FC_WRITE_MULTIPLE = 0x10
 
-# Direct-connection challenge registers (0x045C–0x045D, uint32 high word first).
-VERIFY_CODE_ADDRESS = 0x045C
+# Direct-connection challenge registers (0x2701–0x2702, uint32 high word first).
+VERIFY_CODE_ADDRESS = 0x2701
 VERIFY_CODE_DEFAULT = "123456"
 
 # Firmware version register used by the integration to pick the register map.
-FIRMWARE_VERSION_ADDRESS = 0x2763
+FIRMWARE_VERSION_ADDRESS = 0x274E
 PANEL_MIN_VERSION = (1, 2)
 
 EXC_ILLEGAL_FUNCTION = 0x01
@@ -1991,12 +1991,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--verify-code",
         default=VERIFY_CODE_DEFAULT,
-        help=f"code accepted at 0x045C (default {VERIFY_CODE_DEFAULT})",
+        help=f"code accepted at 0x2701 (default {VERIFY_CODE_DEFAULT})",
     )
     parser.add_argument(
         "--firmware-version",
         default=None,
-        help="ASCII firmware version served at 0x2763 (e.g. 1.2; default empty)",
+        help="ASCII firmware version served at 0x274E (e.g. 1.2; default empty)",
     )
     parser.add_argument(
         "--http-host",

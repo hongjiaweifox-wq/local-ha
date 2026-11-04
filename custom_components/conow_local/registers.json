@@ -25,13 +25,15 @@
       "address": 10000,
       "block": "monitoring",
       "dtype": "uint16",
-      "decode": "bitmask"
+      "decode": "bitmask",
+      "name": "系统状态"
     },
     {
       "code": "fault_code",
       "address": 10001,
       "block": "monitoring",
-      "dtype": "uint16"
+      "dtype": "uint16",
+      "name": "设备故障码"
     },
     {
       "code": "battery_voltage",
@@ -39,7 +41,8 @@
       "block": "monitoring",
       "dtype": "uint16",
       "scale": 0.01,
-      "unit": "V"
+      "unit": "V",
+      "name": "电池电压"
     },
     {
       "code": "battery_soc",
@@ -47,7 +50,8 @@
       "block": "monitoring",
       "dtype": "uint16",
       "scale": 1,
-      "unit": "%"
+      "unit": "%",
+      "name": "电池 SOC"
     },
     {
       "code": "battery_design_capacity",
@@ -55,7 +59,8 @@
       "block": "monitoring",
       "dtype": "uint16",
       "scale": 0.001,
-      "unit": "kWh"
+      "unit": "kWh",
+      "name": "电池额定容量"
     },
     {
       "code": "battery_cell_temp_max",
@@ -64,7 +69,8 @@
       "dtype": "uint16",
       "scale": 0.1,
       "offset": 500,
-      "unit": "°C"
+      "unit": "°C",
+      "name": "电池最高单体温度"
     },
     {
       "code": "battery_cell_temp_min",
@@ -73,7 +79,8 @@
       "dtype": "uint16",
       "scale": 0.1,
       "offset": 500,
-      "unit": "°C"
+      "unit": "°C",
+      "name": "电池最低单体温度"
     },
     {
       "code": "battery_cumulative_charge_energy",
@@ -81,7 +88,8 @@
       "block": "monitoring",
       "dtype": "uint32",
       "scale": 0.01,
-      "unit": "kWh"
+      "unit": "kWh",
+      "name": "电池累计充电量"
     },
     {
       "code": "battery_cumulative_discharge_energy",
@@ -89,7 +97,8 @@
       "block": "monitoring",
       "dtype": "uint32",
       "scale": 0.01,
-      "unit": "kWh"
+      "unit": "kWh",
+      "name": "电池累计放电量"
     },
     {
       "code": "grid_active_power",
@@ -97,7 +106,8 @@
       "block": "monitoring",
       "dtype": "int16",
       "scale": 1,
-      "unit": "W"
+      "unit": "W",
+      "name": "电网有功功率"
     },
     {
       "code": "grid_frequency",
@@ -105,7 +115,8 @@
       "block": "monitoring",
       "dtype": "uint16",
       "scale": 0.01,
-      "unit": "Hz"
+      "unit": "Hz",
+      "name": "电网频率"
     },
     {
       "code": "grid_cumulative_import_energy",
@@ -113,7 +124,8 @@
       "block": "monitoring",
       "dtype": "uint32",
       "scale": 0.01,
-      "unit": "kWh"
+      "unit": "kWh",
+      "name": "电网累计买电量"
     },
     {
       "code": "grid_cumulative_export_energy",
@@ -121,7 +133,8 @@
       "block": "monitoring",
       "dtype": "uint32",
       "scale": 0.01,
-      "unit": "kWh"
+      "unit": "kWh",
+      "name": "电网累计卖电量"
     },
     {
       "code": "backup_load_power",
@@ -129,7 +142,8 @@
       "block": "monitoring",
       "dtype": "int16",
       "scale": 1,
-      "unit": "W"
+      "unit": "W",
+      "name": "备电负载功率"
     },
     {
       "code": "backup_load_cumulative_export_energy",
@@ -137,7 +151,8 @@
       "block": "monitoring",
       "dtype": "uint32",
       "scale": 0.01,
-      "unit": "kWh"
+      "unit": "kWh",
+      "name": "备电负载累计输出电量"
     },
     {
       "code": "backup_load_cumulative_import_energy",
@@ -145,7 +160,8 @@
       "block": "monitoring",
       "dtype": "uint32",
       "scale": 0.01,
-      "unit": "kWh"
+      "unit": "kWh",
+      "name": "备电负载累计输入电量"
     },
     {
       "code": "pv_total_power",
@@ -153,7 +169,8 @@
       "block": "monitoring",
       "dtype": "uint16",
       "scale": 1,
-      "unit": "W"
+      "unit": "W",
+      "name": "PV 总功率"
     },
     {
       "code": "pv_total_cumulative_energy",
@@ -161,7 +178,8 @@
       "block": "monitoring",
       "dtype": "uint32",
       "scale": 0.01,
-      "unit": "kWh"
+      "unit": "kWh",
+      "name": "PV 累计发电量"
     },
     {
       "code": "pv1_power",
@@ -169,7 +187,8 @@
       "block": "monitoring",
       "dtype": "uint16",
       "scale": 1,
-      "unit": "W"
+      "unit": "W",
+      "name": "PV1 功率"
     },
     {
       "code": "pv1_cumulative_energy",
@@ -177,7 +196,8 @@
       "block": "monitoring",
       "dtype": "uint32",
       "scale": 0.01,
-      "unit": "kWh"
+      "unit": "kWh",
+      "name": "PV1 累计发电量"
     },
     {
       "code": "pv2_power",
@@ -185,7 +205,8 @@
       "block": "monitoring",
       "dtype": "uint16",
       "scale": 1,
-      "unit": "W"
+      "unit": "W",
+      "name": "PV2 功率"
     },
     {
       "code": "pv2_cumulative_energy",
@@ -193,7 +214,8 @@
       "block": "monitoring",
       "dtype": "uint32",
       "scale": 0.01,
-      "unit": "kWh"
+      "unit": "kWh",
+      "name": "PV2 累计发电量"
     },
     {
       "code": "pv3_power",
@@ -201,7 +223,8 @@
       "block": "monitoring",
       "dtype": "uint16",
       "scale": 1,
-      "unit": "W"
+      "unit": "W",
+      "name": "PV3 功率"
     },
     {
       "code": "pv3_cumulative_energy",
@@ -209,7 +232,8 @@
       "block": "monitoring",
       "dtype": "uint32",
       "scale": 0.01,
-      "unit": "kWh"
+      "unit": "kWh",
+      "name": "PV3 累计发电量"
     },
     {
       "code": "pv4_power",
@@ -217,7 +241,8 @@
       "block": "monitoring",
       "dtype": "uint16",
       "scale": 1,
-      "unit": "W"
+      "unit": "W",
+      "name": "PV4 功率"
     },
     {
       "code": "pv4_cumulative_energy",
@@ -225,7 +250,8 @@
       "block": "monitoring",
       "dtype": "uint32",
       "scale": 0.01,
-      "unit": "kWh"
+      "unit": "kWh",
+      "name": "PV4 累计发电量"
     },
     {
       "code": "grid_charge_power_limit",
@@ -234,7 +260,10 @@
       "dtype": "uint16",
       "scale": 1,
       "unit": "W",
-      "writable": true
+      "writable": true,
+      "name": "电网充电功率上限",
+      "min": 0,
+      "max": 30000
     },
     {
       "code": "battery_discharge_power_limit",
@@ -243,7 +272,10 @@
       "dtype": "uint16",
       "scale": 1,
       "unit": "W",
-      "writable": true
+      "writable": true,
+      "name": "电池放电功率上限",
+      "min": 0,
+      "max": 30000
     },
     {
       "code": "backup_soc",
@@ -252,28 +284,49 @@
       "dtype": "uint16",
       "scale": 1,
       "unit": "%",
-      "writable": true
+      "writable": true,
+      "name": "备电 SoC",
+      "min": 0,
+      "max": 100
     },
     {
       "code": "off_grid_output_enable",
       "address": 10103,
       "block": "control",
       "dtype": "uint16",
-      "writable": true
+      "writable": true,
+      "name": "离网口开关",
+      "values": {
+        "0": "disable",
+        "1": "enable"
+      },
+      "boolean": true
     },
     {
       "code": "pv_curtailment_enable",
       "address": 10104,
       "block": "control",
       "dtype": "uint16",
-      "writable": true
+      "writable": true,
+      "name": "弃光开关",
+      "values": {
+        "0": "disable",
+        "1": "enable"
+      },
+      "boolean": true
     },
     {
       "code": "charge_discharge_direction",
       "address": 10105,
       "block": "control",
       "dtype": "uint16",
-      "writable": true
+      "writable": true,
+      "name": "充放电方向",
+      "values": {
+        "0": "idle",
+        "1": "chg",
+        "2": "dchg"
+      }
     },
     {
       "code": "battery_target_power",
@@ -282,7 +335,10 @@
       "dtype": "uint16",
       "scale": 1,
       "unit": "W",
-      "writable": true
+      "writable": true,
+      "name": "目标充放电功率",
+      "min": 0,
+      "max": 30000
     },
     {
       "code": "battery_cutoff_soc",
@@ -291,7 +347,10 @@
       "dtype": "uint16",
       "scale": 1,
       "unit": "%",
-      "writable": true
+      "writable": true,
+      "name": "放电截止 SoC",
+      "min": 0,
+      "max": 100
     }
   ],
   "entities": [
@@ -543,6 +602,147 @@
         "force_discharge": 2
       },
       "write_handler": "force_mode"
+    }
+  ],
+  "groups": [
+    {
+      "id": "system",
+      "label": "系统",
+      "icon": "mdi:monitor-dashboard",
+      "order": 10,
+      "atomic": false,
+      "members": [
+        "system_status",
+        "fault_code"
+      ],
+      "span": {
+        "start": 10000,
+        "end": 10001,
+        "registers": 2
+      },
+      "note": "只读；系统状态为 uint16 位掩码，实体按位拆分为 binary_sensor"
+    },
+    {
+      "id": "realtime",
+      "label": "实时监控数据",
+      "icon": "mdi:home-lightning-bolt",
+      "order": 20,
+      "atomic": false,
+      "members": [
+        "battery_voltage",
+        "battery_soc",
+        "grid_active_power",
+        "backup_load_power",
+        "pv_total_power"
+      ],
+      "span": {
+        "start": 10002,
+        "end": 10022,
+        "registers": 21
+      },
+      "note": "只读实时值，一次连续读取"
+    },
+    {
+      "id": "device_info",
+      "label": "运行参数与设备信息",
+      "icon": "mdi:information-outline",
+      "order": 30,
+      "atomic": false,
+      "members": [
+        "battery_design_capacity"
+      ],
+      "span": {
+        "start": 10004,
+        "end": 10004,
+        "registers": 1
+      },
+      "note": "只读；电池额定容量"
+    },
+    {
+      "id": "monitor_detail",
+      "label": "详细监控数据",
+      "icon": "mdi:chart-timeline-variant",
+      "order": 40,
+      "atomic": false,
+      "members": [
+        "battery_cell_temp_max",
+        "battery_cell_temp_min",
+        "grid_frequency",
+        "pv1_power",
+        "pv1_cumulative_energy",
+        "pv2_power",
+        "pv2_cumulative_energy",
+        "pv3_power",
+        "pv3_cumulative_energy",
+        "pv4_power",
+        "pv4_cumulative_energy"
+      ],
+      "span": {
+        "start": 10005,
+        "end": 10036,
+        "registers": 32
+      },
+      "note": "只读；温度、频率与各路 PV 明细"
+    },
+    {
+      "id": "lifetime_energy",
+      "label": "累计电量",
+      "icon": "mdi:counter",
+      "order": 50,
+      "atomic": false,
+      "members": [
+        "battery_cumulative_charge_energy",
+        "battery_cumulative_discharge_energy",
+        "grid_cumulative_import_energy",
+        "grid_cumulative_export_energy",
+        "backup_load_cumulative_export_energy",
+        "backup_load_cumulative_import_energy",
+        "pv_total_cumulative_energy"
+      ],
+      "span": {
+        "start": 10007,
+        "end": 10024,
+        "registers": 18
+      },
+      "note": "只读；U32 累计电量，倍率 0.01"
+    },
+    {
+      "id": "work_strategy",
+      "label": "工作策略",
+      "icon": "mdi:cog-transfer",
+      "order": 60,
+      "atomic": false,
+      "members": [
+        "grid_charge_power_limit",
+        "battery_discharge_power_limit",
+        "backup_soc",
+        "off_grid_output_enable",
+        "pv_curtailment_enable"
+      ],
+      "span": {
+        "start": 10100,
+        "end": 10104,
+        "registers": 5
+      },
+      "note": "功率上限、备电 SoC 与开关；连续寄存器合并为一帧下发"
+    },
+    {
+      "id": "force_control",
+      "label": "实时控制",
+      "icon": "mdi:battery-sync",
+      "order": 70,
+      "atomic": false,
+      "members": [
+        "charge_discharge_direction",
+        "battery_target_power",
+        "battery_cutoff_soc"
+      ],
+      "span": {
+        "start": 10105,
+        "end": 10107,
+        "registers": 3
+      },
+      "note": "充放电方向、目标功率与截止 SoC；掉电不保存，超时后回退"
     }
   ]
 }

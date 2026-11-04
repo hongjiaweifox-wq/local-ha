@@ -53,7 +53,7 @@
           "modbus_slave": "Slave address",
           "tcp_verify_code": "Verification code"
         },
-        "description": "Connect to the all-in-one machine's own Ethernet port (TCP port **502** by default, slave **0xA0**). No RS-485↔Ethernet adapter is involved. Enter the **6-digit verification code** shown on the machine; it is written to holding registers **0x045C–0x045D** and the connection is accepted only if the device confirms it."
+        "description": "Connect to the all-in-one machine's own Ethernet port (TCP port **502** by default, slave **0xA0**). No RS-485↔Ethernet adapter is involved. Enter the **6-digit verification code** shown on the machine; it is written to holding registers **0x2701–0x2702** (9985–9986) and the connection is accepted only if the device confirms it."
       }
     },
     "abort": {

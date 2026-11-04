@@ -53,7 +53,7 @@ class ConowModbusSensor(CoordinatorEntity[ConowLocalCoordinator], SensorEntity):
 
 
 class ConowPanelSensor(CoordinatorEntity[ConowPanelCoordinator], SensorEntity):
-    """Read-only register from the October panel map."""
+    """Read-only register from the finalized panel map."""
 
     _attr_has_entity_name = True
 
@@ -88,7 +88,7 @@ async def _async_add_panel_sensors(
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Add one sensor per read-only register of the October map."""
+    """Add one sensor per read-only register of the finalized map."""
     coordinator = get_panel_coordinator(hass, entry.entry_id)
     if coordinator is None:
         return

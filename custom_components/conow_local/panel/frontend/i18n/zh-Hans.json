@@ -25,18 +25,15 @@
     "warningInvalidTime": "读数非法，请重新设置",
     "noticeClamped": "{name} 已限制为 {value}（{min}–{max}）",
     "noticeTimeClamped": "时间已限制为 {value}（有效范围 00:00–23:59）",
-    "confirmWriteTitle": "批量下发",
-    "confirmWrite": "确认把分组「{group}」写入设备？",
-    "actionCancel": "取消",
-    "actionConfirm": "确定",
+    "confirmWrite": "确认把分组「{group}」写入设备？\n\n{preview}",
     "noticeApplied": "{group}：已下发",
     "noticeFailed": "{group}：{error}",
     "actionApplying": "下发中…",
     "actionApply": "批量下发",
     "titleExpandGroup": "展开分组",
     "titleCollapseGroup": "折叠分组",
-    "mapMismatchV1": "设备固件版本 {firmware}，低于启用 10 月寄存器映射（panel_registers.json）所需的 {minimum}；已按 registers.json（v1）读取实体，分组面板不可用。",
-    "mapUnreadable": "设备有 Modbus 响应，但 10 月映射的地址全部读不到 —— 多半仍在 v1 协议（10000–10036 / 10100–10107）。请选择配置为 v2 的条目，或把该条目指向提供 10 月映射的服务端。",
+    "mapMismatchV1": "设备固件版本 {firmware}，低于启用定稿寄存器映射（panel_registers.json）所需的 {minimum}；已按 registers.json（v1）读取实体，分组面板不可用。",
+    "mapUnreadable": "设备有 Modbus 响应，但定稿映射的地址全部读不到 —— 多半仍在 v1 协议（10000–10036 / 10100–10107）。请选择配置为 v2 的条目，或把该条目指向提供定稿映射的服务端。",
     "emptyNoGroups": "没有匹配的分组。",
     "comboNoMatch": "没有匹配项",
     "modeTcpDirect": "TCP 直连",
@@ -53,23 +50,15 @@
     "unknownFirmware": "未知"
   },
   "groups": {
-    "realtime": "实时监控",
-    "grid_detail": "电网详情",
-    "pv_detail": "光伏详情",
-    "battery_detail": "电池详情",
-    "bypass_detail": "旁路口",
-    "capacity": "容量与功率能力",
-    "device_info": "设备信息",
+    "system": "系统",
+    "realtime": "实时监控数据",
+    "device_info": "运行参数与设备信息",
+    "monitor_detail": "详细监控数据",
     "lifetime_energy": "累计电量",
-    "power_limit": "功率与 SoC 设置",
+    "work_strategy": "工作策略",
     "force_control": "实时控制",
-    "work_mode": "工作模式与基础负载",
-    "backup_soc": "备电 SoC",
-    "reverse_power": "逆流控制",
-    "switches": "开关控制",
-    "modbus_timeout": "Modbus 超时",
-    "generator": "柴发",
-    "do_control": "DO 控制",
+    "power_limit": "功率与 SoC 设置",
+    "generator_do": "柴发与 DO",
     "base_load": "基础负载",
     "base_load_schedule": "基础负载计划表",
     "tou_schedule": "TOU 计划表"
@@ -79,20 +68,51 @@
     "strategy": "策略 {n}"
   },
   "registers": {
+    "system_status": "系统状态",
+    "fault_code": "设备故障码",
+    "battery_voltage": "电池电压",
+    "battery_soc": "电池 SOC",
+    "battery_design_capacity": "电池额定容量",
+    "battery_cell_temp_max": "电池最高单体温度",
+    "battery_cell_temp_min": "电池最低单体温度",
+    "battery_cumulative_charge_energy": "电池累计充电量",
+    "battery_cumulative_discharge_energy": "电池累计放电量",
+    "grid_active_power": "电网有功功率",
+    "grid_frequency": "电网频率",
+    "grid_cumulative_import_energy": "电网累计买电量",
+    "grid_cumulative_export_energy": "电网累计卖电量",
+    "backup_load_power": "备电负载功率",
+    "backup_load_cumulative_export_energy": "备电负载累计输出电量",
+    "backup_load_cumulative_import_energy": "备电负载累计输入电量",
+    "pv_total_power": "PV 总功率",
+    "pv_total_cumulative_energy": "PV 累计发电量",
+    "pv1_power": "PV1 功率",
+    "pv1_cumulative_energy": "PV1 累计发电量",
+    "pv2_power": "PV2 功率",
+    "pv2_cumulative_energy": "PV2 累计发电量",
+    "pv3_power": "PV3 功率",
+    "pv3_cumulative_energy": "PV3 累计发电量",
+    "pv4_power": "PV4 功率",
+    "pv4_cumulative_energy": "PV4 累计发电量",
+    "grid_charge_power_limit": "电网充电功率上限",
+    "battery_discharge_power_limit": "电池放电功率上限",
+    "backup_soc": "备电 SoC",
+    "off_grid_output_enable": "离网口开关",
+    "pv_curtailment_enable": "弃光开关",
+    "charge_discharge_direction": "充放电方向",
+    "battery_target_power": "目标充放电功率",
+    "battery_cutoff_soc": "放电截止 SoC",
     "device_status": "设备状态",
     "device_fault_code": "设备故障码",
-    "system_soc": "系统当前 SOC",
+    "system_soc": "系统当前 SoC",
     "meter_connection_state": "电表连接状态",
     "meter_total_power": "电表总功率",
-    "grid_active_power": "电网有功功率",
-    "pv_total_power": "PV 总功率",
     "battery_work_state": "电池工作状态",
     "battery_power": "电池功率",
     "bypass_switch_state": "旁路口开关状态",
     "bypass_power": "旁路口功率",
     "grid_voltage": "电网电压",
     "grid_current": "电网电流",
-    "grid_frequency": "电网频率",
     "phase_a_power": "A 相功率",
     "phase_b_power": "B 相功率",
     "phase_c_power": "C 相功率",
@@ -109,7 +129,6 @@
     "pv4_voltage": "PV4 电压",
     "pv4_current": "PV4 电流",
     "pv4_energy": "PV4 电量",
-    "battery_voltage": "电池电压",
     "battery_current": "电池电流",
     "cell_temp_max": "最高电芯温度",
     "cell_temp_min": "最低电芯温度",
@@ -142,18 +161,12 @@
     "ac_charge_power_limit": "AC 充电功率上限",
     "ac_discharge_power_limit": "AC 放电功率上限",
     "safety_soc": "安全 SoC",
-    "charge_discharge_direction": "充放电方向",
-    "battery_target_power": "目标充放电功率",
     "charge_discharge_cutoff_soc": "充放电截止 SoC",
     "charge_discharge_duration": "充放电控制时长",
     "work_mode": "工作模式",
-    "base_load_setpoint": "基础负载",
-    "backup_soc": "备电 SoC",
     "allow_reverse_power": "允许逆流功率",
     "allow_battery_export": "允许电池逆流",
     "bypass_enable": "Bypass 开关",
-    "off_grid_output_enable": "离网口开关",
-    "pv_curtailment_enable": "弃光开关",
     "modbus_timeout": "ModBus 超时时长",
     "generator_enable": "柴发开关",
     "generator_start_time": "开始时间",
@@ -163,91 +176,89 @@
     "generator_stop_soc": "柴发截止 SoC",
     "do1_state": "DO1 控制",
     "do2_state": "DO2 控制",
-    "base_load_power": "基础负载",
+    "base_load_setpoint": "基础负载",
     "base_load_slot_count": "基础负载时段数",
-    "base_load_slot1_start": "基础负载时段1-开始时间",
-    "base_load_slot1_end": "基础负载时段1-结束时间",
-    "base_load_slot1_power": "基础负载时段1-负载功率",
-    "base_load_slot2_start": "基础负载时段2-开始时间",
-    "base_load_slot2_end": "基础负载时段2-结束时间",
-    "base_load_slot2_power": "基础负载时段2-负载功率",
-    "base_load_slot3_start": "基础负载时段3-开始时间",
-    "base_load_slot3_end": "基础负载时段3-结束时间",
-    "base_load_slot3_power": "基础负载时段3-负载功率",
-    "base_load_slot4_start": "基础负载时段4-开始时间",
-    "base_load_slot4_end": "基础负载时段4-结束时间",
-    "base_load_slot4_power": "基础负载时段4-负载功率",
-    "base_load_slot5_start": "基础负载时段5-开始时间",
-    "base_load_slot5_end": "基础负载时段5-结束时间",
-    "base_load_slot5_power": "基础负载时段5-负载功率",
-    "base_load_slot6_start": "基础负载时段6-开始时间",
-    "base_load_slot6_end": "基础负载时段6-结束时间",
-    "base_load_slot6_power": "基础负载时段6-负载功率",
-    "base_load_slot7_start": "基础负载时段7-开始时间",
-    "base_load_slot7_end": "基础负载时段7-结束时间",
-    "base_load_slot7_power": "基础负载时段7-负载功率",
-    "base_load_slot8_start": "基础负载时段8-开始时间",
-    "base_load_slot8_end": "基础负载时段8-结束时间",
-    "base_load_slot8_power": "基础负载时段8-负载功率",
-    "tou_slot_count": "TOU时段数",
-    "tou_slot1_start": "用户手动充放电策略1-开始时间",
-    "tou_slot1_end": "用户手动充放电策略1-结束时间",
-    "tou_slot1_mode": "用户手动充放电策略1-工作模式",
-    "tou_slot1_target_soc": "用户手动充放电策略1-目标SOC",
-    "tou_slot1_power": "用户手动充放电策略1-放电功率",
-    "tou_slot1_curtail": "用户手动充放电策略1-弃光",
-    "tou_slot1_ignore_export": "用户手动充放电策略1-忽略防逆流",
-    "tou_slot2_start": "用户手动充放电策略2-开始时间",
-    "tou_slot2_end": "用户手动充放电策略2-结束时间",
-    "tou_slot2_mode": "用户手动充放电策略2-工作模式",
-    "tou_slot2_target_soc": "用户手动充放电策略2-目标SOC",
-    "tou_slot2_power": "用户手动充放电策略2-放电功率",
-    "tou_slot2_curtail": "用户手动充放电策略2-弃光",
-    "tou_slot2_ignore_export": "用户手动充放电策略2-忽略防逆流",
-    "tou_slot3_start": "用户手动充放电策略3-开始时间",
-    "tou_slot3_end": "用户手动充放电策略3-结束时间",
-    "tou_slot3_mode": "用户手动充放电策略3-工作模式",
-    "tou_slot3_target_soc": "用户手动充放电策略3-目标SOC",
-    "tou_slot3_power": "用户手动充放电策略3-放电功率",
-    "tou_slot3_curtail": "用户手动充放电策略3-弃光",
-    "tou_slot3_ignore_export": "用户手动充放电策略3-忽略防逆流",
-    "tou_slot4_start": "用户手动充放电策略4-开始时间",
-    "tou_slot4_end": "用户手动充放电策略4-结束时间",
-    "tou_slot4_mode": "用户手动充放电策略4-工作模式",
-    "tou_slot4_target_soc": "用户手动充放电策略4-目标SOC",
-    "tou_slot4_power": "用户手动充放电策略4-放电功率",
-    "tou_slot4_curtail": "用户手动充放电策略4-弃光",
-    "tou_slot4_ignore_export": "用户手动充放电策略4-忽略防逆流",
-    "tou_slot5_start": "用户手动充放电策略5-开始时间",
-    "tou_slot5_end": "用户手动充放电策略5-结束时间",
-    "tou_slot5_mode": "用户手动充放电策略5-工作模式",
-    "tou_slot5_target_soc": "用户手动充放电策略5-目标SOC",
-    "tou_slot5_power": "用户手动充放电策略5-放电功率",
-    "tou_slot5_curtail": "用户手动充放电策略5-弃光",
-    "tou_slot5_ignore_export": "用户手动充放电策略5-忽略防逆流",
-    "tou_slot6_start": "用户手动充放电策略6-开始时间",
-    "tou_slot6_end": "用户手动充放电策略6-结束时间",
-    "tou_slot6_mode": "用户手动充放电策略6-工作模式",
-    "tou_slot6_target_soc": "用户手动充放电策略6-目标SOC",
-    "tou_slot6_power": "用户手动充放电策略6-放电功率",
-    "tou_slot6_curtail": "用户手动充放电策略6-弃光",
-    "tou_slot6_ignore_export": "用户手动充放电策略6-忽略防逆流",
-    "tou_slot7_start": "用户手动充放电策略7-开始时间",
-    "tou_slot7_end": "用户手动充放电策略7-结束时间",
-    "tou_slot7_mode": "用户手动充放电策略7-工作模式",
-    "tou_slot7_target_soc": "用户手动充放电策略7-目标SOC",
-    "tou_slot7_power": "用户手动充放电策略7-放电功率",
-    "tou_slot7_curtail": "用户手动充放电策略7-弃光",
-    "tou_slot7_ignore_export": "用户手动充放电策略7-忽略防逆流",
-    "tou_slot8_start": "用户手动充放电策略8-开始时间",
-    "tou_slot8_end": "用户手动充放电策略8-结束时间",
-    "tou_slot8_mode": "用户手动充放电策略8-工作模式",
-    "tou_slot8_target_soc": "用户手动充放电策略8-目标SOC",
-    "tou_slot8_power": "用户手动充放电策略8-放电功率",
-    "tou_slot8_curtail": "用户手动充放电策略8-弃光",
-    "tou_slot8_ignore_export": "用户手动充放电策略8-忽略防逆流"
+    "base_load_slot1_start": "基础负载时段 1 - 开始时间",
+    "base_load_slot1_end": "基础负载时段 1 - 结束时间",
+    "base_load_slot1_power": "基础负载时段 1 - 负载功率",
+    "base_load_slot2_start": "基础负载时段 2 - 开始时间",
+    "base_load_slot2_end": "基础负载时段 2 - 结束时间",
+    "base_load_slot2_power": "基础负载时段 2 - 负载功率",
+    "base_load_slot3_start": "基础负载时段 3 - 开始时间",
+    "base_load_slot3_end": "基础负载时段 3 - 结束时间",
+    "base_load_slot3_power": "基础负载时段 3 - 负载功率",
+    "base_load_slot4_start": "基础负载时段 4 - 开始时间",
+    "base_load_slot4_end": "基础负载时段 4 - 结束时间",
+    "base_load_slot4_power": "基础负载时段 4 - 负载功率",
+    "base_load_slot5_start": "基础负载时段 5 - 开始时间",
+    "base_load_slot5_end": "基础负载时段 5 - 结束时间",
+    "base_load_slot5_power": "基础负载时段 5 - 负载功率",
+    "base_load_slot6_start": "基础负载时段 6 - 开始时间",
+    "base_load_slot6_end": "基础负载时段 6 - 结束时间",
+    "base_load_slot6_power": "基础负载时段 6 - 负载功率",
+    "base_load_slot7_start": "基础负载时段 7 - 开始时间",
+    "base_load_slot7_end": "基础负载时段 7 - 结束时间",
+    "base_load_slot7_power": "基础负载时段 7 - 负载功率",
+    "base_load_slot8_start": "基础负载时段 8 - 开始时间",
+    "base_load_slot8_end": "基础负载时段 8 - 结束时间",
+    "base_load_slot8_power": "基础负载时段 8 - 负载功率",
+    "tou_slot_count": "TOU 时段数",
+    "tou_slot1_start": "用户手动充放电策略 1 - 开始时间",
+    "tou_slot1_end": "用户手动充放电策略 1 - 结束时间",
+    "tou_slot1_mode": "用户手动充放电策略 1 - 工作模式",
+    "tou_slot1_target_soc": "用户手动充放电策略 1 - 目标 SOC",
+    "tou_slot1_power": "用户手动充放电策略 1 - 放电功率",
+    "tou_slot2_start": "用户手动充放电策略 2 - 开始时间",
+    "tou_slot2_end": "用户手动充放电策略 2 - 结束时间",
+    "tou_slot2_mode": "用户手动充放电策略 2 - 工作模式",
+    "tou_slot2_target_soc": "用户手动充放电策略 2 - 目标 SOC",
+    "tou_slot2_power": "用户手动充放电策略 2 - 放电功率",
+    "tou_slot3_start": "用户手动充放电策略 3 - 开始时间",
+    "tou_slot3_end": "用户手动充放电策略 3 - 结束时间",
+    "tou_slot3_mode": "用户手动充放电策略 3 - 工作模式",
+    "tou_slot3_target_soc": "用户手动充放电策略 3 - 目标 SOC",
+    "tou_slot3_power": "用户手动充放电策略 3 - 放电功率",
+    "tou_slot4_start": "用户手动充放电策略 4 - 开始时间",
+    "tou_slot4_end": "用户手动充放电策略 4 - 结束时间",
+    "tou_slot4_mode": "用户手动充放电策略 4 - 工作模式",
+    "tou_slot4_target_soc": "用户手动充放电策略 4 - 目标 SOC",
+    "tou_slot4_power": "用户手动充放电策略 4 - 放电功率",
+    "tou_slot5_start": "用户手动充放电策略 5 - 开始时间",
+    "tou_slot5_end": "用户手动充放电策略 5 - 结束时间",
+    "tou_slot5_mode": "用户手动充放电策略 5 - 工作模式",
+    "tou_slot5_target_soc": "用户手动充放电策略 5 - 目标 SOC",
+    "tou_slot5_power": "用户手动充放电策略 5 - 放电功率",
+    "tou_slot6_start": "用户手动充放电策略 6 - 开始时间",
+    "tou_slot6_end": "用户手动充放电策略 6 - 结束时间",
+    "tou_slot6_mode": "用户手动充放电策略 6 - 工作模式",
+    "tou_slot6_target_soc": "用户手动充放电策略 6 - 目标 SOC",
+    "tou_slot6_power": "用户手动充放电策略 6 - 放电功率",
+    "tou_slot7_start": "用户手动充放电策略 7 - 开始时间",
+    "tou_slot7_end": "用户手动充放电策略 7 - 结束时间",
+    "tou_slot7_mode": "用户手动充放电策略 7 - 工作模式",
+    "tou_slot7_target_soc": "用户手动充放电策略 7 - 目标 SOC",
+    "tou_slot7_power": "用户手动充放电策略 7 - 放电功率",
+    "tou_slot8_start": "用户手动充放电策略 8 - 开始时间",
+    "tou_slot8_end": "用户手动充放电策略 8 - 结束时间",
+    "tou_slot8_mode": "用户手动充放电策略 8 - 工作模式",
+    "tou_slot8_target_soc": "用户手动充放电策略 8 - 目标 SOC",
+    "tou_slot8_power": "用户手动充放电策略 8 - 放电功率"
   },
   "values": {
+    "off_grid_output_enable": {
+      "0": "disable",
+      "1": "enable"
+    },
+    "pv_curtailment_enable": {
+      "0": "disable",
+      "1": "enable"
+    },
+    "charge_discharge_direction": {
+      "0": "idle",
+      "1": "chg",
+      "2": "dchg",
+      "3": "exit"
+    },
     "meter_connection_state": {
       "0": "已配对已连接",
       "1": "已配对未连接",
@@ -262,30 +273,16 @@
       "0": "off",
       "1": "on"
     },
-    "charge_discharge_direction": {
-      "0": "idle",
-      "1": "chg",
-      "2": "dchg"
-    },
     "work_mode": {
       "1": "自发自用",
-      "2": "备电优先",
-      "3": "馈网优先",
-      "4": "手动时段"
+      "2": "手动时段",
+      "3": "idle"
     },
     "allow_battery_export": {
       "0": "禁止电池馈网",
       "1": "允许电池馈网"
     },
     "bypass_enable": {
-      "0": "disable",
-      "1": "enable"
-    },
-    "off_grid_output_enable": {
-      "0": "disable",
-      "1": "enable"
-    },
-    "pv_curtailment_enable": {
       "0": "disable",
       "1": "enable"
     },
@@ -305,97 +302,33 @@
       "0": "充电",
       "1": "放电"
     },
-    "tou_slot1_curtail": {
-      "0": "关闭",
-      "1": "开启"
-    },
-    "tou_slot1_ignore_export": {
-      "0": "关闭",
-      "1": "使能"
-    },
     "tou_slot2_mode": {
       "0": "充电",
       "1": "放电"
-    },
-    "tou_slot2_curtail": {
-      "0": "关闭",
-      "1": "开启"
-    },
-    "tou_slot2_ignore_export": {
-      "0": "关闭",
-      "1": "使能"
     },
     "tou_slot3_mode": {
       "0": "充电",
       "1": "放电"
     },
-    "tou_slot3_curtail": {
-      "0": "关闭",
-      "1": "开启"
-    },
-    "tou_slot3_ignore_export": {
-      "0": "关闭",
-      "1": "使能"
-    },
     "tou_slot4_mode": {
       "0": "充电",
       "1": "放电"
-    },
-    "tou_slot4_curtail": {
-      "0": "关闭",
-      "1": "开启"
-    },
-    "tou_slot4_ignore_export": {
-      "0": "关闭",
-      "1": "使能"
     },
     "tou_slot5_mode": {
       "0": "充电",
       "1": "放电"
     },
-    "tou_slot5_curtail": {
-      "0": "关闭",
-      "1": "开启"
-    },
-    "tou_slot5_ignore_export": {
-      "0": "关闭",
-      "1": "使能"
-    },
     "tou_slot6_mode": {
       "0": "充电",
       "1": "放电"
-    },
-    "tou_slot6_curtail": {
-      "0": "关闭",
-      "1": "开启"
-    },
-    "tou_slot6_ignore_export": {
-      "0": "关闭",
-      "1": "使能"
     },
     "tou_slot7_mode": {
       "0": "充电",
       "1": "放电"
     },
-    "tou_slot7_curtail": {
-      "0": "关闭",
-      "1": "开启"
-    },
-    "tou_slot7_ignore_export": {
-      "0": "关闭",
-      "1": "使能"
-    },
     "tou_slot8_mode": {
       "0": "充电",
       "1": "放电"
-    },
-    "tou_slot8_curtail": {
-      "0": "关闭",
-      "1": "开启"
-    },
-    "tou_slot8_ignore_export": {
-      "0": "关闭",
-      "1": "使能"
     }
   }
 }

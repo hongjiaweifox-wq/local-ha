@@ -126,7 +126,7 @@ class ConowVerificationError(ConowModbusError):
     """Raised when the direct TCP verification code is rejected."""
 
 
-VERIFY_CODE_START = 0x045C  # uint32 challenge, two holding registers
+VERIFY_CODE_START = 0x2701  # uint32 challenge, two holding registers (9985-9986)
 VERIFY_CODE_DIGITS = 6
 
 
@@ -612,10 +612,11 @@ def probe_direct_connection(
 ) -> None:
     """Verify a direct TCP link and complete the challenge authentication.
 
-    The all-in-one machine requires the 6-digit code shown by the device to
-    be written to holding registers 0x045C–0x045D (uint32, high word first).
-    A normal FC 0x10 response means the device accepted the code; an error
-    response is treated as verification failure.
+    The all-in-one machine requires the dynamic code shown by the device to
+    be written to holding registers 0x2701–0x2702 (9985–9986, uint32, high
+    word first).  The code refreshes every 120 s over TCP until verification
+    succeeds.  A normal FC 0x10 response means the device accepted the code;
+    an error response is treated as verification failure.
     """
     words = encode_verify_code(verify_code)
     soc_address = REGISTERS_BY_NAME["battery_soc"].address

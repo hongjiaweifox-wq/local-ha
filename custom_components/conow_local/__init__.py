@@ -102,7 +102,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConowLocalConfigEntry) -
     # Exactly one map is active for this entry; drop the other map's registry
     # entries so they do not linger as unavailable entities.
     _prune_stale_entities(hass, entry, coordinator.map_version)
-    # The October map is only safe on firmware that speaks its addresses.
+    # The finalized map is only safe on firmware that speaks its addresses.
     # Everything else keeps the v1 entities from registers.json.
     if coordinator.map_version == MAP_V2:
         # Shared by the switch and time platforms, and stopped again on unload.

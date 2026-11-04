@@ -37,7 +37,7 @@ PLATFORMS = [
     Platform.TIME,
 ]
 
-# v2 (October map) is panel-first: the panel exposes v2 monitoring/control,
+# v2 (finalized map) is panel-first: the panel exposes v2 monitoring/control,
 # and its on/off, HH:MM and read-only registers become HA entities. The v1
 # entity platforms are intentionally not set up so exactly one map is active.
 PANEL_PLATFORMS = [

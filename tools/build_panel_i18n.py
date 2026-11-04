@@ -15,6 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MAP_PATH = ROOT / "custom_components/conow_local/panel/panel_registers.json"
+V1_MAP_PATH = ROOT / "custom_components/conow_local/registers.json"
 OUT_DIR = ROOT / "custom_components/conow_local/panel/frontend/i18n"
 
 LANGS = ("en", "de", "nl")
@@ -22,18 +23,21 @@ LANGS = ("en", "de", "nl")
 # ---------------------------------------------------------------------------
 # Groups
 # ---------------------------------------------------------------------------
+# One entry per category column of each table.  Both maps now share the same
+# category names, so most ids are used by v1 and v2 alike.
 GROUPS = {
+    "system": ("System", "System", "Systeem"),
     "realtime": ("Real-time Monitoring", "Echtzeitüberwachung", "Realtime bewaking"),
-    "grid_detail": ("Grid Details", "Netzdetails", "Netdetails"),
-    "pv_detail": ("PV Details", "PV-Details", "PV-details"),
-    "battery_detail": ("Battery Details", "Batteriedetails", "Accudetails"),
-    "bypass_detail": ("Bypass", "Bypass", "Bypass"),
-    "capacity": (
-        "Capacity & Power Capability",
-        "Kapazität & Leistungsvermögen",
-        "Capaciteit & vermogen",
+    "monitor_detail": (
+        "Detailed Monitoring",
+        "Detaillierte Überwachung",
+        "Gedetailleerde bewaking",
     ),
-    "device_info": ("Device Information", "Geräteinformationen", "Apparaatinformatie"),
+    "device_info": (
+        "Operating Parameters & Device Information",
+        "Betriebsparameter & Geräteinformationen",
+        "Bedrijfsparameters & apparaatinformatie",
+    ),
     "lifetime_energy": ("Cumulative Energy", "Kumulierte Energie", "Cumulatieve energie"),
     "power_limit": (
         "Power & SoC Settings",
@@ -41,21 +45,8 @@ GROUPS = {
         "Vermogen & SoC-instellingen",
     ),
     "force_control": ("Real-time Control", "Echtzeitsteuerung", "Realtime besturing"),
-    "work_mode": (
-        "Work Mode & Base Load",
-        "Arbeitsmodus & Grundlast",
-        "Werkmodus & basislast",
-    ),
-    "backup_soc": ("Backup SoC", "Reserve-SoC", "Reserve-SoC"),
-    "reverse_power": (
-        "Reverse Power Control",
-        "Rückspeise-Steuerung",
-        "Terugleveringsbeveiliging",
-    ),
-    "switches": ("Switches", "Schalter", "Schakelaars"),
-    "modbus_timeout": ("Modbus Timeout", "Modbus-Timeout", "Modbus-time-out"),
-    "generator": ("Generator", "Generator", "Generator"),
-    "do_control": ("DO Control", "DO-Steuerung", "DO-besturing"),
+    "work_strategy": ("Work Strategy", "Arbeitsstrategie", "Werkstrategie"),
+    "generator_do": ("Generator & DO", "Generator & DO", "Generator & DO"),
     "base_load": ("Base Load", "Grundlast", "Basislast"),
     "base_load_schedule": (
         "Base Load Schedule",
@@ -323,7 +314,6 @@ REGISTERS = {
     ),
     "do1_state": ("DO1 Control", "DO1-Steuerung", "DO1-besturing"),
     "do2_state": ("DO2 Control", "DO2-Steuerung", "DO2-besturing"),
-    "base_load_power": ("Base Load Power", "Grundlastleistung", "Basislastvermogen"),
     "base_load_slot_count": (
         "Base Load Slot Count",
         "Anzahl Grundlast-Zeitfenster",
@@ -376,16 +366,6 @@ TOU_SLOT_TEMPLATES = {
         "Manuelle Lade-/Entladestrategie {n} Entladeleistung",
         "Handmatige laad-/ontlaadstrategie {n} ontlaadvermogen",
     ),
-    "curtail": (
-        "Manual Charge/Discharge Strategy {n} PV Curtailment",
-        "Manuelle Lade-/Entladestrategie {n} PV-Abregelung",
-        "Handmatige laad-/ontlaadstrategie {n} PV-beperking",
-    ),
-    "ignore_export": (
-        "Manual Charge/Discharge Strategy {n} Ignore Reverse-Power Limit",
-        "Manuelle Lade-/Entladestrategie {n} Rückspeise-Schutz ignorieren",
-        "Handmatige laad-/ontlaadstrategie {n} terugleverbeveiliging negeren",
-    ),
 }
 
 for _n in range(1, 9):
@@ -428,12 +408,12 @@ VALUES = {
         "0": ("idle", "idle", "idle"),
         "1": ("chg", "chg", "chg"),
         "2": ("dchg", "dchg", "dchg"),
+        "3": ("exit", "exit", "exit"),
     },
     "work_mode": {
         "1": ("Self-consumption", "Eigenverbrauch", "Eigen verbruik"),
-        "2": ("Backup priority", "Reservepriorität", "Reserveprioriteit"),
-        "3": ("Export priority", "Einspeisepriorität", "Exportprioriteit"),
-        "4": ("Manual schedule", "Manueller Zeitplan", "Handmatig schema"),
+        "2": ("Manual schedule", "Manueller Zeitplan", "Handmatig schema"),
+        "3": ("idle", "idle", "idle"),
     },
     "allow_battery_export": {
         "0": (
@@ -470,14 +450,6 @@ for _n in range(1, 9):
     VALUES[f"tou_slot{_n}_mode"] = {
         "0": ("Charge", "Laden", "Laden"),
         "1": ("Discharge", "Entladen", "Ontladen"),
-    }
-    VALUES[f"tou_slot{_n}_curtail"] = {
-        "0": ("Off", "Aus", "Uit"),
-        "1": ("On", "An", "Aan"),
-    }
-    VALUES[f"tou_slot{_n}_ignore_export"] = {
-        "0": ("Off", "Aus", "Uit"),
-        "1": ("Enabled", "Aktiviert", "Ingeschakeld"),
     }
 
 # ---------------------------------------------------------------------------
@@ -527,14 +499,14 @@ UI = {
         "titleCollapseGroup": "Collapse group",
         "mapMismatchV1": (
             "Device firmware {firmware} is below {minimum}, which is required for "
-            "the October register map (panel_registers.json); entities are read "
+            "the finalized register map (panel_registers.json); entities are read "
             "from registers.json (v1) and the grouped panel is unavailable."
         ),
         "mapUnreadable": (
-            "The device answers Modbus, but none of the October map addresses could "
+            "The device answers Modbus, but none of the finalized map addresses could "
             "be read — it probably still speaks the v1 protocol "
             "(10000–10036 / 10100–10107). Pick a v2 entry or point this entry at a "
-            "server that serves the October map."
+            "server that serves the finalized map."
         ),
         "emptyNoGroups": "No matching groups.",
         "comboNoMatch": "No matches",
@@ -597,15 +569,15 @@ UI = {
         "titleCollapseGroup": "Gruppe einklappen",
         "mapMismatchV1": (
             "Die Gerätefirmware {firmware} ist niedriger als die für die "
-            "Oktober-Registerzuordnung (panel_registers.json) erforderliche Version "
+            "endgültigen Registerzuordnung (panel_registers.json) erforderliche Version "
             "{minimum}; Entitäten werden aus registers.json (v1) gelesen und das "
             "Gruppenpanel ist nicht verfügbar."
         ),
         "mapUnreadable": (
-            "Das Gerät antwortet auf Modbus, aber keine Adresse der Oktober-Zuordnung "
+            "Das Gerät antwortet auf Modbus, aber keine Adresse der endgültigen Zuordnung "
             "konnte gelesen werden – es spricht vermutlich noch das v1-Protokoll "
             "(10000–10036 / 10100–10107). Wählen Sie einen v2-Eintrag oder verweisen "
-            "Sie diesen Eintrag auf einen Server mit der Oktober-Zuordnung."
+            "Sie diesen Eintrag auf einen Server mit der endgültigen Zuordnung."
         ),
         "emptyNoGroups": "Keine passenden Gruppen.",
         "comboNoMatch": "Keine Treffer",
@@ -668,14 +640,14 @@ UI = {
         "titleCollapseGroup": "Groep invouwen",
         "mapMismatchV1": (
             "Apparaatfirmware {firmware} is lager dan {minimum}, de vereiste versie "
-            "voor de oktober-registermap (panel_registers.json); entiteiten worden "
+            "voor de definitieve registermap (panel_registers.json); entiteiten worden "
             "uit registers.json (v1) gelezen en het groepenpaneel is niet beschikbaar."
         ),
         "mapUnreadable": (
             "Het apparaat antwoordt op Modbus, maar geen enkel adres van de "
-            "oktober-map kon worden gelezen — het spreekt waarschijnlijk nog het "
+            "definitieve map kon worden gelezen — het spreekt waarschijnlijk nog het "
             "v1-protocol (10000–10036 / 10100–10107). Kies een v2-item of laat dit "
-            "item naar een server wijzen die de oktober-map aanbiedt."
+            "item naar een server wijzen die de definitieve map aanbiedt."
         ),
         "emptyNoGroups": "Geen overeenkomende groepen.",
         "comboNoMatch": "Geen resultaten",
@@ -733,14 +705,14 @@ UI = {
         "titleExpandGroup": "展开分组",
         "titleCollapseGroup": "折叠分组",
         "mapMismatchV1": (
-            "设备固件版本 {firmware}，低于启用 10 月寄存器映射"
+            "设备固件版本 {firmware}，低于启用定稿寄存器映射"
             "（panel_registers.json）所需的 {minimum}；已按 registers.json（v1）"
             "读取实体，分组面板不可用。"
         ),
         "mapUnreadable": (
-            "设备有 Modbus 响应，但 10 月映射的地址全部读不到 —— 多半仍在 v1 协议"
+            "设备有 Modbus 响应，但定稿映射的地址全部读不到 —— 多半仍在 v1 协议"
             "（10000–10036 / 10100–10107）。请选择配置为 v2 的条目，"
-            "或把该条目指向提供 10 月映射的服务端。"
+            "或把该条目指向提供定稿映射的服务端。"
         ),
         "emptyNoGroups": "没有匹配的分组。",
         "comboNoMatch": "没有匹配项",
@@ -760,32 +732,69 @@ UI = {
 }
 
 
-def main() -> None:
-    data = json.loads(MAP_PATH.read_text(encoding="utf-8"))
-    all_codes = [item["code"] for item in data["registers"]]
-    group_ids = [item["id"] for item in data["groups"]]
+def _existing_translations(lang: str) -> dict:
+    """Load the current output file so v1-only names survive regeneration."""
+    path = OUT_DIR / f"{lang}.json"
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
 
-    missing = [code for code in all_codes if code not in REGISTERS]
+
+def main() -> None:
+    v2 = json.loads(MAP_PATH.read_text(encoding="utf-8"))
+    v1 = json.loads(V1_MAP_PATH.read_text(encoding="utf-8"))
+    entries = {
+        item["code"]: item
+        for item in (*v1["registers"], *v2["registers"])
+    }
+    all_codes = [item["code"] for item in v2["registers"]] + [
+        item["code"]
+        for item in v1["registers"]
+        if item["code"] not in {reg["code"] for reg in v2["registers"]}
+    ]
+    group_ids = [item["id"] for item in v2["groups"]] + [
+        item["id"]
+        for item in v1["groups"]
+        if item["id"] not in {group["id"] for group in v2["groups"]}
+    ]
+    existing = {
+        lang: _existing_translations(lang) for lang in (*LANGS, "zh-Hans")
+    }
+
+    missing = [
+        code
+        for code in all_codes
+        if code not in REGISTERS
+        and code not in existing["en"].get("registers", {})
+    ]
     if missing:
         raise SystemExit(f"Missing register translations: {missing}")
-    unknown = [code for code in REGISTERS if code not in set(all_codes)]
+    unknown = [code for code in REGISTERS if code not in entries]
     if unknown:
         raise SystemExit(f"Unknown register translations: {unknown}")
-    missing_groups = [group for group in group_ids if group not in GROUPS]
+    missing_groups = [
+        group
+        for group in group_ids
+        if group not in GROUPS and group not in existing["en"].get("groups", {})
+    ]
     if missing_groups:
         raise SystemExit(f"Missing group translations: {missing_groups}")
-    for item in data["registers"]:
-        if item.get("values") and item["code"] not in VALUES:
-            raise SystemExit(f"Missing enum translations: {item['code']}")
+    for code, item in entries.items():
+        if item.get("values") and code not in VALUES:
+            raise SystemExit(f"Missing enum translations: {code}")
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Chinese: names/labels/enums come straight from the map.
-    zh_registers = {item["code"]: item["name"] for item in data["registers"]}
-    zh_groups = {item["id"]: item["label"] for item in data["groups"]}
+    # Chinese: names/labels/enums come straight from the maps (v2 wins).
+    zh_registers = {item["code"]: item["name"] for item in v1["registers"]}
+    zh_registers.update(
+        {item["code"]: item["name"] for item in v2["registers"]}
+    )
+    zh_groups = {item["id"]: item["label"] for item in v1["groups"]}
+    zh_groups.update({item["id"]: item["label"] for item in v2["groups"]})
     zh_values = {
-        item["code"]: {str(raw): label for raw, label in item["values"].items()}
-        for item in data["registers"]
+        code: {str(raw): label for raw, label in item["values"].items()}
+        for code, item in entries.items()
         if item.get("values")
     }
     zh_payload = {
@@ -802,18 +811,32 @@ def main() -> None:
     )
 
     for index, lang in enumerate(LANGS):
+        registers_out = {}
+        for code in all_codes:
+            if code in REGISTERS:
+                registers_out[code] = REGISTERS[code][index]
+            else:
+                registers_out[code] = existing[lang]["registers"][code]
+        groups_out = {}
+        for group in group_ids:
+            if group in GROUPS:
+                groups_out[group] = GROUPS[group][index]
+            else:
+                groups_out[group] = existing[lang]["groups"][group]
+        values_out = {
+            code: {raw: labels[index] for raw, labels in options.items()}
+            for code, options in VALUES.items()
+        }
+        for code, item in entries.items():
+            if item.get("values") and code not in VALUES:
+                values_out[code] = existing[lang]["values"][code]
         payload = {
             "language": lang,
             "ui": UI[lang],
-            "groups": {group: translation[index] for group, translation in GROUPS.items()},
+            "groups": groups_out,
             "subgroups": SUBGROUPS[lang],
-            "registers": {
-                code: translation[index] for code, translation in REGISTERS.items()
-            },
-            "values": {
-                code: {raw: labels[index] for raw, labels in options.items()}
-                for code, options in VALUES.items()
-            },
+            "registers": registers_out,
+            "values": values_out,
         }
         (OUT_DIR / f"{lang}.json").write_text(
             json.dumps(payload, ensure_ascii=False, indent=2) + "\n",

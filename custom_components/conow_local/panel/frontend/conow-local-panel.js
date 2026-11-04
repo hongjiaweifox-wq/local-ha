@@ -1,7 +1,7 @@
 /**
  * Conow Local grouping panel.
  *
- * Renders the grouped October protocol map (`panel_registers.json`) with live
+ * Renders the grouped finalized protocol map (`panel_registers.json`) with live
  * values read over Modbus by the integration. Writable registers are edited
  * with Home Assistant form controls and sent per group with one batch write.
  */
@@ -364,7 +364,7 @@ const PANEL_STYLE = `
   }
 `;
 
-const I18N_VERSION = "2";
+const I18N_VERSION = "5";
 const FALLBACK_LANGUAGE = "en";
 
 class ConowLocalPanel extends HTMLElement {
@@ -1701,6 +1701,12 @@ class ConowLocalPanel extends HTMLElement {
   _mapMismatchHint() {
     if (!this._state) {
       return "";
+    }
+    // Both maps are grouped now; only warn when the device sent no groups.
+    if (Object.keys(this._state.groups || {}).length) {
+      return this._state.map_readable === false
+        ? `<div class="hint">${this._t("mapUnreadable")}</div>`
+        : "";
     }
     if (this._state.map_version === 1) {
       const firmware = this._state.firmware_version || this._t("unknownFirmware");

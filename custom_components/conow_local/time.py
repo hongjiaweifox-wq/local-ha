@@ -1,4 +1,4 @@
-"""Time entities for the HH:MM registers of the October panel map."""
+"""Time entities for the HH:MM registers of the finalized panel map."""
 
 from __future__ import annotations
 
@@ -61,7 +61,7 @@ async def async_setup_entry(
     """Set up one time entity per HH:MM register in the panel map."""
     coordinator = get_panel_coordinator(hass, entry.entry_id)
     if coordinator is None:
-        # RTU entries have no October map; TCP entries with an unreadable map
+        # RTU entries have no finalized map; TCP entries with an unreadable map
         # are skipped as well.
         return
     registers = [register for register in panel_map.get_registers() if register.is_time]

@@ -27,7 +27,7 @@ from .panel_functions import (
 
 URL_BASE = "/conow_local_panel_static"
 PANEL_WEBCOMPONENT = "conow-local-panel"
-PANEL_STATIC_VERSION = "47"
+PANEL_STATIC_VERSION = "50"
 PANEL_SCRIPT_URL = f"{URL_BASE}/conow-local-panel.js?v={PANEL_STATIC_VERSION}"
 NOTIFY_SCRIPT_URL = f"{URL_BASE}/conow-local-notify.js?v={PANEL_STATIC_VERSION}"
 PANEL_SIDEBAR_ENABLED = True
@@ -56,7 +56,7 @@ async def websocket_get_panel_devices(
 async def websocket_get_panel_map(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
 ) -> None:
-    """Return the grouped October map without device values."""
+    """Return the grouped finalized map without device values."""
     result = await hass.async_add_executor_job(build_panel_map)
     connection.send_result(msg["id"], result)
 
@@ -71,7 +71,7 @@ async def websocket_get_panel_map(
 async def websocket_get_panel_functions(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
 ) -> None:
-    """Return the grouped October-map read model for one device."""
+    """Return the grouped finalized-map read model for one device."""
     try:
         state = await async_build_panel_state(hass, msg["device_id"])
     except LookupError:
@@ -127,7 +127,7 @@ async def async_register_local_panel(hass: HomeAssistant) -> None:
     try:
         await hass.async_add_executor_job(panel_map.preload)
     except (OSError, ValueError, KeyError) as err:
-        LOGGER.error("Panel: cannot load panel_registers.json: %s", err)
+        LOGGER.error("Panel: cannot load the grouped register maps: %s", err)
     _register_websocket_api(hass)
 
     frontend_dir = Path(__file__).parent / "frontend"

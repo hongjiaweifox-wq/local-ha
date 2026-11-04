@@ -1,6 +1,6 @@
 """Keep single-register writes out of the HA device page.
 
-The October map is written one group at a time so a schedule or strategy is
+The finalized map is written one group at a time so a schedule or strategy is
 applied atomically; toggling one register from the device page would split a
 group across several frames. Every write attempt from a panel-backed entity
 is refused and points the user at the grouping panel instead.

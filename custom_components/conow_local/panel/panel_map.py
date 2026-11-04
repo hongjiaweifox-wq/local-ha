@@ -1,8 +1,9 @@
-"""Read-only view of the October protocol map (``panel_registers.json``).
+"""Read-only view of the grouped register maps.
 
-The entity layer still parses ``registers.json`` (protocol v1).  This module
-loads the second, grouped map distilled from ``10月技术文档.xlsx`` so the
-grouping panel can render it without touching the entity definitions.
+``panel_registers.json`` (v2, finalized protocol) is the default.  The v1 map
+``registers.json`` is loaded with the same schema, so both firmware branches
+render the same grouped panel; callers pass the map id selected by
+``map_router.select_map``.
 """
 
 from __future__ import annotations
@@ -14,7 +15,11 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from ..map_router import MAP_V1, MAP_V2
+
 MAP_PATH = Path(__file__).with_name("panel_registers.json")
+V1_MAP_PATH = Path(__file__).parent.parent / "registers.json"
+MAP_PATHS = {MAP_V1: V1_MAP_PATH, MAP_V2: MAP_PATH}
 
 SUPPORTED_DTYPES = ("uint16", "int16", "uint32", "int32", "string")
 MAX_BLOCK_REGISTERS = 125  # Modbus FC 0x03 limit
@@ -29,7 +34,7 @@ DTYPE_RANGES: dict[str, tuple[int, int]] = {
 
 @dataclass(frozen=True, slots=True)
 class PanelRegister:
-    """One register (or multi-register field) from the October map."""
+    """One register (or multi-register field) from the finalized map."""
 
     code: str
     name: str
@@ -89,17 +94,18 @@ class PanelGroup:
     count_register: str
 
 
-@lru_cache(maxsize=1)
-def _load() -> dict[str, Any]:
-    with MAP_PATH.open(encoding="utf-8") as handle:
+@lru_cache(maxsize=2)
+def _load(map_version: str = MAP_V2) -> dict[str, Any]:
+    path = MAP_PATHS.get(map_version, MAP_PATH)
+    with path.open(encoding="utf-8") as handle:
         return json.load(handle)
 
 
-@lru_cache(maxsize=1)
-def get_registers() -> tuple[PanelRegister, ...]:
-    """Return every register, ordered by address."""
+@lru_cache(maxsize=2)
+def get_registers(map_version: str = MAP_V2) -> tuple[PanelRegister, ...]:
+    """Return every register of one map, ordered by address."""
     registers: list[PanelRegister] = []
-    for item in _load()["registers"]:
+    for item in _load(map_version)["registers"]:
         dtype = item["dtype"]
         if dtype not in SUPPORTED_DTYPES:
             raise ValueError(f"Unsupported dtype {dtype!r} for {item['code']}")
@@ -139,17 +145,17 @@ def get_registers() -> tuple[PanelRegister, ...]:
     return tuple(registers)
 
 
-@lru_cache(maxsize=1)
-def get_register_index() -> dict[str, PanelRegister]:
-    return {reg.code: reg for reg in get_registers()}
+@lru_cache(maxsize=2)
+def get_register_index(map_version: str = MAP_V2) -> dict[str, PanelRegister]:
+    return {reg.code: reg for reg in get_registers(map_version)}
 
 
-@lru_cache(maxsize=1)
-def get_groups() -> tuple[PanelGroup, ...]:
+@lru_cache(maxsize=2)
+def get_groups(map_version: str = MAP_V2) -> tuple[PanelGroup, ...]:
     """Return groups ordered by ``order``."""
-    index = get_register_index()
+    index = get_register_index(map_version)
     groups: list[PanelGroup] = []
-    for item in _load()["groups"]:
+    for item in _load(map_version).get("groups", ()):
         members = tuple(item["members"])
         missing = [code for code in members if code not in index]
         if missing:
@@ -198,15 +204,17 @@ def get_groups() -> tuple[PanelGroup, ...]:
     return tuple(groups)
 
 
-def get_group(group_id: str) -> PanelGroup | None:
-    return next((group for group in get_groups() if group.id == group_id), None)
+def get_group(group_id: str, map_version: str = MAP_V2) -> PanelGroup | None:
+    return next(
+        (group for group in get_groups(map_version) if group.id == group_id), None
+    )
 
 
-@lru_cache(maxsize=1)
-def get_block_spans() -> dict[str, tuple[int, int]]:
+@lru_cache(maxsize=2)
+def get_block_spans(map_version: str = MAP_V2) -> dict[str, tuple[int, int]]:
     """Return ``block -> (start, register count)`` for FC 0x03 reads."""
     spans: dict[str, tuple[int, int]] = {}
-    for register in get_registers():
+    for register in get_registers(map_version):
         start, count = spans.get(register.block, (register.address, 0))
         start = min(start, register.address)
         end = max(register.address + register.register_count, start + count)
@@ -217,24 +225,26 @@ def get_block_spans() -> dict[str, tuple[int, int]]:
     return spans
 
 
-def get_map_meta() -> dict[str, Any]:
+def get_map_meta(map_version: str = MAP_V2) -> dict[str, Any]:
     """Return version/meta/protocol information for the frontend."""
-    data = _load()
+    data = _load(map_version)
     return {
         "version": data.get("version"),
         "meta": data.get("meta", {}),
         "protocol": data.get("protocol", {}),
         "blocks": data.get("blocks", {}),
+        "source": MAP_PATHS.get(map_version, MAP_PATH).name,
     }
 
 
 def preload() -> None:
-    """Load and validate the map; call from an executor thread, not the loop."""
-    get_registers()
-    get_register_index()
-    get_groups()
-    get_block_spans()
-    _load()
+    """Load and validate both maps; call from an executor thread, not the loop."""
+    for map_version in MAP_PATHS:
+        get_registers(map_version)
+        get_register_index(map_version)
+        get_groups(map_version)
+        get_block_spans(map_version)
+        _load(map_version)
 
 
 def decode_raw(register: PanelRegister, words: list[int], index: int) -> int | str | None:
@@ -454,11 +464,13 @@ def describe_value(register: PanelRegister, raw: int | str | None) -> str:
     return str(value)
 
 
-def decode_block(block: str, words: list[int]) -> dict[str, dict[str, Any]]:
+def decode_block(
+    block: str, words: list[int], map_version: str = MAP_V2
+) -> dict[str, dict[str, Any]]:
     """Decode a raw block read into ``{code: {raw, value, display}}``."""
     result: dict[str, dict[str, Any]] = {}
-    start, _ = get_block_spans()[block]
-    for register in get_registers():
+    start, _ = get_block_spans(map_version)[block]
+    for register in get_registers(map_version):
         if register.block != block:
             continue
         index = register.address - start

@@ -53,7 +53,7 @@ class ConowModbusBinarySensor(
 class ConowPanelBinarySensor(
     CoordinatorEntity[ConowPanelCoordinator], BinarySensorEntity
 ):
-    """Read-only on/off register from the October panel map."""
+    """Read-only on/off register from the finalized panel map."""
 
     _attr_has_entity_name = True
 

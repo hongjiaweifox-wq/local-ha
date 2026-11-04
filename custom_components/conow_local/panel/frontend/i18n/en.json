@@ -25,18 +25,15 @@
     "warningInvalidTime": "Invalid reading — set again",
     "noticeClamped": "{name} limited to {value} ({min}–{max})",
     "noticeTimeClamped": "Time limited to {value} (valid range 00:00–23:59)",
-    "confirmWriteTitle": "Batch write",
-    "confirmWrite": "Write group “{group}” to the device?",
-    "actionCancel": "Cancel",
-    "actionConfirm": "Confirm",
+    "confirmWrite": "Write group “{group}” to the device?\n\n{preview}",
     "noticeApplied": "{group}: sent",
     "noticeFailed": "{group}: {error}",
     "actionApplying": "Sending…",
     "actionApply": "Apply group",
     "titleExpandGroup": "Expand group",
     "titleCollapseGroup": "Collapse group",
-    "mapMismatchV1": "Device firmware {firmware} is below {minimum}, which is required for the October register map (panel_registers.json); entities are read from registers.json (v1) and the grouped panel is unavailable.",
-    "mapUnreadable": "The device answers Modbus, but none of the October map addresses could be read — it probably still speaks the v1 protocol (10000–10036 / 10100–10107). Pick a v2 entry or point this entry at a server that serves the October map.",
+    "mapMismatchV1": "Device firmware {firmware} is below {minimum}, which is required for the finalized register map (panel_registers.json); entities are read from registers.json (v1) and the grouped panel is unavailable.",
+    "mapUnreadable": "The device answers Modbus, but none of the finalized map addresses could be read — it probably still speaks the v1 protocol (10000–10036 / 10100–10107). Pick a v2 entry or point this entry at a server that serves the finalized map.",
     "emptyNoGroups": "No matching groups.",
     "comboNoMatch": "No matches",
     "modeTcpDirect": "TCP direct",
@@ -54,25 +51,17 @@
   },
   "groups": {
     "realtime": "Real-time Monitoring",
-    "grid_detail": "Grid Details",
-    "pv_detail": "PV Details",
-    "battery_detail": "Battery Details",
-    "bypass_detail": "Bypass",
-    "capacity": "Capacity & Power Capability",
-    "device_info": "Device Information",
+    "monitor_detail": "Detailed Monitoring",
+    "device_info": "Operating Parameters & Device Information",
     "lifetime_energy": "Cumulative Energy",
     "power_limit": "Power & SoC Settings",
     "force_control": "Real-time Control",
-    "work_mode": "Work Mode & Base Load",
-    "backup_soc": "Backup SoC",
-    "reverse_power": "Reverse Power Control",
-    "switches": "Switches",
-    "modbus_timeout": "Modbus Timeout",
-    "generator": "Generator",
-    "do_control": "DO Control",
+    "work_strategy": "Work Strategy",
+    "generator_do": "Generator & DO",
     "base_load": "Base Load",
     "base_load_schedule": "Base Load Schedule",
-    "tou_schedule": "TOU Schedule"
+    "tou_schedule": "TOU Schedule",
+    "system": "System"
   },
   "subgroups": {
     "slot": "Slot {n}",
@@ -147,7 +136,6 @@
     "charge_discharge_cutoff_soc": "Charge/Discharge Cutoff SoC",
     "charge_discharge_duration": "Charge/Discharge Duration",
     "work_mode": "Work Mode",
-    "base_load_setpoint": "Base Load",
     "backup_soc": "Backup SoC",
     "allow_reverse_power": "Allowed Reverse Power",
     "allow_battery_export": "Allow Battery Export",
@@ -163,89 +151,98 @@
     "generator_stop_soc": "Generator Stop SoC",
     "do1_state": "DO1 Control",
     "do2_state": "DO2 Control",
-    "base_load_power": "Base Load Power",
+    "base_load_setpoint": "Base Load",
     "base_load_slot_count": "Base Load Slot Count",
-    "tou_slot_count": "TOU Slot Count",
     "base_load_slot1_start": "Base Load Slot 1 Start Time",
     "base_load_slot1_end": "Base Load Slot 1 End Time",
     "base_load_slot1_power": "Base Load Slot 1 Power",
+    "base_load_slot2_start": "Base Load Slot 2 Start Time",
+    "base_load_slot2_end": "Base Load Slot 2 End Time",
+    "base_load_slot2_power": "Base Load Slot 2 Power",
+    "base_load_slot3_start": "Base Load Slot 3 Start Time",
+    "base_load_slot3_end": "Base Load Slot 3 End Time",
+    "base_load_slot3_power": "Base Load Slot 3 Power",
+    "base_load_slot4_start": "Base Load Slot 4 Start Time",
+    "base_load_slot4_end": "Base Load Slot 4 End Time",
+    "base_load_slot4_power": "Base Load Slot 4 Power",
+    "base_load_slot5_start": "Base Load Slot 5 Start Time",
+    "base_load_slot5_end": "Base Load Slot 5 End Time",
+    "base_load_slot5_power": "Base Load Slot 5 Power",
+    "base_load_slot6_start": "Base Load Slot 6 Start Time",
+    "base_load_slot6_end": "Base Load Slot 6 End Time",
+    "base_load_slot6_power": "Base Load Slot 6 Power",
+    "base_load_slot7_start": "Base Load Slot 7 Start Time",
+    "base_load_slot7_end": "Base Load Slot 7 End Time",
+    "base_load_slot7_power": "Base Load Slot 7 Power",
+    "base_load_slot8_start": "Base Load Slot 8 Start Time",
+    "base_load_slot8_end": "Base Load Slot 8 End Time",
+    "base_load_slot8_power": "Base Load Slot 8 Power",
+    "tou_slot_count": "TOU Slot Count",
     "tou_slot1_start": "Manual Charge/Discharge Strategy 1 Start Time",
     "tou_slot1_end": "Manual Charge/Discharge Strategy 1 End Time",
     "tou_slot1_mode": "Manual Charge/Discharge Strategy 1 Work Mode",
     "tou_slot1_target_soc": "Manual Charge/Discharge Strategy 1 Target SoC",
     "tou_slot1_power": "Manual Charge/Discharge Strategy 1 Discharge Power",
-    "tou_slot1_curtail": "Manual Charge/Discharge Strategy 1 PV Curtailment",
-    "tou_slot1_ignore_export": "Manual Charge/Discharge Strategy 1 Ignore Reverse-Power Limit",
-    "base_load_slot2_start": "Base Load Slot 2 Start Time",
-    "base_load_slot2_end": "Base Load Slot 2 End Time",
-    "base_load_slot2_power": "Base Load Slot 2 Power",
     "tou_slot2_start": "Manual Charge/Discharge Strategy 2 Start Time",
     "tou_slot2_end": "Manual Charge/Discharge Strategy 2 End Time",
     "tou_slot2_mode": "Manual Charge/Discharge Strategy 2 Work Mode",
     "tou_slot2_target_soc": "Manual Charge/Discharge Strategy 2 Target SoC",
     "tou_slot2_power": "Manual Charge/Discharge Strategy 2 Discharge Power",
-    "tou_slot2_curtail": "Manual Charge/Discharge Strategy 2 PV Curtailment",
-    "tou_slot2_ignore_export": "Manual Charge/Discharge Strategy 2 Ignore Reverse-Power Limit",
-    "base_load_slot3_start": "Base Load Slot 3 Start Time",
-    "base_load_slot3_end": "Base Load Slot 3 End Time",
-    "base_load_slot3_power": "Base Load Slot 3 Power",
     "tou_slot3_start": "Manual Charge/Discharge Strategy 3 Start Time",
     "tou_slot3_end": "Manual Charge/Discharge Strategy 3 End Time",
     "tou_slot3_mode": "Manual Charge/Discharge Strategy 3 Work Mode",
     "tou_slot3_target_soc": "Manual Charge/Discharge Strategy 3 Target SoC",
     "tou_slot3_power": "Manual Charge/Discharge Strategy 3 Discharge Power",
-    "tou_slot3_curtail": "Manual Charge/Discharge Strategy 3 PV Curtailment",
-    "tou_slot3_ignore_export": "Manual Charge/Discharge Strategy 3 Ignore Reverse-Power Limit",
-    "base_load_slot4_start": "Base Load Slot 4 Start Time",
-    "base_load_slot4_end": "Base Load Slot 4 End Time",
-    "base_load_slot4_power": "Base Load Slot 4 Power",
     "tou_slot4_start": "Manual Charge/Discharge Strategy 4 Start Time",
     "tou_slot4_end": "Manual Charge/Discharge Strategy 4 End Time",
     "tou_slot4_mode": "Manual Charge/Discharge Strategy 4 Work Mode",
     "tou_slot4_target_soc": "Manual Charge/Discharge Strategy 4 Target SoC",
     "tou_slot4_power": "Manual Charge/Discharge Strategy 4 Discharge Power",
-    "tou_slot4_curtail": "Manual Charge/Discharge Strategy 4 PV Curtailment",
-    "tou_slot4_ignore_export": "Manual Charge/Discharge Strategy 4 Ignore Reverse-Power Limit",
-    "base_load_slot5_start": "Base Load Slot 5 Start Time",
-    "base_load_slot5_end": "Base Load Slot 5 End Time",
-    "base_load_slot5_power": "Base Load Slot 5 Power",
     "tou_slot5_start": "Manual Charge/Discharge Strategy 5 Start Time",
     "tou_slot5_end": "Manual Charge/Discharge Strategy 5 End Time",
     "tou_slot5_mode": "Manual Charge/Discharge Strategy 5 Work Mode",
     "tou_slot5_target_soc": "Manual Charge/Discharge Strategy 5 Target SoC",
     "tou_slot5_power": "Manual Charge/Discharge Strategy 5 Discharge Power",
-    "tou_slot5_curtail": "Manual Charge/Discharge Strategy 5 PV Curtailment",
-    "tou_slot5_ignore_export": "Manual Charge/Discharge Strategy 5 Ignore Reverse-Power Limit",
-    "base_load_slot6_start": "Base Load Slot 6 Start Time",
-    "base_load_slot6_end": "Base Load Slot 6 End Time",
-    "base_load_slot6_power": "Base Load Slot 6 Power",
     "tou_slot6_start": "Manual Charge/Discharge Strategy 6 Start Time",
     "tou_slot6_end": "Manual Charge/Discharge Strategy 6 End Time",
     "tou_slot6_mode": "Manual Charge/Discharge Strategy 6 Work Mode",
     "tou_slot6_target_soc": "Manual Charge/Discharge Strategy 6 Target SoC",
     "tou_slot6_power": "Manual Charge/Discharge Strategy 6 Discharge Power",
-    "tou_slot6_curtail": "Manual Charge/Discharge Strategy 6 PV Curtailment",
-    "tou_slot6_ignore_export": "Manual Charge/Discharge Strategy 6 Ignore Reverse-Power Limit",
-    "base_load_slot7_start": "Base Load Slot 7 Start Time",
-    "base_load_slot7_end": "Base Load Slot 7 End Time",
-    "base_load_slot7_power": "Base Load Slot 7 Power",
     "tou_slot7_start": "Manual Charge/Discharge Strategy 7 Start Time",
     "tou_slot7_end": "Manual Charge/Discharge Strategy 7 End Time",
     "tou_slot7_mode": "Manual Charge/Discharge Strategy 7 Work Mode",
     "tou_slot7_target_soc": "Manual Charge/Discharge Strategy 7 Target SoC",
     "tou_slot7_power": "Manual Charge/Discharge Strategy 7 Discharge Power",
-    "tou_slot7_curtail": "Manual Charge/Discharge Strategy 7 PV Curtailment",
-    "tou_slot7_ignore_export": "Manual Charge/Discharge Strategy 7 Ignore Reverse-Power Limit",
-    "base_load_slot8_start": "Base Load Slot 8 Start Time",
-    "base_load_slot8_end": "Base Load Slot 8 End Time",
-    "base_load_slot8_power": "Base Load Slot 8 Power",
     "tou_slot8_start": "Manual Charge/Discharge Strategy 8 Start Time",
     "tou_slot8_end": "Manual Charge/Discharge Strategy 8 End Time",
     "tou_slot8_mode": "Manual Charge/Discharge Strategy 8 Work Mode",
     "tou_slot8_target_soc": "Manual Charge/Discharge Strategy 8 Target SoC",
     "tou_slot8_power": "Manual Charge/Discharge Strategy 8 Discharge Power",
-    "tou_slot8_curtail": "Manual Charge/Discharge Strategy 8 PV Curtailment",
-    "tou_slot8_ignore_export": "Manual Charge/Discharge Strategy 8 Ignore Reverse-Power Limit"
+    "system_status": "System Status",
+    "fault_code": "Fault Code",
+    "battery_soc": "Battery SoC",
+    "battery_design_capacity": "Battery Rated Capacity",
+    "battery_cell_temp_max": "Max Cell Temperature",
+    "battery_cell_temp_min": "Min Cell Temperature",
+    "battery_cumulative_charge_energy": "Battery Total Charged Energy",
+    "battery_cumulative_discharge_energy": "Battery Total Discharged Energy",
+    "grid_cumulative_import_energy": "Grid Total Import Energy",
+    "grid_cumulative_export_energy": "Grid Total Export Energy",
+    "backup_load_power": "Backup Load Power",
+    "backup_load_cumulative_export_energy": "Backup Load Total Output Energy",
+    "backup_load_cumulative_import_energy": "Backup Load Total Input Energy",
+    "pv_total_cumulative_energy": "PV Total Generated Energy",
+    "pv1_power": "PV1 Power",
+    "pv1_cumulative_energy": "PV1 Total Generated Energy",
+    "pv2_power": "PV2 Power",
+    "pv2_cumulative_energy": "PV2 Total Generated Energy",
+    "pv3_power": "PV3 Power",
+    "pv3_cumulative_energy": "PV3 Total Generated Energy",
+    "pv4_power": "PV4 Power",
+    "pv4_cumulative_energy": "PV4 Total Generated Energy",
+    "grid_charge_power_limit": "Grid Charge Power Limit",
+    "battery_discharge_power_limit": "Battery Discharge Power Limit",
+    "battery_cutoff_soc": "Discharge Cutoff SoC"
   },
   "values": {
     "meter_connection_state": {
@@ -265,13 +262,13 @@
     "charge_discharge_direction": {
       "0": "idle",
       "1": "chg",
-      "2": "dchg"
+      "2": "dchg",
+      "3": "exit"
     },
     "work_mode": {
       "1": "Self-consumption",
-      "2": "Backup priority",
-      "3": "Export priority",
-      "4": "Manual schedule"
+      "2": "Manual schedule",
+      "3": "idle"
     },
     "allow_battery_export": {
       "0": "Battery export disabled",
@@ -305,97 +302,33 @@
       "0": "Charge",
       "1": "Discharge"
     },
-    "tou_slot1_curtail": {
-      "0": "Off",
-      "1": "On"
-    },
-    "tou_slot1_ignore_export": {
-      "0": "Off",
-      "1": "Enabled"
-    },
     "tou_slot2_mode": {
       "0": "Charge",
       "1": "Discharge"
-    },
-    "tou_slot2_curtail": {
-      "0": "Off",
-      "1": "On"
-    },
-    "tou_slot2_ignore_export": {
-      "0": "Off",
-      "1": "Enabled"
     },
     "tou_slot3_mode": {
       "0": "Charge",
       "1": "Discharge"
     },
-    "tou_slot3_curtail": {
-      "0": "Off",
-      "1": "On"
-    },
-    "tou_slot3_ignore_export": {
-      "0": "Off",
-      "1": "Enabled"
-    },
     "tou_slot4_mode": {
       "0": "Charge",
       "1": "Discharge"
-    },
-    "tou_slot4_curtail": {
-      "0": "Off",
-      "1": "On"
-    },
-    "tou_slot4_ignore_export": {
-      "0": "Off",
-      "1": "Enabled"
     },
     "tou_slot5_mode": {
       "0": "Charge",
       "1": "Discharge"
     },
-    "tou_slot5_curtail": {
-      "0": "Off",
-      "1": "On"
-    },
-    "tou_slot5_ignore_export": {
-      "0": "Off",
-      "1": "Enabled"
-    },
     "tou_slot6_mode": {
       "0": "Charge",
       "1": "Discharge"
-    },
-    "tou_slot6_curtail": {
-      "0": "Off",
-      "1": "On"
-    },
-    "tou_slot6_ignore_export": {
-      "0": "Off",
-      "1": "Enabled"
     },
     "tou_slot7_mode": {
       "0": "Charge",
       "1": "Discharge"
     },
-    "tou_slot7_curtail": {
-      "0": "Off",
-      "1": "On"
-    },
-    "tou_slot7_ignore_export": {
-      "0": "Off",
-      "1": "Enabled"
-    },
     "tou_slot8_mode": {
       "0": "Charge",
       "1": "Discharge"
-    },
-    "tou_slot8_curtail": {
-      "0": "Off",
-      "1": "On"
-    },
-    "tou_slot8_ignore_export": {
-      "0": "Off",
-      "1": "Enabled"
     }
   }
 }

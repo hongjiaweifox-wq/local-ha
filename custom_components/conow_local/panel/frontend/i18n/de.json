@@ -25,18 +25,15 @@
     "warningInvalidTime": "Ungültiger Wert – erneut einstellen",
     "noticeClamped": "{name} auf {value} begrenzt ({min}–{max})",
     "noticeTimeClamped": "Zeit auf {value} begrenzt (gültig 00:00–23:59)",
-    "confirmWriteTitle": "Sammel-Schreiben",
-    "confirmWrite": "Gruppe „{group}“ auf das Gerät schreiben?",
-    "actionCancel": "Abbrechen",
-    "actionConfirm": "Bestätigen",
+    "confirmWrite": "Gruppe „{group}“ auf das Gerät schreiben?\n\n{preview}",
     "noticeApplied": "{group}: gesendet",
     "noticeFailed": "{group}: {error}",
     "actionApplying": "Wird gesendet…",
     "actionApply": "Gruppe senden",
     "titleExpandGroup": "Gruppe ausklappen",
     "titleCollapseGroup": "Gruppe einklappen",
-    "mapMismatchV1": "Die Gerätefirmware {firmware} ist niedriger als die für die Oktober-Registerzuordnung (panel_registers.json) erforderliche Version {minimum}; Entitäten werden aus registers.json (v1) gelesen und das Gruppenpanel ist nicht verfügbar.",
-    "mapUnreadable": "Das Gerät antwortet auf Modbus, aber keine Adresse der Oktober-Zuordnung konnte gelesen werden – es spricht vermutlich noch das v1-Protokoll (10000–10036 / 10100–10107). Wählen Sie einen v2-Eintrag oder verweisen Sie diesen Eintrag auf einen Server mit der Oktober-Zuordnung.",
+    "mapMismatchV1": "Die Gerätefirmware {firmware} ist niedriger als die für die endgültigen Registerzuordnung (panel_registers.json) erforderliche Version {minimum}; Entitäten werden aus registers.json (v1) gelesen und das Gruppenpanel ist nicht verfügbar.",
+    "mapUnreadable": "Das Gerät antwortet auf Modbus, aber keine Adresse der endgültigen Zuordnung konnte gelesen werden – es spricht vermutlich noch das v1-Protokoll (10000–10036 / 10100–10107). Wählen Sie einen v2-Eintrag oder verweisen Sie diesen Eintrag auf einen Server mit der endgültigen Zuordnung.",
     "emptyNoGroups": "Keine passenden Gruppen.",
     "comboNoMatch": "Keine Treffer",
     "modeTcpDirect": "TCP direkt",
@@ -54,25 +51,17 @@
   },
   "groups": {
     "realtime": "Echtzeitüberwachung",
-    "grid_detail": "Netzdetails",
-    "pv_detail": "PV-Details",
-    "battery_detail": "Batteriedetails",
-    "bypass_detail": "Bypass",
-    "capacity": "Kapazität & Leistungsvermögen",
-    "device_info": "Geräteinformationen",
+    "monitor_detail": "Detaillierte Überwachung",
+    "device_info": "Betriebsparameter & Geräteinformationen",
     "lifetime_energy": "Kumulierte Energie",
     "power_limit": "Leistungs- & SoC-Einstellungen",
     "force_control": "Echtzeitsteuerung",
-    "work_mode": "Arbeitsmodus & Grundlast",
-    "backup_soc": "Reserve-SoC",
-    "reverse_power": "Rückspeise-Steuerung",
-    "switches": "Schalter",
-    "modbus_timeout": "Modbus-Timeout",
-    "generator": "Generator",
-    "do_control": "DO-Steuerung",
+    "work_strategy": "Arbeitsstrategie",
+    "generator_do": "Generator & DO",
     "base_load": "Grundlast",
     "base_load_schedule": "Grundlast-Zeitplan",
-    "tou_schedule": "TOU-Zeitplan"
+    "tou_schedule": "TOU-Zeitplan",
+    "system": "System"
   },
   "subgroups": {
     "slot": "Zeitfenster {n}",
@@ -147,7 +136,6 @@
     "charge_discharge_cutoff_soc": "Lade-/Entlade-Abschalt-SoC",
     "charge_discharge_duration": "Lade-/Entladedauer",
     "work_mode": "Arbeitsmodus",
-    "base_load_setpoint": "Grundlast",
     "backup_soc": "Reserve-SoC",
     "allow_reverse_power": "Zulässige Rückspeiseleistung",
     "allow_battery_export": "Batterieeinspeisung erlauben",
@@ -163,89 +151,98 @@
     "generator_stop_soc": "Generator-Stopp-SoC",
     "do1_state": "DO1-Steuerung",
     "do2_state": "DO2-Steuerung",
-    "base_load_power": "Grundlastleistung",
+    "base_load_setpoint": "Grundlast",
     "base_load_slot_count": "Anzahl Grundlast-Zeitfenster",
-    "tou_slot_count": "Anzahl TOU-Zeitfenster",
     "base_load_slot1_start": "Grundlast Zeitfenster 1 Startzeit",
     "base_load_slot1_end": "Grundlast Zeitfenster 1 Endzeit",
     "base_load_slot1_power": "Grundlast Zeitfenster 1 Leistung",
+    "base_load_slot2_start": "Grundlast Zeitfenster 2 Startzeit",
+    "base_load_slot2_end": "Grundlast Zeitfenster 2 Endzeit",
+    "base_load_slot2_power": "Grundlast Zeitfenster 2 Leistung",
+    "base_load_slot3_start": "Grundlast Zeitfenster 3 Startzeit",
+    "base_load_slot3_end": "Grundlast Zeitfenster 3 Endzeit",
+    "base_load_slot3_power": "Grundlast Zeitfenster 3 Leistung",
+    "base_load_slot4_start": "Grundlast Zeitfenster 4 Startzeit",
+    "base_load_slot4_end": "Grundlast Zeitfenster 4 Endzeit",
+    "base_load_slot4_power": "Grundlast Zeitfenster 4 Leistung",
+    "base_load_slot5_start": "Grundlast Zeitfenster 5 Startzeit",
+    "base_load_slot5_end": "Grundlast Zeitfenster 5 Endzeit",
+    "base_load_slot5_power": "Grundlast Zeitfenster 5 Leistung",
+    "base_load_slot6_start": "Grundlast Zeitfenster 6 Startzeit",
+    "base_load_slot6_end": "Grundlast Zeitfenster 6 Endzeit",
+    "base_load_slot6_power": "Grundlast Zeitfenster 6 Leistung",
+    "base_load_slot7_start": "Grundlast Zeitfenster 7 Startzeit",
+    "base_load_slot7_end": "Grundlast Zeitfenster 7 Endzeit",
+    "base_load_slot7_power": "Grundlast Zeitfenster 7 Leistung",
+    "base_load_slot8_start": "Grundlast Zeitfenster 8 Startzeit",
+    "base_load_slot8_end": "Grundlast Zeitfenster 8 Endzeit",
+    "base_load_slot8_power": "Grundlast Zeitfenster 8 Leistung",
+    "tou_slot_count": "Anzahl TOU-Zeitfenster",
     "tou_slot1_start": "Manuelle Lade-/Entladestrategie 1 Startzeit",
     "tou_slot1_end": "Manuelle Lade-/Entladestrategie 1 Endzeit",
     "tou_slot1_mode": "Manuelle Lade-/Entladestrategie 1 Arbeitsmodus",
     "tou_slot1_target_soc": "Manuelle Lade-/Entladestrategie 1 Ziel-SoC",
     "tou_slot1_power": "Manuelle Lade-/Entladestrategie 1 Entladeleistung",
-    "tou_slot1_curtail": "Manuelle Lade-/Entladestrategie 1 PV-Abregelung",
-    "tou_slot1_ignore_export": "Manuelle Lade-/Entladestrategie 1 Rückspeise-Schutz ignorieren",
-    "base_load_slot2_start": "Grundlast Zeitfenster 2 Startzeit",
-    "base_load_slot2_end": "Grundlast Zeitfenster 2 Endzeit",
-    "base_load_slot2_power": "Grundlast Zeitfenster 2 Leistung",
     "tou_slot2_start": "Manuelle Lade-/Entladestrategie 2 Startzeit",
     "tou_slot2_end": "Manuelle Lade-/Entladestrategie 2 Endzeit",
     "tou_slot2_mode": "Manuelle Lade-/Entladestrategie 2 Arbeitsmodus",
     "tou_slot2_target_soc": "Manuelle Lade-/Entladestrategie 2 Ziel-SoC",
     "tou_slot2_power": "Manuelle Lade-/Entladestrategie 2 Entladeleistung",
-    "tou_slot2_curtail": "Manuelle Lade-/Entladestrategie 2 PV-Abregelung",
-    "tou_slot2_ignore_export": "Manuelle Lade-/Entladestrategie 2 Rückspeise-Schutz ignorieren",
-    "base_load_slot3_start": "Grundlast Zeitfenster 3 Startzeit",
-    "base_load_slot3_end": "Grundlast Zeitfenster 3 Endzeit",
-    "base_load_slot3_power": "Grundlast Zeitfenster 3 Leistung",
     "tou_slot3_start": "Manuelle Lade-/Entladestrategie 3 Startzeit",
     "tou_slot3_end": "Manuelle Lade-/Entladestrategie 3 Endzeit",
     "tou_slot3_mode": "Manuelle Lade-/Entladestrategie 3 Arbeitsmodus",
     "tou_slot3_target_soc": "Manuelle Lade-/Entladestrategie 3 Ziel-SoC",
     "tou_slot3_power": "Manuelle Lade-/Entladestrategie 3 Entladeleistung",
-    "tou_slot3_curtail": "Manuelle Lade-/Entladestrategie 3 PV-Abregelung",
-    "tou_slot3_ignore_export": "Manuelle Lade-/Entladestrategie 3 Rückspeise-Schutz ignorieren",
-    "base_load_slot4_start": "Grundlast Zeitfenster 4 Startzeit",
-    "base_load_slot4_end": "Grundlast Zeitfenster 4 Endzeit",
-    "base_load_slot4_power": "Grundlast Zeitfenster 4 Leistung",
     "tou_slot4_start": "Manuelle Lade-/Entladestrategie 4 Startzeit",
     "tou_slot4_end": "Manuelle Lade-/Entladestrategie 4 Endzeit",
     "tou_slot4_mode": "Manuelle Lade-/Entladestrategie 4 Arbeitsmodus",
     "tou_slot4_target_soc": "Manuelle Lade-/Entladestrategie 4 Ziel-SoC",
     "tou_slot4_power": "Manuelle Lade-/Entladestrategie 4 Entladeleistung",
-    "tou_slot4_curtail": "Manuelle Lade-/Entladestrategie 4 PV-Abregelung",
-    "tou_slot4_ignore_export": "Manuelle Lade-/Entladestrategie 4 Rückspeise-Schutz ignorieren",
-    "base_load_slot5_start": "Grundlast Zeitfenster 5 Startzeit",
-    "base_load_slot5_end": "Grundlast Zeitfenster 5 Endzeit",
-    "base_load_slot5_power": "Grundlast Zeitfenster 5 Leistung",
     "tou_slot5_start": "Manuelle Lade-/Entladestrategie 5 Startzeit",
     "tou_slot5_end": "Manuelle Lade-/Entladestrategie 5 Endzeit",
     "tou_slot5_mode": "Manuelle Lade-/Entladestrategie 5 Arbeitsmodus",
     "tou_slot5_target_soc": "Manuelle Lade-/Entladestrategie 5 Ziel-SoC",
     "tou_slot5_power": "Manuelle Lade-/Entladestrategie 5 Entladeleistung",
-    "tou_slot5_curtail": "Manuelle Lade-/Entladestrategie 5 PV-Abregelung",
-    "tou_slot5_ignore_export": "Manuelle Lade-/Entladestrategie 5 Rückspeise-Schutz ignorieren",
-    "base_load_slot6_start": "Grundlast Zeitfenster 6 Startzeit",
-    "base_load_slot6_end": "Grundlast Zeitfenster 6 Endzeit",
-    "base_load_slot6_power": "Grundlast Zeitfenster 6 Leistung",
     "tou_slot6_start": "Manuelle Lade-/Entladestrategie 6 Startzeit",
     "tou_slot6_end": "Manuelle Lade-/Entladestrategie 6 Endzeit",
     "tou_slot6_mode": "Manuelle Lade-/Entladestrategie 6 Arbeitsmodus",
     "tou_slot6_target_soc": "Manuelle Lade-/Entladestrategie 6 Ziel-SoC",
     "tou_slot6_power": "Manuelle Lade-/Entladestrategie 6 Entladeleistung",
-    "tou_slot6_curtail": "Manuelle Lade-/Entladestrategie 6 PV-Abregelung",
-    "tou_slot6_ignore_export": "Manuelle Lade-/Entladestrategie 6 Rückspeise-Schutz ignorieren",
-    "base_load_slot7_start": "Grundlast Zeitfenster 7 Startzeit",
-    "base_load_slot7_end": "Grundlast Zeitfenster 7 Endzeit",
-    "base_load_slot7_power": "Grundlast Zeitfenster 7 Leistung",
     "tou_slot7_start": "Manuelle Lade-/Entladestrategie 7 Startzeit",
     "tou_slot7_end": "Manuelle Lade-/Entladestrategie 7 Endzeit",
     "tou_slot7_mode": "Manuelle Lade-/Entladestrategie 7 Arbeitsmodus",
     "tou_slot7_target_soc": "Manuelle Lade-/Entladestrategie 7 Ziel-SoC",
     "tou_slot7_power": "Manuelle Lade-/Entladestrategie 7 Entladeleistung",
-    "tou_slot7_curtail": "Manuelle Lade-/Entladestrategie 7 PV-Abregelung",
-    "tou_slot7_ignore_export": "Manuelle Lade-/Entladestrategie 7 Rückspeise-Schutz ignorieren",
-    "base_load_slot8_start": "Grundlast Zeitfenster 8 Startzeit",
-    "base_load_slot8_end": "Grundlast Zeitfenster 8 Endzeit",
-    "base_load_slot8_power": "Grundlast Zeitfenster 8 Leistung",
     "tou_slot8_start": "Manuelle Lade-/Entladestrategie 8 Startzeit",
     "tou_slot8_end": "Manuelle Lade-/Entladestrategie 8 Endzeit",
     "tou_slot8_mode": "Manuelle Lade-/Entladestrategie 8 Arbeitsmodus",
     "tou_slot8_target_soc": "Manuelle Lade-/Entladestrategie 8 Ziel-SoC",
     "tou_slot8_power": "Manuelle Lade-/Entladestrategie 8 Entladeleistung",
-    "tou_slot8_curtail": "Manuelle Lade-/Entladestrategie 8 PV-Abregelung",
-    "tou_slot8_ignore_export": "Manuelle Lade-/Entladestrategie 8 Rückspeise-Schutz ignorieren"
+    "system_status": "Systemstatus",
+    "fault_code": "Fehlercode",
+    "battery_soc": "Batterie-SoC",
+    "battery_design_capacity": "Nennkapazität der Batterie",
+    "battery_cell_temp_max": "Maximale Zelltemperatur",
+    "battery_cell_temp_min": "Minimale Zelltemperatur",
+    "battery_cumulative_charge_energy": "Gesamt geladene Batterieenergie",
+    "battery_cumulative_discharge_energy": "Gesamt entladene Batterieenergie",
+    "grid_cumulative_import_energy": "Netzbezug gesamt",
+    "grid_cumulative_export_energy": "Netzeinspeisung gesamt",
+    "backup_load_power": "Notstromlast-Leistung",
+    "backup_load_cumulative_export_energy": "Notstromlast Gesamtausgangsenergie",
+    "backup_load_cumulative_import_energy": "Notstromlast Gesamteingangsenergie",
+    "pv_total_cumulative_energy": "PV-Gesamtenergie",
+    "pv1_power": "PV1-Leistung",
+    "pv1_cumulative_energy": "PV1-Gesamtenergie",
+    "pv2_power": "PV2-Leistung",
+    "pv2_cumulative_energy": "PV2-Gesamtenergie",
+    "pv3_power": "PV3-Leistung",
+    "pv3_cumulative_energy": "PV3-Gesamtenergie",
+    "pv4_power": "PV4-Leistung",
+    "pv4_cumulative_energy": "PV4-Gesamtenergie",
+    "grid_charge_power_limit": "Netzladungsleistungsgrenze",
+    "battery_discharge_power_limit": "Batterieentladungsleistungsgrenze",
+    "battery_cutoff_soc": "Entladeabschalt-SoC"
   },
   "values": {
     "meter_connection_state": {
@@ -265,13 +262,13 @@
     "charge_discharge_direction": {
       "0": "idle",
       "1": "chg",
-      "2": "dchg"
+      "2": "dchg",
+      "3": "exit"
     },
     "work_mode": {
       "1": "Eigenverbrauch",
-      "2": "Reservepriorität",
-      "3": "Einspeisepriorität",
-      "4": "Manueller Zeitplan"
+      "2": "Manueller Zeitplan",
+      "3": "idle"
     },
     "allow_battery_export": {
       "0": "Batterieeinspeisung deaktiviert",
@@ -305,97 +302,33 @@
       "0": "Laden",
       "1": "Entladen"
     },
-    "tou_slot1_curtail": {
-      "0": "Aus",
-      "1": "An"
-    },
-    "tou_slot1_ignore_export": {
-      "0": "Aus",
-      "1": "Aktiviert"
-    },
     "tou_slot2_mode": {
       "0": "Laden",
       "1": "Entladen"
-    },
-    "tou_slot2_curtail": {
-      "0": "Aus",
-      "1": "An"
-    },
-    "tou_slot2_ignore_export": {
-      "0": "Aus",
-      "1": "Aktiviert"
     },
     "tou_slot3_mode": {
       "0": "Laden",
       "1": "Entladen"
     },
-    "tou_slot3_curtail": {
-      "0": "Aus",
-      "1": "An"
-    },
-    "tou_slot3_ignore_export": {
-      "0": "Aus",
-      "1": "Aktiviert"
-    },
     "tou_slot4_mode": {
       "0": "Laden",
       "1": "Entladen"
-    },
-    "tou_slot4_curtail": {
-      "0": "Aus",
-      "1": "An"
-    },
-    "tou_slot4_ignore_export": {
-      "0": "Aus",
-      "1": "Aktiviert"
     },
     "tou_slot5_mode": {
       "0": "Laden",
       "1": "Entladen"
     },
-    "tou_slot5_curtail": {
-      "0": "Aus",
-      "1": "An"
-    },
-    "tou_slot5_ignore_export": {
-      "0": "Aus",
-      "1": "Aktiviert"
-    },
     "tou_slot6_mode": {
       "0": "Laden",
       "1": "Entladen"
-    },
-    "tou_slot6_curtail": {
-      "0": "Aus",
-      "1": "An"
-    },
-    "tou_slot6_ignore_export": {
-      "0": "Aus",
-      "1": "Aktiviert"
     },
     "tou_slot7_mode": {
       "0": "Laden",
       "1": "Entladen"
     },
-    "tou_slot7_curtail": {
-      "0": "Aus",
-      "1": "An"
-    },
-    "tou_slot7_ignore_export": {
-      "0": "Aus",
-      "1": "Aktiviert"
-    },
     "tou_slot8_mode": {
       "0": "Laden",
       "1": "Entladen"
-    },
-    "tou_slot8_curtail": {
-      "0": "Aus",
-      "1": "An"
-    },
-    "tou_slot8_ignore_export": {
-      "0": "Aus",
-      "1": "Aktiviert"
     }
   }
 }

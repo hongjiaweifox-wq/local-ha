@@ -53,7 +53,7 @@ class ConowModbusSwitch(CoordinatorEntity[ConowLocalCoordinator], SwitchEntity):
 
 
 class ConowPanelSwitch(CoordinatorEntity[ConowPanelCoordinator], SwitchEntity):
-    """On/off register from the October panel map."""
+    """On/off register from the finalized panel map."""
 
     _attr_has_entity_name = True
 
@@ -97,7 +97,7 @@ async def _async_add_panel_switches(
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Add one switch per on/off register of the October map (TCP only)."""
+    """Add one switch per on/off register of the finalized map (TCP only)."""
     coordinator = get_panel_coordinator(hass, entry.entry_id)
     if coordinator is None:
         return

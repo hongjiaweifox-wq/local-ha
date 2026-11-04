@@ -157,13 +157,15 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except ConowModbusError as err:
             raise UpdateFailed(str(err)) from err
 
-    def _read_panel_blocks(self) -> dict[str, list[int] | None]:
-        """Read the October map blocks for the grouping panel."""
+    def _read_panel_blocks(
+        self, map_version: str = MAP_V2
+    ) -> dict[str, list[int] | None]:
+        """Read the grouped map blocks for the grouping panel."""
 
         def _operation(client: ConowModbusClient) -> dict[str, list[int] | None]:
             blocks: dict[str, list[int] | None] = {}
             for index, (block, (start, count)) in enumerate(
-                panel_map.get_block_spans().items()
+                panel_map.get_block_spans(map_version).items()
             ):
                 if index:
                     time.sleep(INTER_FRAME_DELAY_S)
@@ -176,9 +178,13 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         return self._run_locked(_operation)
 
-    async def async_read_panel_blocks(self) -> dict[str, list[int] | None]:
+    async def async_read_panel_blocks(
+        self, map_version: str = MAP_V2
+    ) -> dict[str, list[int] | None]:
         """Read the grouping-panel map without touching coordinator data."""
-        return await self.hass.async_add_executor_job(self._read_panel_blocks)
+        return await self.hass.async_add_executor_job(
+            self._read_panel_blocks, map_version
+        )
 
     def _write_panel_ops(self, ops: list[tuple[int, list[int]]]) -> None:
         """Write grouping-panel registers under the shared Modbus lock."""

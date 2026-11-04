@@ -1,9 +1,9 @@
 """Select the register map from the device's reported firmware version.
 
 ``registers.json`` (map version 1, the July protocol) is always the default.
-``panel/panel_registers.json`` (map version 2, the October protocol) is only
-used when the firmware version read from ``0x2763-0x2764`` is at least
-``PANEL_MAP_MIN_FIRMWARE``.  A failed or unparsable probe therefore falls
+``panel/panel_registers.json`` (map version 2, the finalized protocol) is only
+used when the firmware version read from ``0x274E-0x274F`` (10062-10063) is at
+least ``PANEL_MAP_MIN_FIRMWARE``.  A failed or unparsable probe therefore falls
 back to the v1 map, never to the newer addresses.
 """
 
@@ -14,10 +14,10 @@ import re
 MAP_V1 = "v1"
 MAP_V2 = "v2"
 
-FIRMWARE_VERSION_ADDRESS = 10083  # 0x2763, two 16-bit registers, 4-byte ASCII
+FIRMWARE_VERSION_ADDRESS = 10062  # 0x274E, two 16-bit registers, 4-byte ASCII
 FIRMWARE_VERSION_REGISTERS = 2
 
-# The October register map ships with firmware v1.2 and later.  Change this
+# The finalized register map ships with firmware v1.2 and later.  Change this
 # tuple if the vendor moves the cut-over.
 PANEL_MAP_MIN_FIRMWARE = (1, 2)
 

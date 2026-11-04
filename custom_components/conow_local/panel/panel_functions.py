@@ -62,7 +62,7 @@ def _device_name(entry, device_entry) -> str:
     )
 
 
-# October-map codes that back a differently named v1 entity. Clicking the
+# finalized-map codes that back a differently named v1 entity. Clicking the
 # panel row opens the entity's more-info dialog, so the alias only covers
 # registers whose meaning is identical across both maps.
 ENTITY_CODE_ALIASES = {
@@ -99,7 +99,7 @@ def _entity_code_map(hass: HomeAssistant, entry_id: str, device_entry) -> dict[s
             # Bit sensors share one status register; they have no panel row.
             continue
         if code.startswith("panel_"):
-            # October-map entity whose code also exists in the v1 map; this is
+            # finalized-map entity whose code also exists in the v1 map; this is
             # the entity that actually points at the panel register.
             panel_overrides[code[len("panel_") :]] = item.entity_id
             continue
@@ -120,10 +120,11 @@ def _serialize_group(
     group: panel_map.PanelGroup,
     decoded: dict[str, dict[str, Any]] | None = None,
     entities: dict[str, str] | None = None,
+    map_version: str = MAP_V2,
 ) -> dict[str, Any]:
     decoded = decoded or {}
     entities = entities or {}
-    index = panel_map.get_register_index()
+    index = panel_map.get_register_index(map_version)
     members: list[dict[str, Any]] = []
     for code in group.members:
         register = index[code]
@@ -190,8 +191,8 @@ def get_panel_devices(hass: HomeAssistant) -> list[dict[str, Any]]:
     """List config entries that can be inspected through the grouping panel.
 
     Entries are listed even when the v1 coordinator is not loaded: the panel
-    reads the October map independently, so a device that only speaks the new
-    protocol can still be inspected.
+    reads the selected grouped map independently, so a device that only
+    speaks one of the two protocols can still be inspected.
     """
     device_registry = dr.async_get(hass)
     devices: list[dict[str, Any]] = []
@@ -279,6 +280,7 @@ def plan_group_writes(
     group: panel_map.PanelGroup,
     values: dict[str, Any],
     live: dict[str, dict[str, Any]] | None = None,
+    map_version: str = MAP_V2,
 ) -> list[tuple[int, list[int]]]:
     """Validate a group submission and return ``(address, words)`` writes.
 
@@ -288,7 +290,7 @@ def plan_group_writes(
     limits that depend on another register (safety SoC, hardware power
     capability) can be enforced before anything is sent.
     """
-    index = panel_map.get_register_index()
+    index = panel_map.get_register_index(map_version)
     registers = [index[code] for code in group.members if index[code].writable]
     if not registers:
         raise ValueError(f"Group {group.id} has no writable registers")
@@ -353,30 +355,23 @@ async def async_write_panel_group(
     live: dict[str, dict[str, Any]] = {}
     if loaded:
         map_version = getattr(coordinator, "map_version", MAP_V1)
-        firmware = getattr(coordinator, "firmware_version", None)
         panel_coordinator = get_panel_coordinator(hass, entry.entry_id)
         live = dict(getattr(panel_coordinator, "data", None) or {})
     else:
         try:
-            map_version, firmware, raw_blocks = await hass.async_add_executor_job(
+            map_version, _firmware, raw_blocks = await hass.async_add_executor_job(
                 _read_blocks_direct, entry
             )
         except (ConowModbusError, OSError):
-            map_version, firmware, raw_blocks = MAP_V1, None, {}
+            map_version, raw_blocks = MAP_V1, {}
         for block, words in raw_blocks.items():
             if words is not None:
-                live.update(panel_map.decode_block(block, words))
-    if map_version != MAP_V2:
-        raise ConowModbusError(
-            "Grouped panel writes need the October register map "
-            f"(firmware >= {format_version(PANEL_MAP_MIN_FIRMWARE)}); "
-            f"this device reports {format_version(firmware) or 'an unknown firmware'}"
-        )
+                live.update(panel_map.decode_block(block, words, map_version))
 
-    group = panel_map.get_group(group_id)
+    group = panel_map.get_group(group_id, map_version)
     if group is None:
         raise LookupError(f"Unknown group {group_id}")
-    ops = plan_group_writes(group, values, live)
+    ops = plan_group_writes(group, values, live, map_version)
 
     if loaded:
         await coordinator.async_write_panel_ops(ops)
@@ -392,10 +387,14 @@ async def async_write_panel_group(
     return await async_build_panel_state(hass, device_id)
 
 
-def _read_blocks(client: ConowModbusClient) -> dict[str, list[int] | None]:
-    """Read every panel block with one connected client."""
+def _read_blocks(
+    client: ConowModbusClient, map_version: str = MAP_V2
+) -> dict[str, list[int] | None]:
+    """Read every block of one map with one connected client."""
     blocks: dict[str, list[int] | None] = {}
-    for index, (block, (start, count)) in enumerate(panel_map.get_block_spans().items()):
+    for index, (block, (start, count)) in enumerate(
+        panel_map.get_block_spans(map_version).items()
+    ):
         if index:
             time.sleep(INTER_FRAME_DELAY_S)
         try:
@@ -418,13 +417,11 @@ def _read_blocks_direct(
     slave = entry.data[CONF_MODBUS_SLAVE]
     with ConowModbusClient(host=host, tcp_port=tcp_port, slave=slave) as client:
         map_version, version = _probe_map_version(client)
-        if map_version != MAP_V2:
-            return map_version, version, {}
-        return map_version, version, _read_blocks(client)
+        return map_version, version, _read_blocks(client, map_version)
 
 
 async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[str, Any]:
-    """Read the October map and serialize the grouped values for the panel."""
+    """Read the selected grouped map and serialize the grouped values."""
     device_registry = dr.async_get(hass)
     entry = _entry_for_id(hass, device_id)
     if entry is None:
@@ -439,11 +436,7 @@ async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[s
     if loaded:
         map_version = getattr(coordinator, "map_version", MAP_V1)
         firmware = getattr(coordinator, "firmware_version", None)
-        raw_blocks = (
-            await coordinator.async_read_panel_blocks()
-            if map_version == MAP_V2
-            else {}
-        )
+        raw_blocks = await coordinator.async_read_panel_blocks(map_version)
     else:
         try:
             map_version, firmware, raw_blocks = await hass.async_add_executor_job(
@@ -456,7 +449,7 @@ async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[s
     decoded: dict[str, dict[str, Any]] = {}
     for block, words in raw_blocks.items():
         if words is not None:
-            decoded.update(panel_map.decode_block(block, words))
+            decoded.update(panel_map.decode_block(block, words, map_version))
 
     LOGGER.debug(
         "Panel: read %s/%s blocks for %s (map=%s, firmware=%s)",
@@ -466,10 +459,8 @@ async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[s
         map_version,
         format_version(firmware) or "unknown",
     )
-    read_ok = map_version == MAP_V2 and any(
-        words is not None for words in raw_blocks.values()
-    )
-    map_info = dict(panel_map.get_map_meta())
+    read_ok = any(words is not None for words in raw_blocks.values())
+    map_info = dict(panel_map.get_map_meta(map_version))
     map_info.update(
         {
             "selected": map_version,
@@ -503,12 +494,8 @@ async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[s
         "blocks_read": {
             block: words is not None for block, words in raw_blocks.items()
         },
-        "groups": (
-            {
-                group.id: _serialize_group(group, decoded, entities)
-                for group in panel_map.get_groups()
-            }
-            if map_version == MAP_V2
-            else {}
-        ),
+        "groups": {
+            group.id: _serialize_group(group, decoded, entities, map_version)
+            for group in panel_map.get_groups(map_version)
+        },
     }

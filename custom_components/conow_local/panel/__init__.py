@@ -1,1 +1,1 @@
-"""Grouped control panel for the October register map."""
+"""Grouped control panel for the finalized register map."""
