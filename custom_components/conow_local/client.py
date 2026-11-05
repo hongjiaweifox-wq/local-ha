@@ -109,15 +109,19 @@ class ConowVerificationError(ConowModbusError):
 
 
 VERIFY_CODE_START = 0x2701  # uint32 challenge, two holding registers (9985-9986)
-VERIFY_CODE_DIGITS = 6
+VERIFY_CODE_LENGTH = 8
 
 
 def encode_verify_code(code: str | int) -> list[int]:
-    """Encode a 6-digit code as uint32 words (high word first)."""
+    """Encode an 8-character hexadecimal code as uint32 words (high word first)."""
     text = str(code).strip()
-    if len(text) != VERIFY_CODE_DIGITS or not text.isdigit():
-        raise ConowModbusError("Verification code must be exactly 6 digits")
-    value = int(text)
+    if len(text) != VERIFY_CODE_LENGTH or any(
+        char not in "0123456789abcdefABCDEF" for char in text
+    ):
+        raise ConowModbusError(
+            "Verification code must be exactly 8 hexadecimal characters"
+        )
+    value = int(text, 16)
     return [(value >> 16) & 0xFFFF, value & 0xFFFF]
 
 
@@ -435,11 +439,12 @@ def probe_direct_connection(
 ) -> None:
     """Verify a direct TCP link and complete the challenge authentication.
 
-    The all-in-one machine requires the dynamic code shown by the device to
-    be written to holding registers 0x2701–0x2702 (9985–9986, uint32, high
-    word first).  The code refreshes every 120 s over TCP until verification
-    succeeds.  A normal FC 0x10 response means the device accepted the code;
-    an error response is treated as verification failure.
+    The all-in-one machine requires the dynamic 8-character hexadecimal code
+    shown by the device to be written to holding registers 0x2701–0x2702
+    (9985–9986, uint32, high word first).  The code refreshes every 120 s over
+    TCP until verification succeeds.  A normal FC 0x10 response means the
+    device accepted the code; an error response is treated as verification
+    failure.
     """
     words = encode_verify_code(verify_code)
     address, count = CONNECTION_PROBE

@@ -594,7 +594,7 @@ rm hacs.zip</code></pre>
               <td><strong>Modbus TCP（直连一体机）</strong></td>
               <td>一体机自带 Modbus TCP 网口，中间没有转换器</td>
               <td>设备名称、主机/IP、TCP 端口 <code>502</code>、从站 <code>160</code></td>
-              <td><span class="pill warn">需要</span> 一体机屏幕上的 6 位码</td>
+              <td><span class="pill warn">需要</span> 一体机屏幕上的 8 位十六进制验证码</td>
             </tr>
             <tr>
               <td><strong>Modbus TCP（以太网适配器）</strong></td>
@@ -616,12 +616,12 @@ rm hacs.zip</code></pre>
       <ol class="steps">
         <li>连接方式选择 <strong>Modbus TCP（直连一体机）</strong>。</li>
         <li>填写设备名称、一体机 IP、TCP 端口 <code>502</code>、从站地址 <code>160</code>。</li>
-        <li>输入一体机上显示的 <strong>6 位验证码</strong>，提交。</li>
+        <li>输入一体机上显示的 <strong>8 位十六进制验证码</strong>（数字 0–9 与字母 A–F，不区分大小写），提交。</li>
         <li>集成会把验证码写入保持寄存器 <code>0x2701–0x2702</code>（<code>9985–9986</code>）；TCP 直连时该动态验证码每 120 秒刷新一次，设备确认通过后才会创建设备条目。</li>
       </ol>
       <div class="callout danger">
         <span class="label">验证失败</span>
-        提示“设备校验未通过”时，核对屏幕上的 6 位码是否变化，重新输入；提示“验证码必须是 6 位数字”时，去掉空格或字母再提交。
+        提示“设备校验未通过”时，核对屏幕上的 8 位验证码是否变化，重新输入；提示“验证码必须是 8 位十六进制字符”时，去掉空格或检查是否有 0–9/A–F 以外的字符。
       </div>
 
       <h3>以太网适配器 / RS-485 串口</h3>
@@ -786,7 +786,7 @@ rm hacs.zip</code></pre>
             <tr>
               <td>直连模式提示“设备校验未通过”</td>
               <td>验证码过期或输入错误</td>
-              <td>核对一体机当前屏幕上的 6 位码，重新提交</td>
+              <td>核对一体机当前屏幕上的 8 位验证码，重新提交</td>
             </tr>
             <tr>
               <td>提示“该设备已经配置过了”</td>
@@ -926,7 +926,7 @@ rm hacs.zip</code></pre>
         <li>切换固件后，HA 侧需要重新加载该集成（或重启 HA）以重新探测固件并重建实体。</li>
         <li>在 HA 中添加集成时选择 <strong>Modbus TCP（以太网适配器）</strong>：主机填模拟器所在机器 IP（同机可填 <code>127.0.0.1</code>），端口 <code>1504</code>，从站 <code>160</code>，不需要验证码。</li>
         <li>模拟器默认应答任意从站地址；如需严格匹配，追加 <code>--slave 160</code>。</li>
-        <li>直连演示时，验证码输入 <code>--verify-code</code> 指定的值（示例为 <code>123456</code>）；状态页会显示当前验证码。</li>
+        <li>直连演示时，验证码输入 <code>--verify-code</code> 指定的值（示例为 <code>A1B2C3D4</code>）；状态页会显示当前验证码。</li>
       </ul>
 
       <h3>关键地址</h3>
@@ -939,7 +939,7 @@ rm hacs.zip</code></pre>
             <tr><td>控制块（v2）</td><td><code>10100–10189</code></td><td>面板可写分组</td></tr>
             <tr><td>监控块（v1）</td><td><code>10000–10036</code></td><td>v1 实体与 v1 面板只读数据</td></tr>
             <tr><td>控制块（v1）</td><td><code>10100–10107</code></td><td>v1 实体与 v1 面板可写分组</td></tr>
-            <tr><td>直连验证码</td><td><code>9985–9986</code>（<code>0x2701–0x2702</code>）</td><td>uint32，高字在前；每 120 秒动态刷新</td></tr>
+            <tr><td>直连验证码</td><td><code>9985–9986</code>（<code>0x2701–0x2702</code>）</td><td>8 位十六进制字符按 uint32 写入，高字在前；每 120 秒动态刷新</td></tr>
           </tbody>
         </table>
       </div>

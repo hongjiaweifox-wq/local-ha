@@ -8,6 +8,7 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 
 from .client import (
+    VERIFY_CODE_LENGTH,
     ConowModbusError,
     ConowVerificationError,
     probe_connection,
@@ -39,9 +40,11 @@ MODBUS_MODES = {
 
 
 def _is_valid_verify_code(value: str) -> bool:
-    """Return whether the value is exactly six decimal digits."""
+    """Return whether the value is an 8-character hexadecimal code."""
     text = str(value).strip()
-    return len(text) == 6 and text.isdigit()
+    return len(text) == VERIFY_CODE_LENGTH and all(
+        char in "0123456789abcdefABCDEF" for char in text
+    )
 
 class ConowLocalConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle Conow Local config flow."""

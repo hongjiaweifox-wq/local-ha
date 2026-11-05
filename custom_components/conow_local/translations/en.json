@@ -13,8 +13,8 @@
   "config": {
     "error": {
       "cannot_connect": "Unable to connect over Modbus. Check the connection, Enable External Control / ModBus RTU, and slave address.",
-      "invalid_verify_code": "Verification code must be exactly 6 digits.",
-      "verification_failed": "The device rejected the verification code. Check the 6-digit code shown on the machine and try again."
+      "invalid_verify_code": "Verification code must be exactly 8 hexadecimal characters.",
+      "verification_failed": "The device rejected the verification code. Check the 8-character code shown on the machine and try again."
     },
     "step": {
       "user": {
@@ -53,7 +53,7 @@
           "modbus_slave": "Slave address",
           "tcp_verify_code": "Verification code"
         },
-        "description": "Connect to the all-in-one machine's own Ethernet port (TCP port **502** by default, slave **0xA0**). No RS-485↔Ethernet adapter is involved. Enter the **6-digit verification code** shown on the machine; it is written to holding registers **0x2701–0x2702** (9985–9986) and the connection is accepted only if the device confirms it."
+        "description": "Connect to the all-in-one machine's own Ethernet port (TCP port **502** by default, slave **0xA0**). No RS-485↔Ethernet adapter is involved. Enter the **8-character hexadecimal verification code** shown on the machine; it is written to holding registers **0x2701–0x2702** (9985–9986) and the connection is accepted only if the device confirms it."
       }
     },
     "abort": {

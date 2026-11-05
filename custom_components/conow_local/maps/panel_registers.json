@@ -26,6 +26,7 @@
       "end": 9986,
       "hex": "0x2701–0x2702",
       "dtype": "uint32",
+      "format": "8 hexadecimal characters, case-insensitive",
       "dynamic_seconds": 120,
       "transport": "tcp"
     },

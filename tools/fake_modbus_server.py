@@ -38,8 +38,8 @@ Examples::
     # block, and >= 1.2 switches back to v2 -- no restart or --map change.
     # Use --no-auto-map to keep serving exactly one map.
 
-    # accept challenge code 000042 on direct connections (default 123456)
-    python3 tools/fake_modbus_server.py --verify-code 000042
+    # accept challenge code A1B2C3D4 on direct connections (default A1B2C3D4)
+    python3 tools/fake_modbus_server.py --verify-code A1B2C3D4
 
 The server also starts a browser test page on ``--http-port`` (default: Modbus
 port + 100, so 127.0.0.1:1602 for the default port). It can:
@@ -77,7 +77,7 @@ FC_WRITE_MULTIPLE = 0x10
 
 # Direct-connection challenge registers (0x2701–0x2702, uint32 high word first).
 VERIFY_CODE_ADDRESS = 0x2701
-VERIFY_CODE_DEFAULT = "123456"
+VERIFY_CODE_DEFAULT = "A1B2C3D4"
 
 # Firmware version register used by the integration to pick the register map.
 FIRMWARE_VERSION_ADDRESS = 0x274E
@@ -402,7 +402,7 @@ class RegisterBank:
         self._defs = defs
         self._by_code = {item.code: item for item in defs}
         self._by_address = {item.address: item for item in defs}
-        self._verify_code = int(verify_code) if verify_code is not None else None
+        self._verify_code = int(verify_code, 16) if verify_code is not None else None
         self._firmware_version = firmware_version
         # Continuation words of multi-word registers belong to the same def, so a
         # block write may span the high/low half of a uint32 register.
@@ -531,7 +531,7 @@ class RegisterBank:
     @property
     def verify_code(self) -> str | None:
         """Return the accepted direct-connection code, or None when disabled."""
-        return f"{self._verify_code:06d}" if self._verify_code is not None else None
+        return f"{self._verify_code:08X}" if self._verify_code is not None else None
 
     def has_code(self, code: str) -> bool:
         """Return whether the map defines this code."""
@@ -1992,7 +1992,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--verify-code",
         default=VERIFY_CODE_DEFAULT,
-        help=f"code accepted at 0x2701 (default {VERIFY_CODE_DEFAULT})",
+        help=f"8-character hex code accepted at 0x2701 (default {VERIFY_CODE_DEFAULT})",
     )
     parser.add_argument(
         "--firmware-version",
@@ -2027,8 +2027,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     code = str(args.verify_code).strip()
-    if len(code) != 6 or not code.isdigit():
-        print("--verify-code must be exactly 6 digits", file=sys.stderr)
+    if len(code) != 8 or any(c not in "0123456789abcdefABCDEF" for c in code):
+        print("--verify-code must be exactly 8 hex characters", file=sys.stderr)
         return 2
 
     def build_bank(path: Path) -> RegisterBank:

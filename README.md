@@ -97,9 +97,9 @@ Use this when the all-in-one machine exposes its own Modbus TCP port, with no RS
 | Host / IP       | Machine IP, e.g. `192.168.1.60`        |
 | TCP port        | `502` (default Modbus TCP port)        |
 | Slave address   | `160`                                  |
-| Verification code | 6-digit code shown on the machine    |
+| Verification code | 8-character hex code shown on the machine |
 
-When you submit the form, the integration writes the verification code to holding registers **0x2701–0x2702** (9985–9986, uint32, high word first). The setup succeeds only when the device acknowledges the write; a rejected code shows a verification error instead of creating the entry.
+When you submit the form, the integration writes the verification code to holding registers **0x2701–0x2702** (9985–9986, uint32, high word first). The 8 characters are hexadecimal digits (`0-9`, `A-F`). The setup succeeds only when the device acknowledges the write; a rejected code shows a verification error instead of creating the entry.
 
 
 

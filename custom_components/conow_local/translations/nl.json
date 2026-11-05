@@ -13,8 +13,8 @@
   "config": {
     "error": {
       "cannot_connect": "Kan geen Modbus-verbinding maken. Controleer de verbinding, Externe besturing / ModBus RTU en het slave-adres.",
-      "invalid_verify_code": "De verificatiecode moet uit precies 6 cijfers bestaan.",
-      "verification_failed": "Het apparaat heeft de verificatiecode geweigerd. Controleer de 6-cijferige code op het apparaat en probeer opnieuw."
+      "invalid_verify_code": "De verificatiecode moet uit precies 8 hexadecimale tekens bestaan.",
+      "verification_failed": "Het apparaat heeft de verificatiecode geweigerd. Controleer de 8-tekens code op het apparaat en probeer opnieuw."
     },
     "step": {
       "user": {
@@ -53,7 +53,7 @@
           "modbus_slave": "Slave-adres",
           "tcp_verify_code": "Verificatiecode"
         },
-        "description": "Verbind met de eigen Ethernet-poort van het alles-in-één-apparaat (standaard TCP-poort **502**, slave **0xA0**). Er is geen RS-485↔Ethernet-adapter nodig. Voer de **6-cijferige verificatiecode** van het apparaat in; deze wordt naar de holding-registers **0x2701–0x2702** (9985–9986) geschreven en de verbinding wordt alleen bij bevestiging geaccepteerd."
+        "description": "Verbind met de eigen Ethernet-poort van het alles-in-één-apparaat (standaard TCP-poort **502**, slave **0xA0**). Er is geen RS-485↔Ethernet-adapter nodig. Voer de **8-tekens hexadecimale verificatiecode** van het apparaat in; deze wordt naar de holding-registers **0x2701–0x2702** (9985–9986) geschreven en de verbinding wordt alleen bij bevestiging geaccepteerd."
       }
     },
     "abort": {
