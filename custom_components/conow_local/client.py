@@ -437,19 +437,18 @@ def probe_direct_connection(
     slave: int = DEFAULT_SLAVE,
     verify_code: str,
 ) -> None:
-    """Verify a direct TCP link and complete the challenge authentication.
+    """Verify a direct TCP link by writing the challenge code.
 
     The all-in-one machine requires the dynamic 8-character hexadecimal code
     shown by the device to be written to holding registers 0x2701–0x2702
     (9985–9986, uint32, high word first).  The code refreshes every 120 s over
-    TCP until verification succeeds.  A normal FC 0x10 response means the
-    device accepted the code; an error response is treated as verification
+    TCP until verification succeeds.  The write itself is the first Modbus
+    request: a normal FC 0x10 response means the device accepted the code,
+    while an error response or missing reply is treated as verification
     failure.
     """
     words = encode_verify_code(verify_code)
-    address, count = CONNECTION_PROBE
     with ConowModbusClient(host=host, tcp_port=tcp_port, slave=slave) as client:
-        client.read_holding_registers(address, count)
         try:
             client.write_registers(VERIFY_CODE_START, words, retries=1)
         except ConowModbusError as err:
