@@ -54,9 +54,15 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: ConowLocalConfigEntry) -> bool:
     """Set up a Modbus config entry."""
     coordinator = ConowLocalCoordinator(hass, entry)
-    # Select the map before the first poll: exactly one map is active.
-    await coordinator.async_probe_map_version()
-    await coordinator.async_config_entry_first_refresh()
+    try:
+        # Select the map before the first poll: exactly one map is active.
+        await coordinator.async_probe_map_version()
+        await coordinator.async_config_entry_first_refresh()
+    except Exception:
+        # Serial ports are opened exclusively: a failed setup must release
+        # the handle or every retry fails with "Failed to open serial port".
+        await hass.async_add_executor_job(coordinator.shutdown)
+        raise
     entry.runtime_data = coordinator
     _prune_stale_entities(hass, entry, coordinator.map_version)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
