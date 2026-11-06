@@ -61,6 +61,25 @@
       "already_in_progress": "This device is already being configured. Finish or cancel the open dialog first."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Update verification code",
+        "description": "Enter the 8-character hexadecimal code currently shown on the machine. It is tested against the device before it replaces the stored code.",
+        "data": {
+          "tcp_verify_code": "Verification code"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect over Modbus. Check the connection, Enable External Control / ModBus RTU, and slave address.",
+      "invalid_verify_code": "Verification code must be exactly 8 hexadecimal characters.",
+      "verification_failed": "The device rejected the verification code. Check the 8-character code shown on the machine and try again."
+    },
+    "abort": {
+      "no_options": "Only direct Modbus TCP entries use a verification code."
+    }
+  },
   "entity": {
     "sensor": {
       "backup_load_cumulative_export_energy": {

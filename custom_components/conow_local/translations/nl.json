@@ -61,6 +61,25 @@
       "already_in_progress": "Dit apparaat wordt al geconfigureerd. Rond eerst het open venster af of annuleer het."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Verificatiecode bijwerken",
+        "description": "Voer de 8-tekens hexadecimale code in die het apparaat nu toont. De code wordt op het apparaat getest voordat hij wordt opgeslagen.",
+        "data": {
+          "tcp_verify_code": "Verificatiecode"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Kan geen Modbus-verbinding maken. Controleer de verbinding, Externe besturing / ModBus RTU en het slave-adres.",
+      "invalid_verify_code": "De verificatiecode moet uit precies 8 hexadecimale tekens bestaan.",
+      "verification_failed": "Het apparaat heeft de verificatiecode geweigerd. Controleer de 8-tekens code op het apparaat en probeer opnieuw."
+    },
+    "abort": {
+      "no_options": "Alleen directe Modbus TCP-vermeldingen gebruiken een verificatiecode."
+    }
+  },
   "entity": {
     "sensor": {
       "backup_load_cumulative_export_energy": {

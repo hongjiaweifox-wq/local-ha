@@ -66,16 +66,19 @@ const PANEL_STYLE = `
   }
   h1 { margin: 0 0 4px; font-size: 1.5rem; font-weight: 500; }
   .toolbar {
-    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    display: flex; gap: 12px; align-items: center; flex-wrap: nowrap;
     margin-bottom: 16px;
     user-select: none;
     -webkit-user-select: none;
   }
-  .toolbar .combo { position: relative; flex: none; }
-  .toolbar .combo[data-field="device"] { width: 260px; }
-  .toolbar .combo[data-field="group"] { width: 220px; }
-  .toolbar .combo[data-field="entity"] { width: 320px; }
-  .toolbar .combo[data-field="access"] { width: 120px; }
+  /* Fixed widths that may shrink, so the refresh button always stays on the
+     same row instead of wrapping below the filters. */
+  .toolbar .combo { position: relative; flex: 0 1 auto; min-width: 0; }
+  .toolbar .combo[data-field="device"] { width: 240px; }
+  .toolbar .combo[data-field="group"] { width: 180px; }
+  .toolbar .combo[data-field="entity"] { width: 280px; }
+  .toolbar .combo[data-field="access"] { width: 130px; }
+  .toolbar .combo[data-field="poll"] { width: 120px; }
   .toolbar .combo-input {
     width: 100%;
     min-width: 0;
@@ -366,6 +369,9 @@ const PANEL_STYLE = `
 
 const ASSET_VERSION = new URL(import.meta.url).searchParams.get("v") || "";
 const FALLBACK_LANGUAGE = "en";
+// Per-device polling interval choices (seconds), matching
+// const.POLL_INTERVAL_OPTIONS on the backend.
+const POLL_INTERVAL_OPTIONS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60];
 
 class ConowLocalPanel extends HTMLElement {
   constructor() {
@@ -1901,7 +1907,7 @@ class ConowLocalPanel extends HTMLElement {
     // Both maps are grouped now; only warn when the device sent no groups.
     if (Object.keys(this._state.groups || {}).length) {
       return this._state.map_readable === false
-        ? `<div class="hint">${this._t("mapUnreadable")}</div>`
+        ? this._mapUnreadableHint()
         : "";
     }
     if (this._state.map_version === 1) {
@@ -1915,7 +1921,16 @@ class ConowLocalPanel extends HTMLElement {
     if (this._state.map_readable !== false) {
       return "";
     }
-    return `<div class="hint">${this._t("mapUnreadable")}</div>`;
+    return this._mapUnreadableHint();
+  }
+
+  // Direct-TCP links also depend on the challenge code, so the hint names it.
+  _mapUnreadableHint() {
+    const key =
+      this._state?.mode === "tcp_direct"
+        ? "mapUnreadableTcpDirect"
+        : "mapUnreadable";
+    return `<div class="hint">${this._t(key)}</div>`;
   }
 
   _renderGroups() {
@@ -2020,6 +2035,39 @@ class ConowLocalPanel extends HTMLElement {
       this._accessFilter = value || "all";
       this._refreshToolbar();
       this._refreshGroupsBody();
+    });
+
+    bind("poll", async (value) => {
+      const deviceId = this._deviceId;
+      const seconds = Number(value);
+      if (!deviceId || !Number.isFinite(seconds)) {
+        return;
+      }
+      try {
+        await this._callWS("conow_local/set_poll_interval", {
+          device_id: deviceId,
+          seconds,
+        });
+        const device = this._devices.find((item) => item.device_id === deviceId);
+        if (device) {
+          device.poll_interval = seconds;
+        }
+        if (this._state) {
+          this._state.poll_interval = seconds;
+        }
+        this._notice = {
+          ok: true,
+          text: this._t("noticePollInterval", { seconds }),
+        };
+      } catch (err) {
+        this._notice = {
+          ok: false,
+          text: this._t("noticePollIntervalFailed", {
+            error: err.message || String(err),
+          }),
+        };
+      }
+      this._render();
     });
 
     const refresh = this._root.querySelector("#refresh-btn");
@@ -2209,6 +2257,12 @@ class ConowLocalPanel extends HTMLElement {
     this._bindToolbar();
   }
 
+  _pollIntervalFor(deviceId) {
+    const device = this._devices.find((item) => item.device_id === deviceId);
+    const seconds = Number(device?.poll_interval ?? this._state?.poll_interval);
+    return Number.isFinite(seconds) && seconds > 0 ? seconds : 30;
+  }
+
   _renderToolbar() {
     const groupsSource = this._state?.groups || this._mapState?.groups || {};
     const groups = Object.values(groupsSource);
@@ -2286,11 +2340,28 @@ class ConowLocalPanel extends HTMLElement {
       { value: "ro", label: this._t("accessRo") },
     ];
 
+    // Polling is stored per device, so the dropdown only makes sense once a
+    // device is selected.
+    const pollItems = POLL_INTERVAL_OPTIONS.map((seconds) => ({
+      value: String(seconds),
+      label: this._t("pollIntervalOption", { seconds }),
+    }));
+
     return `
       ${this._combo("device", this._t("selectDevice"), deviceItems, this._deviceId || "")}
       ${this._combo("group", this._t("allGroups"), groupItems, this._groupFilter)}
       ${this._combo("entity", this._t("allEntities"), entityItems, this._entityFilter)}
       ${this._combo("access", this._t("accessAll"), accessItems, this._accessFilter)}
+      ${
+        this._deviceId
+          ? this._combo(
+              "poll",
+              this._t("pollInterval"),
+              pollItems,
+              String(this._pollIntervalFor(this._deviceId))
+            )
+          : ""
+      }
       <button id="refresh-btn" class="icon-btn${this._loading ? " spinning" : ""}"
         type="button" title="${this._escape(
           this._t("refresh")

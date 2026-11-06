@@ -61,6 +61,25 @@
       "already_in_progress": "该设备正在配置中，请先完成或取消当前配置对话框。"
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "更新验证码",
+        "description": "请输入一体机当前显示的 8 位十六进制验证码，会先向设备校验成功后再保存。",
+        "data": {
+          "tcp_verify_code": "验证码"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "无法通过 Modbus 连接，请检查连接方式、是否开启「启用外部控制 / ModBus RTU」及从站地址。",
+      "invalid_verify_code": "验证码必须是 8 位十六进制字符。",
+      "verification_failed": "设备校验未通过，请核对一体机上显示的 8 位验证码后重试。"
+    },
+    "abort": {
+      "no_options": "只有 Modbus TCP 直连条目才需要验证码。"
+    }
+  },
   "entity": {
     "sensor": {
       "backup_load_cumulative_export_energy": {

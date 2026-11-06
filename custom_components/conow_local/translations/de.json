@@ -61,6 +61,25 @@
       "already_in_progress": "Dieses Gerät wird bereits eingerichtet. Schließe zuerst den offenen Dialog ab oder brich ihn ab."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Bestätigungscode aktualisieren",
+        "description": "Gib den 8-stelligen Hexadezimalcode ein, den das Gerät aktuell anzeigt. Der Code wird vor dem Speichern am Gerät geprüft.",
+        "data": {
+          "tcp_verify_code": "Bestätigungscode"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung über Modbus nicht möglich. Prüfe Verbindung, „Externen Steuerung / ModBus RTU“ und Slave-Adresse.",
+      "invalid_verify_code": "Der Bestätigungscode muss aus genau 8 Hexadezimalzeichen bestehen.",
+      "verification_failed": "Das Gerät hat den Bestätigungscode abgelehnt. Prüfe den 8-stelligen Code am Gerät und versuche es erneut."
+    },
+    "abort": {
+      "no_options": "Nur direkte Modbus-TCP-Einträge verwenden einen Bestätigungscode."
+    }
+  },
   "entity": {
     "sensor": {
       "backup_load_cumulative_export_energy": {

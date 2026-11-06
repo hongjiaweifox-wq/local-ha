@@ -849,10 +849,13 @@ UI = {
             "from registers.json (v1) and the grouped panel is unavailable."
         ),
         "mapUnreadable": (
-            "The device answers Modbus, but none of the finalized map addresses could "
-            "be read — it probably still speaks the v1 protocol "
-            "(10000–10036 / 10100–10107). Pick a v2 entry or point this entry at a "
-            "server that serves the finalized map."
+            "No data could be read from the device. Check that it is online and "
+            "that the serial or network connection is working."
+        ),
+        "mapUnreadableTcpDirect": (
+            "No data could be read from the device. Check whether the IP address "
+            "or port has changed and whether the verification code is still "
+            "correct (Settings → Devices & services → Conow Local → Configure)."
         ),
         "emptyNoGroups": "No matching groups.",
         "comboNoMatch": "No matches",
@@ -866,6 +869,10 @@ UI = {
         "accessRo": "Read-only only",
         "selectDevice": "Select device…",
         "refresh": "Refresh",
+        "pollInterval": "Poll interval",
+        "pollIntervalOption": "{seconds} s",
+        "noticePollInterval": "Poll interval set to {seconds} s.",
+        "noticePollIntervalFailed": "Could not save the poll interval: {error}",
         "entityOption": "{name} ({code})",
         "unknownFirmware": "unknown",
     },
@@ -923,10 +930,13 @@ UI = {
             "Gruppenpanel ist nicht verfügbar."
         ),
         "mapUnreadable": (
-            "Das Gerät antwortet auf Modbus, aber keine Adresse der endgültigen Zuordnung "
-            "konnte gelesen werden – es spricht vermutlich noch das v1-Protokoll "
-            "(10000–10036 / 10100–10107). Wählen Sie einen v2-Eintrag oder verweisen "
-            "Sie diesen Eintrag auf einen Server mit der endgültigen Zuordnung."
+            "Es konnten keine Gerätedaten gelesen werden. Prüfen Sie, ob das Gerät "
+            "online ist und die serielle bzw. Netzwerkverbindung funktioniert."
+        ),
+        "mapUnreadableTcpDirect": (
+            "Es konnten keine Gerätedaten gelesen werden. Prüfen Sie, ob sich "
+            "IP-Adresse oder Port geändert haben und ob der Verifizierungscode noch "
+            "stimmt (Einstellungen → Geräte & Dienste → Conow Local → Konfigurieren)."
         ),
         "emptyNoGroups": "Keine passenden Gruppen.",
         "comboNoMatch": "Keine Treffer",
@@ -940,6 +950,10 @@ UI = {
         "accessRo": "Nur lesen",
         "selectDevice": "Gerät auswählen…",
         "refresh": "Aktualisieren",
+        "pollInterval": "Abfrageintervall",
+        "pollIntervalOption": "{seconds} s",
+        "noticePollInterval": "Abfrageintervall auf {seconds} s gesetzt.",
+        "noticePollIntervalFailed": "Abfrageintervall konnte nicht gespeichert werden: {error}",
         "entityOption": "{name} ({code})",
         "unknownFirmware": "unbekannt",
     },
@@ -996,10 +1010,13 @@ UI = {
             "uit registers.json (v1) gelezen en het groepenpaneel is niet beschikbaar."
         ),
         "mapUnreadable": (
-            "Het apparaat antwoordt op Modbus, maar geen enkel adres van de "
-            "definitieve map kon worden gelezen — het spreekt waarschijnlijk nog het "
-            "v1-protocol (10000–10036 / 10100–10107). Kies een v2-item of laat dit "
-            "item naar een server wijzen die de definitieve map aanbiedt."
+            "Er konden geen apparaatgegevens worden gelezen. Controleer of het "
+            "apparaat online is en of de seriële of netwerkverbinding werkt."
+        ),
+        "mapUnreadableTcpDirect": (
+            "Er konden geen apparaatgegevens worden gelezen. Controleer of het "
+            "IP-adres of de poort is gewijzigd en of de verificatiecode nog klopt "
+            "(Instellingen → Apparaten & diensten → Conow Local → Configureren)."
         ),
         "emptyNoGroups": "Geen overeenkomende groepen.",
         "comboNoMatch": "Geen resultaten",
@@ -1013,6 +1030,10 @@ UI = {
         "accessRo": "Alleen lezen",
         "selectDevice": "Selecteer apparaat…",
         "refresh": "Vernieuwen",
+        "pollInterval": "Poll-interval",
+        "pollIntervalOption": "{seconds} s",
+        "noticePollInterval": "Poll-interval ingesteld op {seconds} s.",
+        "noticePollIntervalFailed": "Poll-interval opslaan mislukt: {error}",
         "entityOption": "{name} ({code})",
         "unknownFirmware": "onbekend",
     },
@@ -1065,9 +1086,11 @@ UI = {
             "读取实体，分组面板不可用。"
         ),
         "mapUnreadable": (
-            "设备有 Modbus 响应，但定稿映射的地址全部读不到 —— 多半仍在 v1 协议"
-            "（10000–10036 / 10100–10107）。请选择配置为 v2 的条目，"
-            "或把该条目指向提供定稿映射的服务端。"
+            "读取不到设备数据。请检查设备是否在线、串口或网络连接是否正常。"
+        ),
+        "mapUnreadableTcpDirect": (
+            "读取不到设备数据。请检查 IP、端口是否有变更，以及验证码是否已更新"
+            "（设置 → 设备与服务 → Conow Local → 配置）。"
         ),
         "emptyNoGroups": "没有匹配的分组。",
         "comboNoMatch": "没有匹配项",
@@ -1081,6 +1104,10 @@ UI = {
         "accessRo": "仅只读",
         "selectDevice": "选择设备…",
         "refresh": "刷新",
+        "pollInterval": "轮询间隔",
+        "pollIntervalOption": "{seconds} 秒",
+        "noticePollInterval": "轮询间隔已设为 {seconds} 秒。",
+        "noticePollIntervalFailed": "轮询间隔保存失败：{error}",
         "entityOption": "{name}（{code}）",
         "unknownFirmware": "未知",
     },
@@ -1136,6 +1163,7 @@ def _write_entity_sections(
         payload = {
             "exceptions": existing.get("exceptions", {}),
             "config": existing.get("config", {}),
+            "options": existing.get("options", {}),
             "entity": sections[lang],
         }
         path.parent.mkdir(parents=True, exist_ok=True)

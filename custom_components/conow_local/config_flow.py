@@ -7,7 +7,14 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant.components import usb
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigEntryState,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
+from homeassistant.core import callback
 from homeassistant.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
@@ -79,6 +86,18 @@ class ConowLocalConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle Conow Local config flow."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> ConowLocalOptionsFlow:
+        """Return the options flow that updates the verification code."""
+        return ConowLocalOptionsFlow(config_entry)
+
+    @classmethod
+    @callback
+    def async_supports_options_flow(cls, config_entry: ConfigEntry) -> bool:
+        """Only direct TCP entries have a verification code to update."""
+        return config_entry.data.get(CONF_MODBUS_MODE) == MODBUS_MODE_TCP_DIRECT
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -289,15 +308,20 @@ class ConowLocalConfigFlow(ConfigFlow, domain=DOMAIN):
                 except ConowModbusError:
                     errors["base"] = "cannot_connect"
                 else:
+                    data = {
+                        CONF_MODBUS_MODE: mode,
+                        CONF_DEVICE_NAME: user_input[CONF_DEVICE_NAME],
+                        CONF_MODBUS_HOST: host,
+                        CONF_MODBUS_TCP_PORT: tcp_port,
+                        CONF_MODBUS_SLAVE: slave,
+                    }
+                    if direct:
+                        # The code is written before every direct-TCP link is
+                        # used, so a router reboot does not need a new entry.
+                        data[CONF_TCP_VERIFY_CODE] = verify_code
                     return self.async_create_entry(
                         title=user_input[CONF_DEVICE_NAME],
-                        data={
-                            CONF_MODBUS_MODE: mode,
-                            CONF_DEVICE_NAME: user_input[CONF_DEVICE_NAME],
-                            CONF_MODBUS_HOST: host,
-                            CONF_MODBUS_TCP_PORT: tcp_port,
-                            CONF_MODBUS_SLAVE: slave,
-                        },
+                        data=data,
                     )
 
             return self.async_show_form(
@@ -326,4 +350,89 @@ class ConowLocalConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=(
                 self._tcp_direct_schema() if direct else self._tcp_schema()
             ),
+        )
+
+
+class ConowLocalOptionsFlow(OptionsFlow):
+    """Update the verification code of a direct-TCP entry.
+
+    The machine shows a fresh code after a power cycle or a factory reset;
+    writing it here replaces the stored one without deleting the entry.
+    """
+
+    def __init__(self, config_entry: ConfigEntry) -> None:
+        """Store the entry the options belong to."""
+        self._entry = config_entry
+
+    def _schema(self, verify_code: str) -> vol.Schema:
+        """Return the single-field form."""
+        return vol.Schema(
+            {
+                vol.Required(CONF_TCP_VERIFY_CODE, default=verify_code): str,
+            }
+        )
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Validate the new code against the device, then save it."""
+        if self._entry.data.get(CONF_MODBUS_MODE) != MODBUS_MODE_TCP_DIRECT:
+            return self.async_abort(reason="no_options")
+
+        host = self._entry.data[CONF_MODBUS_HOST]
+        tcp_port = self._entry.data.get(CONF_MODBUS_TCP_PORT, DEFAULT_TCP_PORT)
+        slave = self._entry.data[CONF_MODBUS_SLAVE]
+        current = str(self._entry.data.get(CONF_TCP_VERIFY_CODE, "") or "")
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            verify_code = str(user_input[CONF_TCP_VERIFY_CODE]).strip()
+            if not _is_valid_verify_code(verify_code):
+                errors["base"] = "invalid_verify_code"
+            else:
+                coordinator = getattr(self._entry, "runtime_data", None)
+                loaded = (
+                    self._entry.state is ConfigEntryState.LOADED
+                    and coordinator is not None
+                )
+                try:
+                    if loaded:
+                        await coordinator.async_write_verify_code(verify_code)
+                    else:
+                        await self.hass.async_add_executor_job(
+                            partial(
+                                probe_direct_connection,
+                                host,
+                                tcp_port=tcp_port,
+                                slave=slave,
+                                verify_code=verify_code,
+                            )
+                        )
+                except ConowVerificationError:
+                    errors["base"] = "verification_failed"
+                except ConowModbusError:
+                    errors["base"] = (
+                        "verification_failed" if loaded else "cannot_connect"
+                    )
+                else:
+                    self.hass.config_entries.async_update_entry(
+                        self._entry,
+                        data={**self._entry.data, CONF_TCP_VERIFY_CODE: verify_code},
+                    )
+                    await self.hass.config_entries.async_reload(
+                        self._entry.entry_id
+                    )
+                    return self.async_create_entry(
+                        title="", data=dict(self._entry.options)
+                    )
+
+            return self.async_show_form(
+                step_id="init",
+                data_schema=self._schema(verify_code or current),
+                errors=errors,
+            )
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=self._schema(current),
         )

@@ -18,12 +18,19 @@ from homeassistant.core import HomeAssistant, callback
 
 from ..maps import model as map_model
 from ..client import ConowModbusError
-from ..const import DOMAIN, LOGGER, PANEL_URL_PATH
+from ..const import (
+    CONF_POLL_INTERVAL,
+    DOMAIN,
+    LOGGER,
+    PANEL_URL_PATH,
+    POLL_INTERVAL_OPTIONS,
+)
 from ..maps.registry import MAP_PATHS
 from .panel_functions import (
     async_build_panel_state,
     async_write_panel_group,
     build_panel_map,
+    entry_for_device,
     get_panel_devices,
 )
 
@@ -136,6 +143,36 @@ async def websocket_set_panel_group(
     connection.send_result(msg["id"], state)
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/set_poll_interval",
+        vol.Required("device_id"): str,
+        vol.Required("seconds"): vol.All(
+            vol.Coerce(int), vol.In(POLL_INTERVAL_OPTIONS)
+        ),
+    }
+)
+@websocket_api.async_response
+async def websocket_set_poll_interval(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict
+) -> None:
+    """Store one device's polling interval and apply it without a reload."""
+    entry = entry_for_device(hass, msg["device_id"])
+    if entry is None:
+        connection.send_error(msg["id"], "not_found", "Device not found")
+        return
+    seconds = msg["seconds"]
+    # Options survive a restart; the entry data stays untouched.
+    hass.config_entries.async_update_entry(
+        entry, options={**entry.options, CONF_POLL_INTERVAL: seconds}
+    )
+    coordinator = getattr(entry, "runtime_data", None)
+    if coordinator is not None:
+        await coordinator.async_set_poll_interval(seconds)
+    LOGGER.info("Panel: poll interval for %s set to %ss", entry.entry_id, seconds)
+    connection.send_result(msg["id"], {"seconds": seconds})
+
+
 @callback
 def _register_websocket_api(hass: HomeAssistant) -> None:
     if hass.data.get(f"{DOMAIN}_panel_ws_registered"):
@@ -144,6 +181,7 @@ def _register_websocket_api(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_get_panel_map)
     websocket_api.async_register_command(hass, websocket_get_panel_functions)
     websocket_api.async_register_command(hass, websocket_set_panel_group)
+    websocket_api.async_register_command(hass, websocket_set_poll_interval)
     hass.data[f"{DOMAIN}_panel_ws_registered"] = True
 
 
@@ -181,11 +219,13 @@ async def async_register_local_panel(hass: HomeAssistant) -> None:
             or SIDEBAR_TITLES.get(language.split("-")[0])
             or "Conow Local"
         )
+        # No config_panel_domain: a registered config panel would take over the
+        # gear icon on every config entry, hiding the options flow that updates
+        # the direct-TCP verification code.  The panel stays in the sidebar.
         await panel_custom.async_register_panel(
             hass=hass,
             frontend_url_path=PANEL_URL_PATH,
             webcomponent_name=PANEL_WEBCOMPONENT,
-            config_panel_domain=DOMAIN,
             module_url=PANEL_SCRIPT_URL,
             sidebar_title=sidebar_title,
             sidebar_icon="mdi:format-list-group",

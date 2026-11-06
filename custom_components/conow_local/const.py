@@ -19,6 +19,7 @@ CONF_MODBUS_SLAVE = "modbus_slave"
 CONF_MODBUS_BAUDRATE = "modbus_baudrate"
 CONF_DEVICE_NAME = "device_name"
 CONF_TCP_VERIFY_CODE = "tcp_verify_code"
+CONF_POLL_INTERVAL = "poll_interval"
 
 MODBUS_MODE_RTU = "rtu"
 MODBUS_MODE_TCP = "tcp"
@@ -27,6 +28,15 @@ MODBUS_TCP_MODES = (MODBUS_MODE_TCP, MODBUS_MODE_TCP_DIRECT)
 DEFAULT_TCP_PORT = 502
 
 MODBUS_POLL_INTERVAL = 5
+
+# Per-device polling interval, configured from the grouping panel.  Stored in
+# the config entry options so it survives a restart.
+POLL_INTERVAL_MIN_S = 5
+POLL_INTERVAL_MAX_S = 60
+POLL_INTERVAL_STEP_S = 5
+POLL_INTERVAL_OPTIONS = tuple(
+    range(POLL_INTERVAL_MIN_S, POLL_INTERVAL_MAX_S + 1, POLL_INTERVAL_STEP_S)
+)
 
 DEFAULT_SLAVE = 0xA0
 DEFAULT_BAUDRATE = 38400

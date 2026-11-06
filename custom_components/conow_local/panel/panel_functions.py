@@ -29,8 +29,10 @@ from ..const import (
     MODBUS_TCP_MODES,
 )
 from ..device.coordinator import (
+    PANEL_POLL_INTERVAL_S,
     ConowLocalCoordinator,
-    decode_map_blocks,
+    configured_poll_interval,
+    decode_required_blocks,
     read_map_blocks,
     write_register_ops,
 )
@@ -80,6 +82,13 @@ def _device_name(entry, device_entry) -> str:
         or entry.title
         or entry.entry_id
     )
+
+
+def _poll_interval(entry, coordinator: ConowLocalCoordinator | None) -> int:
+    """Return the interval the coordinator polls at, or what its next setup uses."""
+    if coordinator is not None:
+        return coordinator.poll_interval_seconds
+    return configured_poll_interval(entry) or PANEL_POLL_INTERVAL_S
 
 
 # finalized-map codes that back a differently named v1 entity. Clicking the
@@ -259,13 +268,14 @@ def get_panel_devices(hass: HomeAssistant) -> list[dict[str, Any]]:
                 "loaded": loaded,
                 "mode": entry.data.get(CONF_MODBUS_MODE, "rtu"),
                 "slave": entry.data.get(CONF_MODBUS_SLAVE),
+                "poll_interval": _poll_interval(entry, coordinator),
             }
         )
     devices.sort(key=lambda item: item["name"].lower())
     return devices
 
 
-def _entry_for_id(hass: HomeAssistant, device_id: str):
+def entry_for_device(hass: HomeAssistant, device_id: str):
     """Resolve a panel ``device_id`` (HA device id or entry id) to an entry."""
     device_registry = dr.async_get(hass)
     device_entry = device_registry.async_get(device_id)
@@ -395,7 +405,7 @@ async def async_write_panel_group(
     values: dict[str, Any],
 ) -> dict[str, Any]:
     """Write one group atomically and return the refreshed panel state."""
-    entry = _entry_for_id(hass, device_id)
+    entry = entry_for_device(hass, device_id)
     if entry is None:
         raise LookupError(f"No {DOMAIN} entry for {device_id}")
 
@@ -443,13 +453,13 @@ def _read_blocks_direct(entry) -> tuple[str, tuple[int, ...] | None, dict[str, d
     with ConowModbusClient(host=host, tcp_port=tcp_port, slave=slave) as client:
         map_version, version = _probe_map_version(client)
         blocks = read_map_blocks(client, map_version)
-        return map_version, version, decode_map_blocks(blocks, map_version)
+        return map_version, version, decode_required_blocks(blocks, map_version)
 
 
 async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[str, Any]:
     """Read the selected grouped map and serialize the grouped values."""
     device_registry = dr.async_get(hass)
-    entry = _entry_for_id(hass, device_id)
+    entry = entry_for_device(hass, device_id)
     if entry is None:
         raise LookupError(f"No {DOMAIN} entry for {device_id}")
     device_entry = device_registry.async_get_device(
@@ -466,8 +476,10 @@ async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[s
             decoded = await coordinator.async_read_snapshot()
             read_ok = bool(decoded)
         except (ConowModbusError, OSError):
+            # Never fall back to the previous poll: the panel shows "—" for a
+            # device that cannot be read right now.
             LOGGER.debug("Panel: fresh read failed for %s", entry.entry_id)
-            decoded = dict(coordinator.data or {})
+            decoded = {}
     else:
         try:
             map_version, firmware, decoded = await hass.async_add_executor_job(
@@ -498,11 +510,9 @@ async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[s
     return {
         "device_id": device_id,
         "name": _device_name(entry, device_entry) if device_entry else entry.title,
-        "online": bool(
-            read_ok
-            or (loaded and coordinator.last_update_success)
-            or firmware is not None
-        ),
+        # Reachability is the fresh read, not the cached firmware version: a
+        # loaded entry whose device stopped answering must not look online.
+        "online": read_ok,
         "map_readable": read_ok,
         "map_version": 2 if map_version != MAP_V1 else 1,
         "map_source": map_info["source"],
@@ -510,6 +520,7 @@ async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[s
         "min_firmware": map_info["min_firmware"],
         "mode": entry.data.get(CONF_MODBUS_MODE, "rtu"),
         "slave": entry.data.get(CONF_MODBUS_SLAVE),
+        "poll_interval": _poll_interval(entry, coordinator if loaded else None),
         "map": map_info,
         "groups": {
             group.id: _serialize_group(

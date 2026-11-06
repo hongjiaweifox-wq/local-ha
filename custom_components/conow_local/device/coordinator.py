@@ -22,8 +22,10 @@ from ..maps import model as map_model
 from ..client import (
     INTER_FRAME_DELAY_S,
     POST_WRITE_DELAY_S,
+    VERIFY_CODE_START,
     ConowModbusClient,
     ConowModbusError,
+    encode_verify_code,
 )
 from ..const import (
     CONF_MODBUS_BAUDRATE,
@@ -32,12 +34,16 @@ from ..const import (
     CONF_MODBUS_PORT,
     CONF_MODBUS_SLAVE,
     CONF_MODBUS_TCP_PORT,
+    CONF_POLL_INTERVAL,
+    CONF_TCP_VERIFY_CODE,
     DEFAULT_BAUDRATE,
     DEFAULT_TCP_PORT,
     DOMAIN,
     LOGGER,
+    MODBUS_MODE_TCP_DIRECT,
     MODBUS_POLL_INTERVAL,
     MODBUS_TCP_MODES,
+    POLL_INTERVAL_OPTIONS,
 )
 from ..maps.registry import (
     FIRMWARE_VERSION_ADDRESS,
@@ -53,6 +59,19 @@ from ..maps.registry import (
 _T = TypeVar("_T")
 
 PANEL_POLL_INTERVAL_S = 30
+
+# The block that carries the live measurements.  A device that cannot answer
+# it is offline: reporting the other blocks would mix fresh and stale values.
+KEY_BLOCK = "monitoring"
+
+
+def configured_poll_interval(entry: ConfigEntry) -> int | None:
+    """Return the panel-configured interval, or None when unset or invalid."""
+    try:
+        seconds = int(entry.options.get(CONF_POLL_INTERVAL))
+    except (TypeError, ValueError):
+        return None
+    return seconds if seconds in POLL_INTERVAL_OPTIONS else None
 
 
 def read_map_blocks(
@@ -71,6 +90,23 @@ def read_map_blocks(
             LOGGER.debug("Map %s: block %s read failed", map_version, block)
             blocks[block] = None
     return blocks
+
+
+def decode_required_blocks(
+    blocks: dict[str, list[int] | None], map_version: str
+) -> dict[str, dict[str, Any]]:
+    """Decode a snapshot, requiring the live-measurement block.
+
+    A partial read is not a usable snapshot: entities must either show fresh
+    values or become unavailable, never keep the previous poll's numbers.
+    Raises ``ConowModbusError`` when the map's key block did not answer, so
+    callers can report the whole device as offline.
+    """
+    if KEY_BLOCK in blocks and blocks[KEY_BLOCK] is None:
+        raise ConowModbusError(
+            f"{map_source(map_version)}: block {KEY_BLOCK!r} is not readable"
+        )
+    return decode_map_blocks(blocks, map_version)
 
 
 def decode_map_blocks(
@@ -117,9 +153,20 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self.baudrate = entry.data[CONF_MODBUS_BAUDRATE]
         self._lock = threading.Lock()
         self._client: ConowModbusClient | None = None
+        # Direct TCP entries carry the challenge code that guards the machine.
+        self.verify_code: str | None = (
+            entry.data.get(CONF_TCP_VERIFY_CODE)
+            if self.mode == MODBUS_MODE_TCP_DIRECT
+            else None
+        )
         # v1 is the default; async_probe_map_version() may upgrade this.
         self.map_version = MAP_V1
         self.firmware_version: tuple[int, ...] | None = None
+        # A panel-configured interval overrides the map default; the map is
+        # only known after the probe, so the effective value is resolved in
+        # _apply_poll_interval().
+        self._configured_poll_interval = configured_poll_interval(entry)
+        self.poll_interval_seconds = MODBUS_POLL_INTERVAL
         super().__init__(
             hass,
             LOGGER,
@@ -138,8 +185,30 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 baudrate=self.baudrate or DEFAULT_BAUDRATE,
             )
             client.connect()
+            if self.verify_code:
+                self._send_verify_code(client)
             self._client = client
         return self._client
+
+    def _send_verify_code(self, client: ConowModbusClient) -> None:
+        """Re-verify a direct TCP link with the stored challenge code.
+
+        The machine expects the code on every fresh connection.  A stale code
+        is not fatal here: the reads that follow report the real failure, and
+        the options flow is where a rotated code is replaced.
+        """
+        try:
+            client.write_registers(
+                VERIFY_CODE_START,
+                encode_verify_code(self.verify_code),
+                retries=1,
+            )
+        except ConowModbusError as err:
+            LOGGER.warning(
+                "TCP direct: verification code rejected (%s); update it under "
+                "Settings > Devices & services > Conow Local > Configure",
+                err,
+            )
 
     def _reset_client(self) -> None:
         """Close the client after an I/O error."""
@@ -198,25 +267,46 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         self.firmware_version = version
         self.map_version = select_map(probe_ok)
-        self.update_interval = timedelta(
-            seconds=(
+        self._apply_poll_interval()
+        LOGGER.info(
+            "Map: firmware=%s -> %s (%s), poll every %ss",
+            format_version(version) or "unknown",
+            self.map_version,
+            map_source(self.map_version),
+            self.poll_interval_seconds,
+        )
+        return self.map_version
+
+    def _apply_poll_interval(self) -> None:
+        """Use the panel-configured interval when set, else the map default."""
+        seconds = self._configured_poll_interval
+        if seconds is None:
+            seconds = (
                 PANEL_POLL_INTERVAL_S
                 if self.map_version == MAP_V2
                 else MODBUS_POLL_INTERVAL
             )
-        )
-        LOGGER.info(
-            "Map: firmware=%s -> %s (%s)",
-            format_version(version) or "unknown",
-            self.map_version,
-            map_source(self.map_version),
-        )
-        return self.map_version
+        self.poll_interval_seconds = seconds
+        self.update_interval = timedelta(seconds=seconds)
+
+    async def async_set_poll_interval(self, seconds: int) -> None:
+        """Apply a new polling interval without reloading the entry."""
+        if seconds not in POLL_INTERVAL_OPTIONS:
+            raise ValueError(f"Unsupported poll interval: {seconds}s")
+        self._configured_poll_interval = seconds
+        self._apply_poll_interval()
+        # Re-arm the timer with the new interval right away instead of waiting
+        # for the currently scheduled refresh.
+        await self.async_request_refresh()
 
     def _read_snapshot(self) -> dict[str, dict[str, Any]]:
-        """Blocking read of every block of the active map."""
+        """Blocking read of every block of the active map.
+
+        Raises ``ConowModbusError`` when the key block is unreadable so the
+        coordinator marks the device unavailable instead of half-updating it.
+        """
         return self._run_locked(
-            lambda client: decode_map_blocks(
+            lambda client: decode_required_blocks(
                 read_map_blocks(client, self.map_version), self.map_version
             )
         )
@@ -240,6 +330,21 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         polled entity data.
         """
         return await self.hass.async_add_executor_job(self._read_snapshot)
+
+    async def async_write_verify_code(self, verify_code: str) -> None:
+        """Send a new challenge code over the existing TCP connection.
+
+        Reuses the coordinator's link so a device that accepts only one TCP
+        client is not asked for a second one while the entry is loaded.
+        """
+        await self.hass.async_add_executor_job(
+            self._run_locked,
+            lambda client: client.write_registers(
+                VERIFY_CODE_START,
+                encode_verify_code(verify_code),
+                retries=1,
+            ),
+        )
 
     def _write_panel_ops(self, ops: list[tuple[int, list[int]]]) -> None:
         """Write grouping-panel registers under the shared Modbus lock."""
