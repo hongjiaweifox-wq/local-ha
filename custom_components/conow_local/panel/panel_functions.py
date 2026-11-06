@@ -312,22 +312,32 @@ def _probe_map_version(
     return select_map(True), parse_firmware_version(words)
 
 
+MAX_WRITE_REGISTERS = 123  # FC 0x10 quantity limit
+
+
 def _merge_contiguous(
     ops: list[tuple[int, list[int]]],
-) -> tuple[int, list[int]] | None:
-    """Merge per-register writes into one frame when the addresses touch."""
-    start = ops[0][0]
-    expected = start
-    words: list[int] = []
+) -> list[tuple[int, list[int]]]:
+    """Merge neighbouring per-register writes into FC 0x10 frames.
+
+    A group can contain a read-only register in the middle — ``work_strategy``
+    has ``allow_battery_export`` between two writable runs — so merging only
+    when *every* address touches would degrade such a group to one frame per
+    register.  Merge each contiguous run instead, starting a new frame when
+    the addresses jump or the FC 0x10 limit is reached.
+    """
+    merged: list[tuple[int, list[int]]] = []
     for address, chunk in ops:
-        if address != expected:
-            return None
-        words.extend(chunk)
-        expected += len(chunk)
-    return start, words
-
-
-MAX_WRITE_REGISTERS = 123  # FC 0x10 quantity limit
+        if merged:
+            start, words = merged[-1]
+            if (
+                address == start + len(words)
+                and len(words) + len(chunk) <= MAX_WRITE_REGISTERS
+            ):
+                merged[-1] = (start, words + chunk)
+                continue
+        merged.append((address, list(chunk)))
+    return merged
 
 
 def plan_group_writes(
@@ -339,11 +349,11 @@ def plan_group_writes(
 ) -> list[tuple[int, list[int]]]:
     """Validate a group submission and return ``(address, words)`` writes.
 
-    A group is sent as one atomic FC 0x10 frame whenever its writable
-    registers are contiguous; groups with gaps fall back to per-register
-    frames written back to back.  ``live`` holds the decoded device state so
-    limits that depend on another register (safety SoC, hardware power
-    capability) can be enforced before anything is sent.
+    Consecutive writable registers are sent as one FC 0x10 frame per
+    contiguous run; only isolated registers need their own frame.  ``live``
+    holds the decoded device state so limits that depend on another register
+    (safety SoC, hardware power capability) can be enforced before anything
+    is sent.
     """
     index = map_model.get_register_index(map_version)
     registers = [index[code] for code in group.members if index[code].writable]
@@ -380,11 +390,7 @@ def plan_group_writes(
                         f"range {low:g}–{high:g}"
                     )
         ops.append((register.address, map_model.encode_value(register, value)))
-    if len(ops) > 1:
-        merged = _merge_contiguous(ops)
-        if merged is not None and len(merged[1]) <= MAX_WRITE_REGISTERS:
-            return [merged]
-    return ops
+    return _merge_contiguous(ops)
 
 
 def _write_ops_direct(entry, ops: list[tuple[int, list[int]]]) -> None:
