@@ -32,7 +32,7 @@
           "modbus_slave": "Slave-adres",
           "modbus_baudrate": "Baudsnelheid"
         },
-        "description": "Standaard RS-485 met **38400 8N1** (slave **0xA0**). Schakel eerst **Externe besturing / ModBus RTU** in de Conow-app in."
+        "description": "De lijst toont de op de Home Assistant-host gevonden seriële poorten; kies er een of typ een pad zoals `/dev/ttyUSB0`. Standaard **38400 8N1** met slave **0xA0**. Schakel eerst **Externe besturing / ModBus RTU** in de Conow-app in."
       },
       "tcp": {
         "title": "Modbus TCP (Ethernet-adapter)",

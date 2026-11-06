@@ -32,7 +32,7 @@
           "modbus_slave": "Slave address",
           "modbus_baudrate": "Baud rate"
         },
-        "description": "Connect over RS-485 with **38400 8N1** by default (slave **0xA0**). Enable **External Control / ModBus RTU** in the Conow app before continuing."
+        "description": "The list shows serial ports detected on the Home Assistant host; pick one or type a path such as `/dev/ttyUSB0`. Uses **38400 8N1** with slave **0xA0** by default. Enable **External Control / ModBus RTU** in the Conow app before continuing."
       },
       "tcp": {
         "title": "Modbus TCP (Ethernet adapter)",

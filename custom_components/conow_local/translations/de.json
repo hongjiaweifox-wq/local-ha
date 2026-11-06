@@ -32,7 +32,7 @@
           "modbus_slave": "Slave-Adresse",
           "modbus_baudrate": "Baudrate"
         },
-        "description": "Standardmäßig RS-485 mit **38400 8N1** (Slave **0xA0**). Vor dem Fortsetzen **Externe Steuerung / ModBus RTU** in der Conow-App aktivieren."
+        "description": "Die Liste zeigt die am Home-Assistant-Host erkannten seriellen Schnittstellen; eine auswählen oder einen Pfad wie `/dev/ttyUSB0` eingeben. Standardmäßig **38400 8N1** mit Slave **0xA0**. Vorher **Externe Steuerung / ModBus RTU** in der Conow-App aktivieren."
       },
       "tcp": {
         "title": "Modbus TCP (Ethernet-Adapter)",

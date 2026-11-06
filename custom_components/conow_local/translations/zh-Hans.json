@@ -32,7 +32,7 @@
           "modbus_slave": "从站地址",
           "modbus_baudrate": "波特率"
         },
-        "description": "默认 **38400 8N1**、从站 **0xA0**。请先在 Conow App 中开启 **启用外部控制 / ModBus RTU**。"
+        "description": "列表会显示 Home Assistant 主机上检测到的串口，可直接选择，也可手动输入路径（如 `/dev/ttyUSB0`）。默认 **38400 8N1**、从站 **0xA0**。请先在 Conow App 中开启 **启用外部控制 / ModBus RTU**。"
       },
       "tcp": {
         "title": "Modbus TCP（以太网适配器）",
