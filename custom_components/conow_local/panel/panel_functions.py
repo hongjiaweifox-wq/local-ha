@@ -280,17 +280,26 @@ def _entry_for_id(hass: HomeAssistant, device_id: str):
 def _probe_map_version(
     client: ConowModbusClient,
 ) -> tuple[str, tuple[int, ...] | None]:
-    """Probe firmware and return the selected map plus decoded version."""
-    try:
-        words = client.read_holding_registers(
-            FIRMWARE_VERSION_ADDRESS,
-            FIRMWARE_VERSION_REGISTERS,
-            retries=2,
-        )
-    except ConowModbusError:
+    """Probe firmware and return the selected map plus decoded version.
+
+    Any reply from the firmware register selects v2, including current
+    machines that answer 0x0000.  A single-word read is retried because some
+    firmware exposes only 0x274E.
+    """
+    words: list[int] | None = None
+    for count in (FIRMWARE_VERSION_REGISTERS, 1):
+        try:
+            words = client.read_holding_registers(
+                FIRMWARE_VERSION_ADDRESS,
+                count,
+                retries=2,
+            )
+        except ConowModbusError:
+            continue
+        break
+    if words is None:
         return MAP_V1, None
-    version = parse_firmware_version(words)
-    return select_map(version), version
+    return select_map(True), parse_firmware_version(words)
 
 
 def _merge_contiguous(

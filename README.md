@@ -273,18 +273,19 @@ one entity classifier; only the data differs:
 
 | Map | File | Used for |
 |-----|------|----------|
-| v1 | `maps/registers.json` | Firmware < 1.2 (also the fallback) |
-| v2 (finalized) | `maps/panel_registers.json` | Firmware ≥ 1.2 |
+| v1 | `maps/registers.json` | Firmware probe failed (fallback) |
+| v2 (finalized) | `maps/panel_registers.json` | Firmware register responds (any value) |
 
 The two maps are **mutually exclusive** for an entry: exactly one is loaded,
 polled and rendered. The selection is made once at setup:
 
-After setup begins, the integration reads the 4-byte ASCII firmware version
-at **10062–10063 (0x274E–0x274F)** before the first poll. The v2 map and its
-panel features are used only when the parsed version is **≥ 1.2**
-(`PANEL_MAP_MIN_FIRMWARE`). A missing, timed-out or unparsable value keeps
-`registers.json`; the integration never falls forward to the finalized control
-addresses by accident.
+After setup begins, the integration reads the firmware register at
+**10062 (0x274E)** before the first poll. The v2 map and its panel features
+are used whenever the device answers this read — the value does not matter,
+and current machines reply `0x0000`. A missing reply, timeout or Modbus
+exception keeps `registers.json`; the integration never falls forward to the
+finalized control addresses by accident. When the reply happens to contain a
+version string (e.g. `1.2`), it is shown in the logs and the panel.
 
 The panel asks for the map version reported by the active device, so it never
 briefly renders the other map's groups. Every map file path lives in

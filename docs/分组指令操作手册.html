@@ -351,7 +351,7 @@
     <div class="badges">
       <span class="badge">集成版本 2.5.0</span>
       <span class="badge">HA 2026.6+</span>
-      <span class="badge">设备固件 ≥ 1.2</span>
+      <span class="badge">固件寄存器 0x274E 可读</span>
       <span class="badge">2026-11-03</span>
     </div>
   </header>
@@ -380,7 +380,7 @@
       <p class="section-lead">建议提前一天完成安装和配对；演示当天只做“打开、展示、下发”，避免现场等待重启或网络下载。</p>
 
       <div class="flow" aria-label="演示环境结构">
-        <div class="node"><b>CONOW 一体机</b><span>固件 ≥ 1.2</span></div>
+        <div class="node"><b>CONOW 一体机</b><span>0x274E 可读（v2）</span></div>
         <div class="arrow">↔</div>
         <div class="node"><b>RS-485 / 网口</b><span>RTU 或 Modbus TCP</span></div>
         <div class="arrow">↔</div>
@@ -396,7 +396,7 @@
         <li>设备已在 <strong>CONOW ECO App</strong> 中完成激活（全新设备未激活时 RS-485 不工作）。</li>
         <li>已在 App 中打开 <strong>启用外部控制 / ModBus RTU</strong>。</li>
         <li>准备演示用的连接参数：从站地址 <code>160</code>（<code>0xA0</code>）、波特率 <code>38400</code>、TCP 端口 <code>502</code>。</li>
-        <li>设备固件为 <strong>1.2 或更高</strong> 时使用完整的 v2 分组；低于 1.2 也能打开分组面板，只是显示 v1 的 7 个分组。</li>
+        <li>设备<strong>能响应 0x274E</strong>（任意值，当前真机返回 <code>0x0000</code>）时使用完整的 v2 分组；读取不到时才回退到 v1 的 7 个分组。</li>
       </ul>
 
       <h3>软件</h3>
@@ -632,18 +632,18 @@ rm hacs.zip</code></pre>
       </ul>
 
       <h3>添加成功后的固件路由</h3>
-      <p>集成启动时会读取 <code>10062–10063</code>（<code>0x274E</code>）的 4 字节 ASCII 固件版本，并据此选择寄存器表：</p>
+      <p>集成启动时会读取 <code>10062</code>（<code>0x274E</code>）的固件寄存器：<strong>只要有响应就使用 v2</strong>（当前真机返回 <code>0x0000</code>），读取失败才回退 v1：</p>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>固件版本</th><th>使用的映射</th><th>效果</th></tr></thead>
+          <thead><tr><th>固件寄存器 0x274E</th><th>使用的映射</th><th>效果</th></tr></thead>
           <tbody>
             <tr>
-              <td><strong>≥ 1.2</strong></td>
+              <td><strong>有响应（含 0x0000）</strong></td>
               <td><code>maps/panel_registers.json</code>（v2）</td>
               <td>启用分组面板与面板实体，11 个分组，与定稿表格的「分类」列一一对应，覆盖 10000–10081 与 10100–10189 的全部功能</td>
             </tr>
             <tr>
-              <td><strong>&lt; 1.2 / 读取不到</strong></td>
+              <td><strong>无响应 / 异常</strong></td>
               <td><code>maps/registers.json</code>（v1）</td>
               <td>照常显示 v1 实体；分组面板显示 v1 的 7 个分组（系统、实时监控数据、运行参数与设备信息、详细监控数据、累计电量、工作策略、实时控制）；「系统」分组把系统状态位掩码拆成待机、故障、充电中、放电中 4 个只读值</td>
             </tr>
@@ -652,7 +652,7 @@ rm hacs.zip</code></pre>
       </div>
       <div class="callout warn">
         <span class="label">演示必须</span>
-        两种固件都能使用分组面板，但 <strong>≥ 1.2（v2）</strong>才有完整分组和面板实体。演示前请在设备页或日志中确认版本，日志会显示 <code>Map: firmware=1.2 -&gt; v2</code> 或 <code>-&gt; v1</code>。
+        只要设备能响应 <strong>0x274E（v2）</strong>就有完整分组和面板实体；读取不到 0x274E 时才回退 v1 的 7 个分组。演示前可在日志中确认，日志会显示 <code>Map: firmware=… -&gt; v2</code> 或 <code>-&gt; v1</code>。
       </div>
     </section>
 
@@ -795,7 +795,7 @@ rm hacs.zip</code></pre>
             </tr>
             <tr>
               <td>面板没有分组，提示“分组面板不可用”</td>
-              <td>固件低于 1.2，且 v1 地址也读不到</td>
+              <td>0x274E 无响应，且 v1 地址也读不到</td>
               <td>检查日志中的 <code>Map: firmware=… -&gt; v1/v2</code>；v1 至少要能读到 10000 和 10100 两个块</td>
             </tr>
             <tr>
@@ -907,7 +907,7 @@ rm hacs.zip</code></pre>
             <tr><td>从站地址</td><td><code>160</code>（<code>0xA0</code>）</td><td>三种连接方式一致</td></tr>
             <tr><td>波特率</td><td><code>38400</code>，8N1</td><td>仅 RTU / 适配器串口侧</td></tr>
             <tr><td>轮询间隔</td><td>v2 30 秒 / v1 5 秒</td><td>两版共用同一协调器，按活动地图的块读取；写入后立即回读</td></tr>
-            <tr><td>固件门槛</td><td><code>1.2</code></td><td>≥ 1.2 使用 v2 完整分组；低于该版本使用 v1 的 7 个分组</td></tr>
+            <tr><td>映射判定</td><td><code>0x274E</code></td><td>0x274E 有响应（任意值）→ v2 完整分组；读取失败 → v1 的 7 个分组</td></tr>
           </tbody>
         </table>
       </div>
@@ -922,7 +922,7 @@ rm hacs.zip</code></pre>
   --live</code></pre>
       <ul>
         <li>模拟器网页状态：<code>http://127.0.0.1:1604/api/state</code>，可确认 <code>map</code>、固件版本与当前验证码。</li>
-        <li>模拟器会自动加载 v1/v2 两张表：在网页 <code>http://127.0.0.1:1604/</code> 把 <strong>固件版本</strong>（<code>10062</code>，<code>0x274E</code>）改成低于 <code>1.2</code>（如 <code>1.1</code>）会立即切换到 v1 控制块，改回 <code>1.2</code> 及以上自动恢复到 v2，无需重启或更换 <code>--map</code>；状态页的 <code>map</code> 字段会实时反映当前使用的表。</li>
+        <li>模拟器自身会在网页上按固件版本切换 v1/v2 数据表；但 HA 现在以 <strong>0x274E 是否有响应</strong>判断映射，因此连接模拟器时总会被识别为 v2。要在 HA 侧验证 v1 回退，需要一个不响应 0x274E 的设备（或模拟器配置为不提供该寄存器）。</li>
         <li>切换固件后，HA 侧需要重新加载该集成（或重启 HA）以重新探测固件并重建实体。</li>
         <li>在 HA 中添加集成时选择 <strong>Modbus TCP（以太网适配器）</strong>：主机填模拟器所在机器 IP（同机可填 <code>127.0.0.1</code>），端口 <code>1504</code>，从站 <code>160</code>，不需要验证码。</li>
         <li>模拟器默认应答任意从站地址；如需严格匹配，追加 <code>--slave 160</code>。</li>
@@ -934,7 +934,7 @@ rm hacs.zip</code></pre>
         <table>
           <thead><tr><th>用途</th><th>地址</th><th>说明</th></tr></thead>
           <tbody>
-            <tr><td>固件版本</td><td><code>10062–10063</code>（<code>0x274E</code>）</td><td>4 字节 ASCII，决定 v1/v2</td></tr>
+            <tr><td>固件寄存器</td><td><code>10062</code>（<code>0x274E</code>）</td><td>有响应即 v2；读取失败回退 v1；返回值仅用于显示</td></tr>
             <tr><td>监控块（v2）</td><td><code>10000–10081</code></td><td>面板只读数据</td></tr>
             <tr><td>控制块（v2）</td><td><code>10100–10189</code></td><td>面板可写分组</td></tr>
             <tr><td>监控块（v1）</td><td><code>10000–10036</code></td><td>v1 实体与 v1 面板只读数据</td></tr>

@@ -5,11 +5,11 @@ version.  Every other module asks it for the path/source, so a future map
 only changes this file.
 
 ``registers.json`` (map version 1, the July protocol) is the default.
-``panel_registers.json`` (map version 2, the finalized protocol) is
-only used when the firmware version read from ``0x274E-0x274F``
-(10062-10063) is at least ``PANEL_MAP_MIN_FIRMWARE``.  A failed or
-unparsable probe therefore falls back to the v1 map, never to the newer
-addresses.
+``panel_registers.json`` (map version 2, the finalized protocol) is used
+whenever the firmware register at ``0x274E-0x274F`` (10062-10063)
+answers, whatever value it returns (current machines reply ``0x0000``).
+Only a failed probe — timeout, no reply or a Modbus exception — falls
+back to the v1 map, never to the newer addresses.
 
 The module deliberately imports stdlib only: ``tools/i18n/build_panel_i18n.py``
 imports it outside Home Assistant.
@@ -37,8 +37,9 @@ FIRMWARE_VERSION_REGISTERS = 2
 # config flow works before the map (and its firmware) is known.
 CONNECTION_PROBE = (10000, 1)
 
-# The finalized register map ships with firmware v1.2 and later.  Change this
-# tuple if the vendor moves the cut-over.
+# Informational only: the panel shows this as the version that introduced the
+# finalized map.  Map selection itself depends on the probe succeeding, not on
+# the decoded version.
 PANEL_MAP_MIN_FIRMWARE = (1, 2)
 
 _VERSION_TEXT = re.compile(r"^[Vv]?(\d{1,2}(?:\.\d{1,2}){0,3}|\d{3,4})$")
@@ -86,11 +87,14 @@ def parse_firmware_version(words: list[int] | tuple[int, ...]) -> tuple[int, ...
     return None
 
 
-def select_map(version: tuple[int, ...] | None) -> str:
-    """Return the map id selected by a decoded firmware version."""
-    if version is not None and version >= PANEL_MAP_MIN_FIRMWARE:
-        return MAP_V2
-    return MAP_V1
+def select_map(probe_ok: bool) -> str:
+    """Return the map id selected by the firmware probe.
+
+    Any successful response from the firmware register selects the v2 map;
+    only a failed probe falls back to v1.  The value itself is used for
+    display only.
+    """
+    return MAP_V2 if probe_ok else MAP_V1
 
 
 def format_version(version: tuple[int, ...] | None) -> str | None:

@@ -161,33 +161,43 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         with self._lock:
             self._reset_client()
 
-    def _probe_firmware_version(self) -> tuple[int, ...] | None:
-        """Read the 4-byte firmware version used for register-map routing."""
+    def _probe_firmware_version(self) -> tuple[tuple[int, ...] | None, bool]:
+        """Read the firmware register and report whether the probe succeeded.
 
-        def _operation(client: ConowModbusClient) -> list[int]:
-            return client.read_holding_registers(
-                FIRMWARE_VERSION_ADDRESS,
-                FIRMWARE_VERSION_REGISTERS,
-                retries=2,
-            )
+        Any reply selects the v2 map, so the decoded version is only used for
+        logging.  Some machines expose a single word at 0x274E, so a failed
+        two-word read is retried with one word before giving up.
+        """
+        last_error: ConowModbusError | None = None
+        for count in (FIRMWARE_VERSION_REGISTERS, 1):
+            try:
+                words = self._run_locked(
+                    lambda client, count=count: client.read_holding_registers(
+                        FIRMWARE_VERSION_ADDRESS,
+                        count,
+                        retries=2,
+                    )
+                )
+            except ConowModbusError as err:
+                last_error = err
+                continue
+            return parse_firmware_version(words), True
 
-        try:
-            words = self._run_locked(_operation)
-        except ConowModbusError as err:
-            LOGGER.info(
-                "Map: firmware probe at 0x%04X failed (%s); keeping %s",
-                FIRMWARE_VERSION_ADDRESS,
-                err,
-                map_source(MAP_V1),
-            )
-            return None
-        return parse_firmware_version(words)
+        LOGGER.info(
+            "Map: firmware probe at 0x%04X failed (%s); keeping %s",
+            FIRMWARE_VERSION_ADDRESS,
+            last_error,
+            map_source(MAP_V1),
+        )
+        return None, False
 
     async def async_probe_map_version(self) -> str:
         """Probe the device and store the selected register map id."""
-        version = await self.hass.async_add_executor_job(self._probe_firmware_version)
+        version, probe_ok = await self.hass.async_add_executor_job(
+            self._probe_firmware_version
+        )
         self.firmware_version = version
-        self.map_version = select_map(version)
+        self.map_version = select_map(probe_ok)
         self.update_interval = timedelta(
             seconds=(
                 PANEL_POLL_INTERVAL_S
