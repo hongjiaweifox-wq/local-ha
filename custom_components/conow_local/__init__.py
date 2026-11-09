@@ -11,6 +11,7 @@ from homeassistant.helpers.typing import ConfigType
 from .client import ConowConnectError
 from .const import DOMAIN, LOGGER, PLATFORMS
 from .device.coordinator import ConowLocalCoordinator
+from .device.network import async_register_device_mac
 from .maps import entity_model
 from .panel.panel_api import async_register_local_panel
 
@@ -81,6 +82,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConowLocalConfigEntry) -
         hass, entry, coordinator.map_version, coordinator.new_model
     )
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    # The device registry entry exists only after the platforms are forwarded.
+    # The first poll has just succeeded, so the TCP peer's ARP entry is warm.
+    await async_register_device_mac(hass, entry)
     return True
 
 

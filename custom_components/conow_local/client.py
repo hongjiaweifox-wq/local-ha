@@ -180,16 +180,27 @@ class ConowModbusClient:
         slave: int = DEFAULT_SLAVE,
         baudrate: int = DEFAULT_BAUDRATE,
         timeout: float = DEFAULT_TIMEOUT_S,
+        verify_code: str | None = None,
     ) -> None:
         """Initialize client: TCP when host is given, RTU serial otherwise.
 
         Serial defaults to 38400 8N1; TCP targets an RS-485↔Ethernet adapter
-        or the device's own Ethernet port.
+        or the device's own Ethernet port.  ``verify_code`` is the direct-TCP
+        challenge; when set, it is written lazily — after the machine refuses
+        a request — instead of before every link is used.
         """
         self._slave = slave
         self._mode = MODBUS_MODE_TCP if host is not None else MODBUS_MODE_RTU
         self._port = port
         self._host = host
+        self._verify_code = (
+            str(verify_code).strip()
+            if verify_code and self._mode == MODBUS_MODE_TCP
+            else None
+        )
+        # True once the code is known to be active or its verification has
+        # already been attempted on this link; no second automatic write.
+        self._verify_attempted = self._verify_code is None
         if self._mode == MODBUS_MODE_TCP:
             self._tcp_port = tcp_port
             # Log label mirrors what the adapter sees on the RS-485 side.
@@ -220,6 +231,63 @@ class ConowModbusClient:
     def mode(self) -> str:
         """Return the connection mode ('rtu' or 'tcp')."""
         return self._mode
+
+    @property
+    def connected(self) -> bool:
+        """Whether the underlying socket/serial port is still open."""
+        return bool(getattr(self._client, "connected", False))
+
+    def mark_verified(self) -> None:
+        """Record that the challenge code is already active on this link."""
+        self._verify_attempted = True
+
+    def _verify_after_refusal(self, error: ConowExceptionResponseError) -> bool:
+        """Write the challenge code after an unverified link refuses a request.
+
+        A direct-TCP machine reports the refusal itself: it answers the first
+        request on a fresh, unverified link with a Modbus exception response.
+        Reacting to that reply keeps the code out of the traffic entirely for a
+        machine that does not need it, while a machine that does need it still
+        gets exactly one write per link.  The caller retries its request once
+        when this returns ``True``.
+
+        Raises ``ConowVerificationError`` when the machine rejects the code, so
+        the failure is reported as a code problem instead of a generic refusal.
+        """
+        if self._verify_attempted or not self._verify_code:
+            return False
+        # Only one automatic attempt per link: a rejected code must not be
+        # rewritten on every poll.
+        self._verify_attempted = True
+        _LOGGER.info(
+            "Device refused %s before verification; sending the stored "
+            "verification code and retrying",
+            error,
+        )
+        try:
+            response = self._client.write_registers(
+                VERIFY_CODE_START,
+                encode_verify_code(self._verify_code),
+                device_id=self._slave,
+            )
+            _raise_for_response(response, 0x10)
+        except ConowExceptionResponseError as exc:
+            message = (
+                f"Verification code rejected ({exc}); update it under "
+                "Settings > Devices & services > Conow Local > Configure"
+            )
+            _LOGGER.warning(message)
+            raise ConowVerificationError(message) from exc
+        except (ModbusException, ConowModbusError, OSError) as exc:
+            message = f"Verification code write failed: {exc}"
+            _LOGGER.warning(message)
+            raise ConowVerificationError(message) from exc
+        _LOGGER.info(
+            "Modbus write OK: slave=%s addr=%s values=[verification code]",
+            self._slave,
+            VERIFY_CODE_START,
+        )
+        return True
 
     def connect(self) -> None:
         """Open the connection."""
@@ -303,6 +371,12 @@ class ConowModbusClient:
                 _LOGGER.warning(
                     "Modbus read refused addr=%s count=%s: %s", address, count, exc
                 )
+                if self._verify_after_refusal(exc):
+                    # The refusal was the machine's way of asking for the
+                    # challenge code; the link is verified now.
+                    return self.read_holding_registers(
+                        address, count, retries=max(1, attempts - attempt)
+                    )
                 raise
             except (ModbusException, ConowModbusError, OSError) as exc:
                 last_error = exc
@@ -380,6 +454,12 @@ class ConowModbusClient:
                     values,
                     exc,
                 )
+                if self._verify_after_refusal(exc):
+                    # The refusal was the machine's way of asking for the
+                    # challenge code; the link is verified now.
+                    return self.write_registers(
+                        address, values, retries=max(1, attempts - attempt)
+                    )
                 raise
             except (ModbusException, ConowModbusError, OSError) as exc:
                 last_error = exc
@@ -412,13 +492,28 @@ def probe_connection(
     tcp_port: int = DEFAULT_TCP_PORT,
     slave: int = DEFAULT_SLAVE,
     baudrate: int = DEFAULT_BAUDRATE,
-) -> None:
-    """Verify Modbus connectivity by reading a register both maps implement."""
+    keep_open: bool = False,
+) -> ConowModbusClient | None:
+    """Verify Modbus connectivity by reading a register both maps implement.
+
+    With ``keep_open`` the verified client is returned instead of being
+    closed, so the entry being created can poll it instead of opening a
+    second connection.
+    """
     address, count = CONNECTION_PROBE
-    with ConowModbusClient(
+    client = ConowModbusClient(
         port, host=host, tcp_port=tcp_port, slave=slave, baudrate=baudrate
-    ) as client:
+    )
+    try:
+        client.connect()
         client.read_holding_registers(address, count)
+    except Exception:
+        client.close()
+        raise
+    if keep_open:
+        return client
+    client.close()
+    return None
 
 
 def probe_direct_connection(
@@ -427,7 +522,8 @@ def probe_direct_connection(
     tcp_port: int = DEFAULT_TCP_PORT,
     slave: int = DEFAULT_SLAVE,
     verify_code: str,
-) -> None:
+    keep_open: bool = False,
+) -> ConowModbusClient | None:
     """Verify a direct TCP link by writing the challenge code.
 
     The all-in-one machine requires the dynamic 8-character hexadecimal code
@@ -437,12 +533,26 @@ def probe_direct_connection(
     request: a normal FC 0x10 response means the device accepted the code,
     while an error response or missing reply is treated as verification
     failure.
+
+    With ``keep_open`` the verified client is returned instead of being
+    closed: the entry being created adopts it, so the machine sees one
+    connection and one code write, not two.
     """
     words = encode_verify_code(verify_code)
-    with ConowModbusClient(host=host, tcp_port=tcp_port, slave=slave) as client:
-        try:
-            client.write_registers(VERIFY_CODE_START, words, retries=1)
-        except ConowModbusError as err:
-            raise ConowVerificationError(
-                f"Verification code rejected: {err}"
-            ) from err
+    client = ConowModbusClient(host=host, tcp_port=tcp_port, slave=slave)
+    try:
+        client.connect()
+    except Exception:
+        client.close()
+        raise
+    try:
+        client.write_registers(VERIFY_CODE_START, words, retries=1)
+    except ConowModbusError as err:
+        client.close()
+        raise ConowVerificationError(
+            f"Verification code rejected: {err}"
+        ) from err
+    if keep_open:
+        return client
+    client.close()
+    return None

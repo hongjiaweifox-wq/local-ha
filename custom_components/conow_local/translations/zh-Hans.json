@@ -65,9 +65,12 @@
   "options": {
     "step": {
       "init": {
-        "title": "更新验证码",
-        "description": "请输入一体机当前显示的 8 位十六进制验证码，会先向设备校验成功后再保存。",
+        "title": "连接参数",
+        "description": "可修改主机 / IP 地址、TCP 端口、从站地址和验证码。保存前会先用新参数向设备校验。",
         "data": {
+          "modbus_host": "主机 / IP 地址",
+          "modbus_tcp_port": "TCP 端口",
+          "modbus_slave": "从站地址",
           "tcp_verify_code": "验证码"
         }
       }
@@ -79,7 +82,7 @@
       "verification_failed": "设备校验未通过，请核对一体机上显示的 8 位验证码后重试。"
     },
     "abort": {
-      "no_options": "只有 Modbus TCP 直连条目才需要验证码。"
+      "no_options": "只有 Modbus TCP 条目可以编辑连接参数。"
     }
   },
   "entity": {

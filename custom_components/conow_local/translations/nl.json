@@ -65,9 +65,12 @@
   "options": {
     "step": {
       "init": {
-        "title": "Verificatiecode bijwerken",
-        "description": "Voer de 8-tekens hexadecimale code in die het apparaat nu toont. De code wordt op het apparaat getest voordat hij wordt opgeslagen.",
+        "title": "Verbindingsinstellingen",
+        "description": "Wijzig het adres, de TCP-poort, het slave-adres of de verificatiecode. De nieuwe waarden worden op het apparaat getest voordat ze worden opgeslagen.",
         "data": {
+          "modbus_host": "Host / IP-adres",
+          "modbus_tcp_port": "TCP-poort",
+          "modbus_slave": "Slave-adres",
           "tcp_verify_code": "Verificatiecode"
         }
       }
@@ -79,7 +82,7 @@
       "verification_failed": "Het apparaat heeft de verificatiecode geweigerd. Controleer de 8-tekens code op het apparaat en probeer opnieuw."
     },
     "abort": {
-      "no_options": "Alleen directe Modbus TCP-vermeldingen gebruiken een verificatiecode."
+      "no_options": "Verbindingsinstellingen zijn alleen te bewerken voor Modbus TCP-vermeldingen."
     }
   },
   "entity": {

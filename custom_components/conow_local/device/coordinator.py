@@ -19,6 +19,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from ..maps import model as map_model
+from . import handoff
 from ..client import (
     INTER_FRAME_DELAY_S,
     POST_WRITE_DELAY_S,
@@ -181,16 +182,43 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _connect(self) -> ConowModbusClient:
         """Open or reuse the Modbus client (serial or TCP)."""
         if self._client is None:
+            adopted = None
+            if self.mode in MODBUS_TCP_MODES:
+                # The config flow probes the same endpoint in the same
+                # process; adopting that verified link avoids a second
+                # connection and a second verification-code write.
+                adopted = handoff.take(
+                    handoff.connection_key(
+                        self.mode,
+                        self.host,
+                        self.tcp_port,
+                        self.slave,
+                        self.verify_code,
+                    )
+                )
+            if adopted is not None:
+                LOGGER.debug(
+                    "TCP: adopted the verified connection to %s", self.host
+                )
+                self._client = adopted
+                return self._client
             client = ConowModbusClient(
                 self.port,
                 host=self.host,
                 tcp_port=self.tcp_port if self.host is not None else DEFAULT_TCP_PORT,
                 slave=self.slave,
                 baudrate=self.baudrate or DEFAULT_BAUDRATE,
+                # Direct-TCP entries carry the challenge code, but it is only
+                # written when the machine refuses a request — not before
+                # every new link.  A machine that accepts the request needs
+                # no verification frame at all.
+                verify_code=(
+                    self.verify_code
+                    if self.mode == MODBUS_MODE_TCP_DIRECT
+                    else None
+                ),
             )
             client.connect()
-            if self.verify_code:
-                self._send_verify_code(client)
             self._client = client
         return self._client
 

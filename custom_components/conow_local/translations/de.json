@@ -65,9 +65,12 @@
   "options": {
     "step": {
       "init": {
-        "title": "Bestätigungscode aktualisieren",
-        "description": "Gib den 8-stelligen Hexadezimalcode ein, den das Gerät aktuell anzeigt. Der Code wird vor dem Speichern am Gerät geprüft.",
+        "title": "Verbindungseinstellungen",
+        "description": "Adresse, TCP-Port, Slave-Adresse oder Bestätigungscode ändern. Die neuen Werte werden vor dem Speichern am Gerät geprüft.",
         "data": {
+          "modbus_host": "Host / IP-Adresse",
+          "modbus_tcp_port": "TCP-Port",
+          "modbus_slave": "Slave-Adresse",
           "tcp_verify_code": "Bestätigungscode"
         }
       }
@@ -79,7 +82,7 @@
       "verification_failed": "Das Gerät hat den Bestätigungscode abgelehnt. Prüfe den 8-stelligen Code am Gerät und versuche es erneut."
     },
     "abort": {
-      "no_options": "Nur direkte Modbus-TCP-Einträge verwenden einen Bestätigungscode."
+      "no_options": "Verbindungseinstellungen lassen sich nur für Modbus-TCP-Einträge bearbeiten."
     }
   },
   "entity": {

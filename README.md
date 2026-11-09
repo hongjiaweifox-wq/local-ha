@@ -101,6 +101,14 @@ Use this when the all-in-one machine exposes its own Modbus TCP port, with no RS
 
 When you submit the form, the integration writes the verification code to holding registers **0x2701–0x2702** (9985–9986, uint32, high word first). The 8 characters are hexadecimal digits (`0-9`, `A-F`). The setup succeeds only when the device acknowledges the write; a rejected code shows a verification error instead of creating the entry.
 
+Once the entry exists, the stored code is **not** written on every reconnect. It is written only when the machine answers a request with a Modbus exception, which is how it asks for verification — a machine that accepts requests is never sent the code. If the machine rejects the stored code (for example after it shows a new code), the failure is reported with the exception code and a hint to update the code under **Configure**.
+
+### Changing the connection later
+
+**Settings → Devices & Services → Conow Local → Configure** edits the host / IP address, TCP port and slave address (and, for direct connections, the verification code). The new values are tested against the device before they are saved.
+
+When Home Assistant and the device share a network segment, the entry is identified by the device's MAC address (read from the host ARP table after the connection succeeds), so moving the device to a new IP address or port keeps the same entry and entities. A routed device has no MAC entry locally and keeps the host-based identity.
+
 
 
 

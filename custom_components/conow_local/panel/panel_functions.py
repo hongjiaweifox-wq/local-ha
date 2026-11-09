@@ -24,9 +24,11 @@ from ..const import (
     CONF_MODBUS_MODE,
     CONF_MODBUS_SLAVE,
     CONF_MODBUS_TCP_PORT,
+    CONF_TCP_VERIFY_CODE,
     DEFAULT_TCP_PORT,
     DOMAIN,
     LOGGER,
+    MODBUS_MODE_TCP_DIRECT,
     MODBUS_TCP_MODES,
 )
 from ..device.coordinator import (
@@ -597,14 +599,30 @@ def plan_group_writes(
     return _merge_contiguous(ops)
 
 
+def _short_lived_client(entry) -> ConowModbusClient:
+    """Build a TCP client for an entry the coordinator does not own.
+
+    Direct-connected machines get the stored challenge code, which the client
+    writes only if the machine refuses the first request.
+    """
+    verify_code = (
+        entry.data.get(CONF_TCP_VERIFY_CODE)
+        if entry.data.get(CONF_MODBUS_MODE) == MODBUS_MODE_TCP_DIRECT
+        else None
+    )
+    return ConowModbusClient(
+        host=entry.data[CONF_MODBUS_HOST],
+        tcp_port=entry.data.get(CONF_MODBUS_TCP_PORT, DEFAULT_TCP_PORT),
+        slave=entry.data[CONF_MODBUS_SLAVE],
+        verify_code=verify_code,
+    )
+
+
 def _write_ops_direct(entry, ops: list[tuple[int, list[int]]]) -> None:
     """Write through a short-lived TCP client when the entry is not loaded."""
     if entry.data.get(CONF_MODBUS_MODE) not in MODBUS_TCP_MODES:
         raise ConowModbusError("RTU entry must finish setup before writing")
-    host = entry.data[CONF_MODBUS_HOST]
-    tcp_port = entry.data.get(CONF_MODBUS_TCP_PORT, DEFAULT_TCP_PORT)
-    slave = entry.data[CONF_MODBUS_SLAVE]
-    with ConowModbusClient(host=host, tcp_port=tcp_port, slave=slave) as client:
+    with _short_lived_client(entry) as client:
         write_register_ops(client, ops)
 
 
@@ -661,10 +679,7 @@ def _read_blocks_direct(entry) -> tuple[str, tuple[int, ...] | None, dict[str, d
     if entry.data.get(CONF_MODBUS_MODE) not in MODBUS_TCP_MODES:
         # Never open a second handle on the serial port.
         return MAP_V1, None, {}
-    host = entry.data[CONF_MODBUS_HOST]
-    tcp_port = entry.data.get(CONF_MODBUS_TCP_PORT, DEFAULT_TCP_PORT)
-    slave = entry.data[CONF_MODBUS_SLAVE]
-    with ConowModbusClient(host=host, tcp_port=tcp_port, slave=slave) as client:
+    with _short_lived_client(entry) as client:
         map_version, version = _probe_map_version(client)
         blocks = read_map_blocks(client, map_version)
         return map_version, version, decode_required_blocks(blocks, map_version)

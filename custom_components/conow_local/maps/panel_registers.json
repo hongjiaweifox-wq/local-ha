@@ -1431,6 +1431,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "min": 0,
+      "max": 3000,
       "device_class": "power",
       "state_class": "measurement",
       "note": "掉电保存"
@@ -1472,6 +1474,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "min": 0,
+      "max": 3000,
       "device_class": "power",
       "state_class": "measurement",
       "note": "掉电保存"
@@ -1513,6 +1517,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "min": 0,
+      "max": 3000,
       "device_class": "power",
       "state_class": "measurement",
       "note": "掉电保存"
@@ -1554,6 +1560,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "min": 0,
+      "max": 3000,
       "device_class": "power",
       "state_class": "measurement",
       "note": "掉电保存"
@@ -1595,6 +1603,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "min": 0,
+      "max": 3000,
       "device_class": "power",
       "state_class": "measurement",
       "note": "掉电保存"
@@ -1636,6 +1646,8 @@
       "length": 1,
       "writable": true,
       "unit": "W",
+      "min": 0,
+      "max": 3000,
       "device_class": "power",
       "state_class": "measurement",
       "note": "掉电保存"

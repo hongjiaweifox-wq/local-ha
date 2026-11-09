@@ -65,9 +65,12 @@
   "options": {
     "step": {
       "init": {
-        "title": "Update verification code",
-        "description": "Enter the 8-character hexadecimal code currently shown on the machine. It is tested against the device before it replaces the stored code.",
+        "title": "Connection settings",
+        "description": "Change the host / IP address, TCP port, slave address or verification code. The new values are tested against the device before they are saved.",
         "data": {
+          "modbus_host": "Host / IP address",
+          "modbus_tcp_port": "TCP port",
+          "modbus_slave": "Slave address",
           "tcp_verify_code": "Verification code"
         }
       }
@@ -79,7 +82,7 @@
       "verification_failed": "The device rejected the verification code. Check the 8-character code shown on the machine and try again."
     },
     "abort": {
-      "no_options": "Only direct Modbus TCP entries use a verification code."
+      "no_options": "Connection settings can only be edited for Modbus TCP entries."
     }
   },
   "entity": {
