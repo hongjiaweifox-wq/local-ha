@@ -65,6 +65,18 @@ const PANEL_STYLE = `
     font-family: var(--ha-font-family-body, Roboto, sans-serif);
   }
   h1 { margin: 0 0 4px; font-size: 1.5rem; font-weight: 500; }
+  /* Freeze the title, filters and status banners as one block: scrolling the
+     groups must never move the filters out of reach.  The negative side
+     margins let the background cover the host padding, so cards cannot peek
+     through the gutters next to the frozen block. */
+  .page-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    margin: 0 -16px;
+    padding: 8px 16px 0;
+    background: var(--primary-background-color, #111);
+  }
   .toolbar {
     display: flex; gap: 12px; align-items: center; flex-wrap: nowrap;
     margin-bottom: 16px;
@@ -1956,16 +1968,17 @@ class ConowLocalPanel extends HTMLElement {
         this._t("emptyNoGroups")
       )}</div>`;
     }
+    return visible.map((group) => this._renderGroup(group)).join("");
+  }
+
+  // Banners live in the frozen header, above the scrolled group list.
+  _renderHeaderNotices() {
     const notice = this._notice
       ? `<div class="notice ${this._notice.ok ? "" : "error"}">${this._escape(
           this._notice.text
         )}</div>`
       : "";
-    return (
-      this._mapMismatchHint() +
-      notice +
-      visible.map((group) => this._renderGroup(group)).join("")
-    );
+    return this._mapMismatchHint() + notice;
   }
 
   _setRefreshSpinning(on) {
@@ -2395,8 +2408,11 @@ class ConowLocalPanel extends HTMLElement {
     }
 
     this._root.innerHTML = `
-      <h1>${this._escape(this._t("title"))}</h1>
-      <div class="toolbar" id="toolbar">${this._renderToolbar()}</div>
+      <div class="page-header">
+        <h1>${this._escape(this._t("title"))}</h1>
+        <div class="toolbar" id="toolbar">${this._renderToolbar()}</div>
+        <div id="page-notices">${this._renderHeaderNotices()}</div>
+      </div>
       <div id="groups-body">${body}</div>
     `;
     this._bindEvents();
