@@ -23,6 +23,7 @@ from ..client import (
     INTER_FRAME_DELAY_S,
     POST_WRITE_DELAY_S,
     VERIFY_CODE_START,
+    ConowExceptionResponseError,
     ConowModbusClient,
     ConowModbusError,
     encode_verify_code,
@@ -123,14 +124,15 @@ def decode_map_blocks(
 def write_register_ops(
     client: ConowModbusClient, ops: list[tuple[int, list[int]]]
 ) -> None:
-    """Write ``(address, words)`` operations back to back."""
+    """Write ``(address, words)`` operations back to back.
+
+    Every frame goes out as FC 0x10, including single-register writes: the
+    machine answers FC 0x06 with an exception (0x86/03) instead of writing.
+    """
     for index, (address, words) in enumerate(ops):
         if index:
             time.sleep(INTER_FRAME_DELAY_S)
-        if len(words) == 1:
-            client.write_register(address, words[0])
-        else:
-            client.write_registers(address, words)
+        client.write_registers(address, words)
         time.sleep(POST_WRITE_DELAY_S)
 
 
@@ -221,6 +223,10 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         with self._lock:
             try:
                 return operation(self._connect())
+            except ConowExceptionResponseError:
+                # The device answered and refused the request; the link is
+                # fine, so keep it open instead of reconnecting on every poll.
+                raise
             except ConowModbusError:
                 self._reset_client()
                 raise

@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import struct
 import time
+from typing import Any
 
 from pymodbus.client import ModbusSerialClient, ModbusTcpClient
 from pymodbus.exceptions import ModbusException
@@ -60,12 +61,6 @@ def _read_holding_response_frame(slave: int, registers: list[int]) -> bytes:
     return _build_rtu_frame(slave, 0x03, payload)
 
 
-def _write_register_request_frame(slave: int, address: int, value: int) -> bytes:
-    """Build FC 0x06 write single register request frame."""
-    payload = struct.pack(">HH", address, value & 0xFFFF)
-    return _build_rtu_frame(slave, 0x06, payload)
-
-
 def _write_registers_request_frame(
     slave: int, address: int, values: list[int]
 ) -> bytes:
@@ -84,11 +79,6 @@ def _build_tcp_frame(transaction_id: int, slave: int, function_code: int, payloa
 def _read_holding_request_tcp_frame(slave: int, address: int, count: int) -> bytes:
     """Build FC 0x03 read holding registers TCP request (indicative TX log)."""
     return _build_tcp_frame(0, slave, 0x03, struct.pack(">HH", address, count))
-
-
-def _write_register_request_tcp_frame(slave: int, address: int, value: int) -> bytes:
-    """Build FC 0x06 write single register TCP request (indicative TX log)."""
-    return _build_tcp_frame(0, slave, 0x06, struct.pack(">HH", address, value & 0xFFFF))
 
 
 def _write_registers_request_tcp_frame(
@@ -115,6 +105,50 @@ class ConowConnectError(ConowModbusError):
 
 class ConowVerificationError(ConowModbusError):
     """Raised when the direct TCP verification code is rejected."""
+
+
+# Modbus exception codes (function code | 0x80 in the reply).
+EXCEPTION_NAMES = {
+    1: "illegal function",
+    2: "illegal data address",
+    3: "illegal data value",
+    4: "slave device failure",
+    5: "acknowledge",
+    6: "slave device busy",
+    8: "memory parity error",
+    10: "gateway path unavailable",
+    11: "gateway target failed to respond",
+}
+
+
+class ConowExceptionResponseError(ConowModbusError):
+    """The device answered with a Modbus exception response.
+
+    The link is healthy — the device heard the request and refused it.  Such a
+    reply must not be retried and must not drop the connection: resending the
+    same request cannot change the answer, and on a direct-TCP machine a
+    reconnect also has to re-send the verification code.
+    """
+
+    def __init__(self, function_code: int, exception_code: int) -> None:
+        """Store the exception reply for callers and logs."""
+        self.function_code = function_code
+        self.exception_code = exception_code
+        super().__init__(
+            f"Modbus exception 0x{function_code:02X}/0x{exception_code:02X} "
+            f"({EXCEPTION_NAMES.get(exception_code, 'unknown exception')})"
+        )
+
+
+def _raise_for_response(response: Any, function_code: int) -> None:
+    """Raise the right error for a missing or exception response."""
+    if response is None:
+        raise ConowModbusError("No response from device")
+    if response.isError():
+        raise ConowExceptionResponseError(
+            int(getattr(response, "function_code", function_code | 0x80)),
+            int(getattr(response, "exception_code", 0)),
+        )
 
 
 VERIFY_CODE_START = 0x2701  # uint32 challenge, two holding registers (9985-9986)
@@ -254,10 +288,7 @@ class ConowModbusClient:
                     count=count,
                     device_id=self._slave,
                 )
-                if response is None:
-                    raise ConowModbusError("No response from device")
-                if response.isError():
-                    raise ConowModbusError(str(response))
+                _raise_for_response(response, 0x03)
                 registers = list(response.registers)
                 rx_frame = _read_holding_response_frame(self._slave, registers)
                 _LOGGER.debug(
@@ -268,6 +299,11 @@ class ConowModbusClient:
                     registers,
                 )
                 return registers
+            except ConowExceptionResponseError as exc:
+                _LOGGER.warning(
+                    "Modbus read refused addr=%s count=%s: %s", address, count, exc
+                )
+                raise
             except (ModbusException, ConowModbusError, OSError) as exc:
                 last_error = exc
                 _LOGGER.debug(
@@ -295,66 +331,6 @@ class ConowModbusClient:
                 f"and slave/baud (160 / 38400)"
             )
         raise ConowModbusError(msg) from last_error
-
-    def write_register(self, address: int, value: int) -> None:
-        """Write single holding register (FC 0x06) with retry."""
-        last_error: Exception | None = None
-        for attempt in range(1, MAX_RETRIES + 1):
-            try:
-                self._flush_input_buffer()
-                if self._mode == MODBUS_MODE_TCP:
-                    tx_frame = _write_register_request_tcp_frame(self._slave, address, value)
-                else:
-                    tx_frame = _write_register_request_frame(self._slave, address, value)
-                _LOGGER.info(
-                    "Modbus write TX (FC 0x06): %s",
-                    _format_rtu_hex(tx_frame),
-                )
-                response = self._client.write_register(
-                    address,
-                    value,
-                    device_id=self._slave,
-                )
-                if response is None:
-                    raise ConowModbusError("No response from device")
-                if response.isError():
-                    raise ConowModbusError(str(response))
-                # FC 0x06 normal response echoes the request PDU (8 bytes).
-                _LOGGER.info(
-                    "Modbus write OK: slave=%s addr=%s value=%s; expected RX echo: %s",
-                    self._slave,
-                    address,
-                    value,
-                    _format_rtu_hex(tx_frame),
-                )
-                return
-            except (ModbusException, ConowModbusError, OSError) as exc:
-                last_error = exc
-                _LOGGER.debug(
-                    "Write failed (attempt %s/%s) addr=%s: %s",
-                    attempt,
-                    MAX_RETRIES,
-                    address,
-                    exc,
-                )
-                if attempt < MAX_RETRIES:
-                    self._reconnect_after_error()
-        if self._mode == MODBUS_MODE_TCP:
-            err_frame = _write_register_request_tcp_frame(self._slave, address, value)
-        else:
-            err_frame = _write_register_request_frame(self._slave, address, value)
-        _LOGGER.error(
-            "Modbus write failed: slave=%s endpoint=%s addr=%s value=%s TX=%s err=%s",
-            self._slave,
-            self._endpoint,
-            address,
-            value,
-            _format_rtu_hex(err_frame),
-            last_error,
-        )
-        raise ConowModbusError(
-            f"Write failed after {MAX_RETRIES} attempts: {last_error}"
-        ) from last_error
 
     def write_registers(
         self, address: int, values: list[int], *, retries: int = MAX_RETRIES
@@ -387,10 +363,7 @@ class ConowModbusClient:
                     values,
                     device_id=self._slave,
                 )
-                if response is None:
-                    raise ConowModbusError("No response from device")
-                if response.isError():
-                    raise ConowModbusError(str(response))
+                _raise_for_response(response, 0x10)
                 _LOGGER.info(
                     "Modbus write OK: slave=%s addr=%s count=%s values=%s",
                     self._slave,
@@ -399,6 +372,15 @@ class ConowModbusClient:
                     values,
                 )
                 return
+            except ConowExceptionResponseError as exc:
+                _LOGGER.warning(
+                    "Modbus write refused addr=%s count=%s values=%s: %s",
+                    address,
+                    len(values),
+                    values,
+                    exc,
+                )
+                raise
             except (ModbusException, ConowModbusError, OSError) as exc:
                 last_error = exc
                 _LOGGER.debug(

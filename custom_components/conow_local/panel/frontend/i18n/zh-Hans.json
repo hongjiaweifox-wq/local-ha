@@ -31,6 +31,7 @@
     "actionConfirm": "确认",
     "noticeApplied": "{group}：已下发",
     "noticeFailed": "{group}：{error}",
+    "noticeRejected": "{group}：设备拒绝了本次写入（{error}），请检查数值后重试。",
     "actionApplying": "下发中…",
     "actionApply": "批量下发",
     "titleExpandGroup": "展开分组",

@@ -17,7 +17,7 @@ from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import HomeAssistant, callback
 
 from ..maps import model as map_model
-from ..client import ConowModbusError
+from ..client import ConowExceptionResponseError, ConowModbusError
 from ..const import (
     CONF_POLL_INTERVAL,
     DOMAIN,
@@ -135,6 +135,10 @@ async def websocket_set_panel_group(
         return
     except ValueError as err:
         connection.send_error(msg["id"], "invalid_value", str(err))
+        return
+    except ConowExceptionResponseError as err:
+        # The device answered and refused the group; the link stays usable.
+        connection.send_error(msg["id"], "write_rejected", str(err))
         return
     except (ConowModbusError, OSError) as err:
         connection.send_error(msg["id"], "write_failed", str(err))

@@ -839,6 +839,10 @@ UI = {
         "actionConfirm": "Confirm",
         "noticeApplied": "{group}: sent",
         "noticeFailed": "{group}: {error}",
+        "noticeRejected": (
+            "{group}: the device refused the write ({error}). Check the values "
+            "and try again."
+        ),
         "actionApplying": "Sending…",
         "actionApply": "Apply group",
         "titleExpandGroup": "Expand group",
@@ -919,6 +923,10 @@ UI = {
         "actionConfirm": "Bestätigen",
         "noticeApplied": "{group}: gesendet",
         "noticeFailed": "{group}: {error}",
+        "noticeRejected": (
+            "{group}: Das Gerät hat das Schreiben abgelehnt ({error}). Prüfe "
+            "die Werte und versuche es erneut."
+        ),
         "actionApplying": "Wird gesendet…",
         "actionApply": "Gruppe senden",
         "titleExpandGroup": "Gruppe ausklappen",
@@ -1000,6 +1008,10 @@ UI = {
         "actionConfirm": "Bevestigen",
         "noticeApplied": "{group}: verzonden",
         "noticeFailed": "{group}: {error}",
+        "noticeRejected": (
+            "{group}: Het apparaat heeft de schrijfactie geweigerd ({error}). "
+            "Controleer de waarden en probeer opnieuw."
+        ),
         "actionApplying": "Verzenden…",
         "actionApply": "Groep verzenden",
         "titleExpandGroup": "Groep uitvouwen",
@@ -1076,6 +1088,9 @@ UI = {
         "actionConfirm": "确认",
         "noticeApplied": "{group}：已下发",
         "noticeFailed": "{group}：{error}",
+        "noticeRejected": (
+            "{group}：设备拒绝了本次写入（{error}），请检查数值后重试。"
+        ),
         "actionApplying": "下发中…",
         "actionApply": "批量下发",
         "titleExpandGroup": "展开分组",

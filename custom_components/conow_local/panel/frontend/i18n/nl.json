@@ -31,6 +31,7 @@
     "actionConfirm": "Bevestigen",
     "noticeApplied": "{group}: verzonden",
     "noticeFailed": "{group}: {error}",
+    "noticeRejected": "{group}: Het apparaat heeft de schrijfactie geweigerd ({error}). Controleer de waarden en probeer opnieuw.",
     "actionApplying": "Verzenden…",
     "actionApply": "Groep verzenden",
     "titleExpandGroup": "Groep uitvouwen",

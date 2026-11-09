@@ -31,6 +31,7 @@
     "actionConfirm": "Bestätigen",
     "noticeApplied": "{group}: gesendet",
     "noticeFailed": "{group}: {error}",
+    "noticeRejected": "{group}: Das Gerät hat das Schreiben abgelehnt ({error}). Prüfe die Werte und versuche es erneut.",
     "actionApplying": "Wird gesendet…",
     "actionApply": "Gruppe senden",
     "titleExpandGroup": "Gruppe ausklappen",

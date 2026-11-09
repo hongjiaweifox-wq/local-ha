@@ -31,6 +31,7 @@
     "actionConfirm": "Confirm",
     "noticeApplied": "{group}: sent",
     "noticeFailed": "{group}: {error}",
+    "noticeRejected": "{group}: the device refused the write ({error}). Check the values and try again.",
     "actionApplying": "Sending…",
     "actionApply": "Apply group",
     "titleExpandGroup": "Expand group",

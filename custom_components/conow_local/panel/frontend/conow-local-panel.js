@@ -1767,10 +1767,13 @@ class ConowLocalPanel extends HTMLElement {
     } catch (err) {
       this._notice = {
         ok: false,
-        text: this._t("noticeFailed", {
-          group: groupLabel,
-          error: err.message || String(err),
-        }),
+        text: this._t(
+          err.code === "write_rejected" ? "noticeRejected" : "noticeFailed",
+          {
+            group: groupLabel,
+            error: err.message || String(err),
+          }
+        ),
       };
     } finally {
       this._pendingGroups.delete(groupId);
