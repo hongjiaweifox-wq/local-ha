@@ -1396,10 +1396,11 @@ class ConowLocalPanel extends HTMLElement {
   _groupTimeOrder(group) {
     // Time slots may leave gaps but must not cross: every start is earlier
     // than its end, and no slot begins before the previous one ends.  Only
-    // the submitted count (时段数 / 策略数) is considered.
+    // the submitted count (时段数 / 策略数) is considered.  Returns the
+    // affected slot labels for the footer hint.
     const limit = this._slotLimit(group);
     const intervals = [];
-    const codes = new Set();
+    const slots = new Set();
     (group.subgroups || []).forEach((subgroup, index) => {
       if (limit !== null && index >= limit) {
         return;
@@ -1414,21 +1415,21 @@ class ConowLocalPanel extends HTMLElement {
         // Empty or malformed values are reported as incomplete/invalid.
         return;
       }
+      const label = subgroup.label || start.code;
       if (from >= to) {
-        codes.add(start.code);
-        codes.add(end.code);
+        slots.add(label);
         return;
       }
-      intervals.push({ from, to, start: start.code, end: end.code });
+      intervals.push({ from, to, label });
     });
     intervals.sort((left, right) => left.from - right.from);
     for (let index = 1; index < intervals.length; index += 1) {
       if (intervals[index].from < intervals[index - 1].to) {
-        codes.add(intervals[index - 1].end);
-        codes.add(intervals[index].start);
+        slots.add(intervals[index - 1].label);
+        slots.add(intervals[index].label);
       }
     }
-    return [...codes];
+    return [...slots];
   }
 
   _rawHex(register) {
@@ -1521,7 +1522,7 @@ class ConowLocalPanel extends HTMLElement {
     const timeOrder = this._groupTimeOrder(group);
     if (timeOrder.length) {
       return this._t("groupHintTimeOrder", {
-        codes: timeOrder.join(separator),
+        slots: timeOrder.join(separator),
       });
     }
     const outOfRange = this._groupOutOfRange(group);

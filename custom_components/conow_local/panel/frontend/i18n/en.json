@@ -17,7 +17,7 @@
     "changedSeparator": "; ",
     "codeSeparator": ", ",
     "groupHintInvalidTime": "Invalid time readings, set them again: {codes}",
-    "groupHintTimeOrder": "Invalid time slots: each start must be before its end and slots must not overlap: {codes}",
+    "groupHintTimeOrder": "Invalid time slots (start before end, no overlaps): {slots}",
     "groupHintOutOfRange": "Outside the allowed range, adjust: {codes}",
     "groupHintIncomplete": "Fill in every writable field",
     "groupHintUnchanged": "No changes",
