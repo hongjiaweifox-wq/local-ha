@@ -17,6 +17,7 @@
     "changedSeparator": "; ",
     "codeSeparator": ", ",
     "groupHintInvalidTime": "Ongeldige tijdwaarden, stel ze opnieuw in: {codes}",
+    "groupHintTimeOrder": "Ongeldige tijdvakken: begin moet vóór einde liggen en tijdvakken mogen elkaar niet overlappen: {codes}",
     "groupHintOutOfRange": "Buiten het toegestane bereik, pas aan: {codes}",
     "groupHintIncomplete": "Vul alle beschrijfbare velden in",
     "groupHintUnchanged": "Geen wijzigingen",

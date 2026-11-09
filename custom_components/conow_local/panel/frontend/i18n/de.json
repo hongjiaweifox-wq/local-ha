@@ -17,6 +17,7 @@
     "changedSeparator": "; ",
     "codeSeparator": ", ",
     "groupHintInvalidTime": "Ungültige Zeitwerte, bitte erneut einstellen: {codes}",
+    "groupHintTimeOrder": "Ungültige Zeitfenster: Beginn muss vor Ende liegen und Fenster dürfen sich nicht überschneiden: {codes}",
     "groupHintOutOfRange": "Außerhalb des zulässigen Bereichs, bitte anpassen: {codes}",
     "groupHintIncomplete": "Füllen Sie alle beschreibbaren Felder aus",
     "groupHintUnchanged": "Keine Änderungen",

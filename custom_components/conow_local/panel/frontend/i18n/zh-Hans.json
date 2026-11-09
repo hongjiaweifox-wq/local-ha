@@ -17,6 +17,7 @@
     "changedSeparator": "；",
     "codeSeparator": "、",
     "groupHintInvalidTime": "时间读数非法，请重新设置：{codes}",
+    "groupHintTimeOrder": "时段设置不合理：开始时间须早于结束时间，且时段之间不能交叉：{codes}",
     "groupHintOutOfRange": "超出允许范围，请调整：{codes}",
     "groupHintIncomplete": "请填写完整所有可写字段",
     "groupHintUnchanged": "无改动",

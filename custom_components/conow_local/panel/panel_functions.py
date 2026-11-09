@@ -458,6 +458,66 @@ def _keeps_live_value(
         return False
 
 
+def _time_minutes(value: Any) -> int | None:
+    """Return an ``HH:MM`` submission as minutes since midnight, else None."""
+    parts = str(value).strip().split(":")
+    if len(parts) < 2:
+        return None
+    try:
+        hour, minute = int(parts[0]), int(parts[1])
+    except (TypeError, ValueError):
+        return None
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        return None
+    return hour * 60 + minute
+
+
+def _validate_slot_times(
+    group: map_model.PanelGroup,
+    values: dict[str, Any],
+    index: dict[str, map_model.PanelRegister],
+    active: set[str],
+) -> None:
+    """Reject active slots that are reversed or cross each other.
+
+    A plan table may leave gaps between slots and need not list them in clock
+    order, but every slot must start before it ends and no two active slots
+    may overlap.  Only the slots covered by the submitted count are checked;
+    the ones past it are not written anyway.
+    """
+    if not group.subgroups:
+        return
+    intervals: list[tuple[int, int, str, str]] = []
+    for subgroup in group.subgroups:
+        times = [
+            index[code]
+            for code in subgroup.members
+            if code in active and code in index and index[code].is_time
+        ]
+        starts = [register for register in times if register.code.endswith("_start")]
+        ends = [register for register in times if register.code.endswith("_end")]
+        if not starts or not ends:
+            continue
+        start, end = starts[0], ends[0]
+        start_minutes = _time_minutes(values.get(start.code))
+        end_minutes = _time_minutes(values.get(end.code))
+        if start_minutes is None or end_minutes is None:
+            # Missing or malformed times are rejected by encode_value later.
+            continue
+        if start_minutes >= end_minutes:
+            raise ValueError(
+                f"{group.id}: {start.code} ({values[start.code]}) must be "
+                f"earlier than {end.code} ({values[end.code]})"
+            )
+        intervals.append((start_minutes, end_minutes, start.code, end.code))
+    intervals.sort()
+    for previous, current in zip(intervals, intervals[1:]):
+        if current[0] < previous[1]:
+            raise ValueError(
+                f"{group.id}: {current[2]} starts before {previous[3]} ends"
+            )
+
+
 def plan_group_writes(
     group: map_model.PanelGroup,
     values: dict[str, Any],
@@ -501,6 +561,7 @@ def plan_group_writes(
             if raw is not None:
                 live = dict(live)
                 live["charge_discharge_direction"] = {"value": float(raw)}
+    _validate_slot_times(group, values, index, active)
     ops: list[tuple[int, list[int]]] = []
     for register in registers:
         value = values[register.code]

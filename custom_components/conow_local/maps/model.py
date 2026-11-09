@@ -454,11 +454,15 @@ def _cutoff_soc_max(values: dict[str, dict[str, Any]]) -> float | None:
     return None
 
 
-def _battery_max_discharge_power(
+def _grid_export_limit(
     values: dict[str, dict[str, Any]],
 ) -> float | None:
-    """Return the discharge power the battery currently allows."""
-    return _positive_value(values, "battery_max_discharge_power")
+    """Return the grid-tied output limit currently in force.
+
+    Until it is unlocked in the app this register holds the local regulatory
+    value; afterwards it reports the hardware maximum AC discharge power.
+    """
+    return _positive_value(values, "grid_code_export_limit")
 
 
 def _battery_soc(values: dict[str, dict[str, Any]]) -> float | None:
@@ -496,10 +500,10 @@ _DYNAMIC_MAX = {
 }
 # A TOU slot only uses one of its two power/SoC fields, depending on its
 # 工作模式: charging may only raise the SoC above the current level, and a
-# discharge slot may only ask for power the battery can deliver right now.
+# discharge slot may only ask for what may be exported to the grid right now.
 for _slot in range(1, 9):
     _DYNAMIC_MIN[f"tou_slot{_slot}_target_soc"] = _battery_soc
-    _DYNAMIC_MAX[f"tou_slot{_slot}_power"] = _battery_max_discharge_power
+    _DYNAMIC_MAX[f"tou_slot{_slot}_power"] = _grid_export_limit
 
 
 def numeric_bounds(

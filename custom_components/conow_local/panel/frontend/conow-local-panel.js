@@ -1368,6 +1368,69 @@ class ConowLocalPanel extends HTMLElement {
     ).padStart(2, "0")}`;
   }
 
+  _timeMinutes(value) {
+    // Minutes since midnight for a valid HH:MM value, else null.
+    const normalized = this._normalizeTime(value);
+    if (!normalized) {
+      return null;
+    }
+    const [hour, minute] = normalized.split(":").map(Number);
+    if (hour > 23 || minute > 59) {
+      return null;
+    }
+    return hour * 60 + minute;
+  }
+
+  _slotTimeCodes(group, members) {
+    // A plan-table slot carries one start and one end time register; find
+    // them by code rather than by position in the subgroup.
+    const registers = members
+      .map((code) => this._findRegister(group.id, code))
+      .filter((register) => register && register.control === "time");
+    return {
+      start: registers.find((register) => /_start$/.test(register.code)),
+      end: registers.find((register) => /_end$/.test(register.code)),
+    };
+  }
+
+  _groupTimeOrder(group) {
+    // Time slots may leave gaps but must not cross: every start is earlier
+    // than its end, and no slot begins before the previous one ends.  Only
+    // the submitted count (时段数 / 策略数) is considered.
+    const limit = this._slotLimit(group);
+    const intervals = [];
+    const codes = new Set();
+    (group.subgroups || []).forEach((subgroup, index) => {
+      if (limit !== null && index >= limit) {
+        return;
+      }
+      const { start, end } = this._slotTimeCodes(group, subgroup.members || []);
+      if (!start || !end) {
+        return;
+      }
+      const from = this._timeMinutes(this._draftValue(group.id, start));
+      const to = this._timeMinutes(this._draftValue(group.id, end));
+      if (from === null || to === null) {
+        // Empty or malformed values are reported as incomplete/invalid.
+        return;
+      }
+      if (from >= to) {
+        codes.add(start.code);
+        codes.add(end.code);
+        return;
+      }
+      intervals.push({ from, to, start: start.code, end: end.code });
+    });
+    intervals.sort((left, right) => left.from - right.from);
+    for (let index = 1; index < intervals.length; index += 1) {
+      if (intervals[index].from < intervals[index - 1].to) {
+        codes.add(intervals[index - 1].end);
+        codes.add(intervals[index].start);
+      }
+    }
+    return [...codes];
+  }
+
   _rawHex(register) {
     const raw = Number(register.raw);
     if (!Number.isFinite(raw)) {
@@ -1455,6 +1518,12 @@ class ConowLocalPanel extends HTMLElement {
     if (invalid.length) {
       return this._t("groupHintInvalidTime", { codes: invalid.join(separator) });
     }
+    const timeOrder = this._groupTimeOrder(group);
+    if (timeOrder.length) {
+      return this._t("groupHintTimeOrder", {
+        codes: timeOrder.join(separator),
+      });
+    }
     const outOfRange = this._groupOutOfRange(group);
     if (outOfRange.length) {
       return this._t("groupHintOutOfRange", {
@@ -1510,6 +1579,10 @@ class ConowLocalPanel extends HTMLElement {
   }
 
   _isValid(group) {
+    if (this._groupTimeOrder(group).length) {
+      // Slots that cross or end before they start are never sent.
+      return false;
+    }
     return (group.members || [])
       .filter((register) => register.writable)
       .every((register) => {
