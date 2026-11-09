@@ -1822,13 +1822,14 @@ class ConowLocalPanel extends HTMLElement {
         const toggle = control.querySelector("ha-switch");
         const badge = control.querySelector(".reg-slider-value");
         const register = this._findRegister(groupId, code);
-        const handle = (raw) => {
+        const handle = (raw, clamp = true) => {
           let value = raw === undefined || raw === null ? "" : raw;
           const bounds =
             register?.control === "number"
               ? this._effectiveBounds(groupId, register)
               : null;
           if (
+            clamp &&
             register?.control === "number" &&
             Array.isArray(bounds) &&
             String(value).trim() !== ""
@@ -1856,7 +1857,7 @@ class ConowLocalPanel extends HTMLElement {
           if (select && select.value !== value) {
             select.value = value;
           }
-          if (input && input.value !== String(value)) {
+          if (input && String(input.value ?? "") !== String(value)) {
             input.value = value;
           }
           if (time && this._normalizeTime(time.value) !== String(value)) {
@@ -1908,7 +1909,12 @@ class ConowLocalPanel extends HTMLElement {
             badge.textContent = this._sliderText(register, event.target.value);
           }
         });
-        input?.addEventListener("input", (event) => handle(event.target.value));
+        // Clamp only when the entry is committed: clamping each keystroke turns
+        // a typed "60" (6 → 60) into "100" whenever the intermediate digit is
+        // outside the bounds.
+        input?.addEventListener("input", (event) =>
+          handle(event.target.value, false)
+        );
         input?.addEventListener("change", (event) => handle(event.target.value));
         toggle?.addEventListener("change", (event) =>
           handle(event.target.checked ? 1 : 0)
