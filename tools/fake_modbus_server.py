@@ -395,6 +395,7 @@ class RegisterBank:
         ranges: tuple[tuple[int, int], ...],
         verify_code: str | None = VERIFY_CODE_DEFAULT,
         firmware_version: str | None = None,
+        serial_number: str | None = None,
         map_path: Path | None = None,
     ) -> None:
         self._lock = threading.Lock()
@@ -404,6 +405,7 @@ class RegisterBank:
         self._by_address = {item.address: item for item in defs}
         self._verify_code = int(verify_code, 16) if verify_code is not None else None
         self._firmware_version = firmware_version
+        self._serial_number = serial_number
         # Continuation words of multi-word registers belong to the same def, so a
         # block write may span the high/low half of a uint32 register.
         self._owner: dict[int, RegisterDef] = {}
@@ -456,16 +458,27 @@ class RegisterBank:
             return (first << 16) | self._words.get(item.address + 1, 0)
         return first
 
+    @staticmethod
+    def _encode_ascii(text: str, count: int) -> list[int]:
+        """Encode ASCII text into ``count`` big-endian register words."""
+        encoded = text.encode("ascii")[: count * 2]
+        return [
+            (encoded[index] << 8)
+            | (encoded[index + 1] if index + 1 < len(encoded) else 0)
+            for index in range(0, len(encoded), 2)
+        ]
+
     def _seed(self) -> None:
         for item in self._defs:
             if item.code == "firmware_version" and self._firmware_version:
-                encoded = self._firmware_version.encode("ascii")[: item.count * 2]
-                words = [
-                    (encoded[index] << 8)
-                    | (encoded[index + 1] if index + 1 < len(encoded) else 0)
-                    for index in range(0, len(encoded), 2)
-                ]
-                self._write_def(item, words)
+                self._write_def(
+                    item, self._encode_ascii(self._firmware_version, item.count)
+                )
+                continue
+            if item.code == "device_serial" and self._serial_number:
+                self._write_def(
+                    item, self._encode_ascii(self._serial_number, item.count)
+                )
                 continue
             if item.code in SEED:
                 value = SEED[item.code]
@@ -2000,6 +2013,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="ASCII firmware version served at 0x274E (e.g. 1.2; default empty)",
     )
     parser.add_argument(
+        "--sn",
+        default=None,
+        help=(
+            "device serial number served at 0x2746 (the third character marks "
+            "the hardware generation: A-J old, K+ new; default empty = old)"
+        ),
+    )
+    parser.add_argument(
         "--http-host",
         default="127.0.0.1",
         help="test UI bind address (default 127.0.0.1)",
@@ -2038,6 +2059,7 @@ def main(argv: list[str] | None = None) -> int:
             m_ranges,
             verify_code=code,
             firmware_version=args.firmware_version,
+            serial_number=args.sn,
             map_path=path,
         )
 

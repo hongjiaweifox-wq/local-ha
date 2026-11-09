@@ -20,6 +20,10 @@ CONF_MODBUS_BAUDRATE = "modbus_baudrate"
 CONF_DEVICE_NAME = "device_name"
 CONF_TCP_VERIFY_CODE = "tcp_verify_code"
 CONF_POLL_INTERVAL = "poll_interval"
+# Last map version this entry read successfully.  Only used to keep the panel
+# structure (and its schedule groups) visible while the device is unreachable;
+# the map is still selected by the firmware probe on every setup.
+CONF_LAST_MAP_VERSION = "last_map_version"
 
 MODBUS_MODE_RTU = "rtu"
 MODBUS_MODE_TCP = "tcp"

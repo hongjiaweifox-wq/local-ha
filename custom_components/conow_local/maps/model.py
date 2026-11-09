@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 import struct
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache
 from typing import Any
 
@@ -65,6 +65,13 @@ class PanelRegister:
     min: float | None
     max: float | None
     boolean: bool
+    new_model_only: bool = False
+    hidden: bool = False
+    # ``(code, allowed_raw_values)``: the setting only applies when another
+    # register of the same group holds one of these raw values.  The panel
+    # disables the control otherwise, and the write plan keeps the value the
+    # device already holds for the field that does not apply.
+    enabled_when: tuple[str, tuple[int, ...]] | None = None
     bits: tuple[PanelBit, ...] = ()
 
     @property
@@ -136,6 +143,15 @@ def get_registers(map_version: str) -> tuple[PanelRegister, ...]:
         )
         if len({bit.bit for bit in bits}) != len(bits):
             raise ValueError(f"{item['code']}: duplicate bit index in bits[]")
+        dependency = item.get("enabled_when")
+        enabled_when = (
+            (
+                str(dependency["code"]),
+                tuple(int(value) for value in dependency.get("values", ())),
+            )
+            if dependency
+            else None
+        )
         registers.append(
             PanelRegister(
                 code=item["code"],
@@ -162,6 +178,9 @@ def get_registers(map_version: str) -> tuple[PanelRegister, ...]:
                 min=None if item.get("min") is None else float(item["min"]),
                 max=None if item.get("max") is None else float(item["max"]),
                 boolean=boolean,
+                new_model_only=bool(item.get("new_model_only", False)),
+                hidden=bool(item.get("hidden", False)),
+                enabled_when=enabled_when,
                 bits=bits,
             )
         )
@@ -225,6 +244,83 @@ def get_groups(map_version: str) -> tuple[PanelGroup, ...]:
             )
         )
     groups.sort(key=lambda group: (group.order, group.id))
+    return tuple(groups)
+
+
+OLD_MODEL_SN_LETTERS = frozenset("ABCDEFGHIJ")
+
+
+def is_new_model(serial: str | None) -> bool:
+    """Return whether a device serial number marks a new-model unit.
+
+    The third character encodes the hardware generation: ``A``–``J`` is the
+    old model, whose firmware does not implement the registers flagged
+    ``new_model_only``.  A missing or too-short serial number is treated as
+    the old model, so unreadable device data never exposes controls the
+    hardware cannot honour.
+    """
+    if not serial or len(serial) < 3:
+        return False
+    return serial[2].upper() not in OLD_MODEL_SN_LETTERS
+
+
+def values_new_model(values: dict[str, dict[str, Any]] | None) -> bool:
+    """Return the hardware generation implied by a decoded snapshot."""
+    serial = ((values or {}).get("device_serial") or {}).get("value")
+    return is_new_model(serial if isinstance(serial, str) else None)
+
+
+def register_available(register: PanelRegister, new_model: bool) -> bool:
+    """Return whether the register is exposed for this hardware generation.
+
+    ``hidden`` registers are not implemented yet: they stay decoded but are
+    kept out of the panel and the entity layer on every model.
+    """
+    if register.hidden:
+        return False
+    return new_model or not register.new_model_only
+
+
+def get_groups_for_model(
+    map_version: str, new_model: bool
+) -> tuple[PanelGroup, ...]:
+    """Return groups with registers this hardware generation lacks removed.
+
+    A group whose every member is new-model-only (the generator/DO block on an
+    old unit) is dropped entirely; subgroups follow the same rule.
+    """
+    index = get_register_index(map_version)
+    groups: list[PanelGroup] = []
+    for group in get_groups(map_version):
+        members = tuple(
+            code
+            for code in group.members
+            if register_available(index[code], new_model)
+        )
+        if not members:
+            continue
+        subgroups = tuple(
+            PanelSubgroup(
+                label=subgroup.label,
+                members=tuple(
+                    code
+                    for code in subgroup.members
+                    if register_available(index[code], new_model)
+                ),
+                key=subgroup.key,
+            )
+            for subgroup in group.subgroups
+        )
+        groups.append(
+            replace(
+                group,
+                members=members,
+                subgroups=tuple(subgroup for subgroup in subgroups if subgroup.members),
+                count_register=(
+                    group.count_register if group.count_register in members else ""
+                ),
+            )
+        )
     return tuple(groups)
 
 
@@ -358,6 +454,13 @@ def _cutoff_soc_max(values: dict[str, dict[str, Any]]) -> float | None:
     return None
 
 
+def _battery_max_discharge_power(
+    values: dict[str, dict[str, Any]],
+) -> float | None:
+    """Return the discharge power the battery currently allows."""
+    return _positive_value(values, "battery_max_discharge_power")
+
+
 def _battery_soc(values: dict[str, dict[str, Any]]) -> float | None:
     """Return the live battery SoC, favouring the v2 ``system_soc`` code."""
     for code in ("system_soc", "battery_soc"):
@@ -391,6 +494,12 @@ _DYNAMIC_MAX = {
     ),
     "battery_target_power": _max_ac_power,
 }
+# A TOU slot only uses one of its two power/SoC fields, depending on its
+# 工作模式: charging may only raise the SoC above the current level, and a
+# discharge slot may only ask for power the battery can deliver right now.
+for _slot in range(1, 9):
+    _DYNAMIC_MIN[f"tou_slot{_slot}_target_soc"] = _battery_soc
+    _DYNAMIC_MAX[f"tou_slot{_slot}_power"] = _battery_max_discharge_power
 
 
 def numeric_bounds(

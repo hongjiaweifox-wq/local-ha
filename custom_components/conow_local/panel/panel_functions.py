@@ -19,6 +19,7 @@ from homeassistant.helpers import entity_registry as er
 from ..maps import model as map_model
 from ..client import ConowModbusClient, ConowModbusError
 from ..const import (
+    CONF_LAST_MAP_VERSION,
     CONF_MODBUS_HOST,
     CONF_MODBUS_MODE,
     CONF_MODBUS_SLAVE,
@@ -105,7 +106,11 @@ ENTITY_CODE_ALIASES = {
 
 
 def _entity_code_map(
-    hass: HomeAssistant, entry_id: str, device_entry, map_version: str
+    hass: HomeAssistant,
+    entry_id: str,
+    device_entry,
+    map_version: str,
+    new_model: bool,
 ) -> dict[str, str]:
     """Map register/entity codes to the entity_id backing them on this device."""
     registry = er.async_get(hass)
@@ -120,7 +125,7 @@ def _entity_code_map(
         if (item.unique_id or "").startswith(unique_prefix)
     }
     mapping: dict[str, str] = {}
-    for code, unique_code in panel_code_map(map_version).items():
+    for code, unique_code in panel_code_map(map_version, new_model).items():
         entity_id = by_unique.get(unique_code)
         if entity_id is not None:
             mapping[code] = entity_id
@@ -141,6 +146,7 @@ def _serialize_group(
     entities: dict[str, str] | None = None,
     *,
     map_version: str,
+    new_model: bool = True,
 ) -> dict[str, Any]:
     decoded = decoded or {}
     entities = entities or {}
@@ -148,6 +154,8 @@ def _serialize_group(
     members: list[dict[str, Any]] = []
     for code in group.members:
         register = index[code]
+        if not map_model.register_available(register, new_model):
+            continue
         value = decoded.get(code, {})
         if register.bits:
             # The register is a bitmask; expose the individual bits as
@@ -193,6 +201,14 @@ def _serialize_group(
                 "values": register.values,
                 "note": register.note,
                 "control": _control_kind(register),
+                "enabled_when": (
+                    {
+                        "code": register.enabled_when[0],
+                        "values": list(register.enabled_when[1]),
+                    }
+                    if register.enabled_when
+                    else None
+                ),
                 "bounds": map_model.numeric_bounds(register, decoded),
                 "raw": value.get("raw"),
                 "value": value.get("value"),
@@ -220,9 +236,17 @@ def _serialize_group(
             {
                 "label": subgroup.label,
                 "key": subgroup.key or None,
-                "members": list(subgroup.members),
+                "members": [
+                    code
+                    for code in subgroup.members
+                    if map_model.register_available(index[code], new_model)
+                ],
             }
             for subgroup in group.subgroups
+            if any(
+                map_model.register_available(index[code], new_model)
+                for code in subgroup.members
+            )
         ],
     }
 
@@ -315,6 +339,29 @@ def _probe_map_version(
 MAX_WRITE_REGISTERS = 123  # FC 0x10 quantity limit
 
 
+def _stored_map_version(entry) -> str:
+    """Map this entry last read successfully (v1 when nothing is stored).
+
+    The device answers the firmware probe with v2 or not at all; while it is
+    unreachable the panel keeps the last confirmed structure instead of
+    dropping to v1, which has no schedule groups.
+    """
+    remembered = entry.options.get(CONF_LAST_MAP_VERSION)
+    return remembered if remembered in MAP_PATHS else MAP_V1
+
+
+def _remember_map_version(hass: HomeAssistant, entry, map_version: str) -> None:
+    """Store the map a panel read just confirmed."""
+    if map_version not in MAP_PATHS:
+        return
+    if entry.options.get(CONF_LAST_MAP_VERSION) == map_version:
+        return
+    hass.config_entries.async_update_entry(
+        entry,
+        options={**entry.options, CONF_LAST_MAP_VERSION: map_version},
+    )
+
+
 def _merge_contiguous(
     ops: list[tuple[int, list[int]]],
 ) -> list[tuple[int, list[int]]]:
@@ -340,12 +387,84 @@ def _merge_contiguous(
     return merged
 
 
+def _active_members(
+    group: map_model.PanelGroup,
+    values: dict[str, Any],
+    index: dict[str, map_model.PanelRegister],
+) -> set[str]:
+    """Return the members that belong to the submitted slot count.
+
+    Plan-table groups carry a count register followed by fixed-size slots.
+    The device evaluates only the slots below the count, and checks the frame
+    against it, so a schedule with one strategy must not drag the unused
+    strategies along.
+    """
+    if not group.count_register or not group.subgroups:
+        return set(group.members)
+    count_register = index.get(group.count_register)
+    if count_register is None:
+        return set(group.members)
+    raw = _enum_raw(count_register, values.get(group.count_register))
+    if raw is None:
+        return set(group.members)
+    count = max(0, min(raw, len(group.subgroups)))
+    active = {group.count_register}
+    for subgroup in group.subgroups[:count]:
+        active.update(subgroup.members)
+    return active
+
+
+def _mode_allows(
+    register: map_model.PanelRegister,
+    values: dict[str, Any],
+    index: dict[str, map_model.PanelRegister],
+) -> bool:
+    """Return whether a mode-dependent register applies to this submission.
+
+    A TOU slot carries both a target SoC and a discharge power, but only the
+    one matching the slot's mode is meaningful: 0 = charge (target SoC),
+    1 = discharge (power).
+    """
+    dependency = register.enabled_when
+    if dependency is None:
+        return True
+    code, allowed = dependency
+    source = index.get(code)
+    if source is None:
+        return True
+    raw = _enum_raw(source, values.get(code))
+    return raw is not None and raw in allowed
+
+
+def _keeps_live_value(
+    register: map_model.PanelRegister,
+    value: Any,
+    live: dict[str, dict[str, Any]] | None,
+) -> bool:
+    """Return whether the submission simply repeats the device's current value.
+
+    Dynamic limits (TOU target SoC above the current SoC, discharge power
+    within what the battery allows) also apply to values the device already
+    holds.  A schedule written earlier may sit outside today's limit; editing
+    another field of the same group must not be blocked by it, since the
+    register is written unchanged.
+    """
+    held = ((live or {}).get(register.code) or {}).get("value")
+    if isinstance(held, bool) or not isinstance(held, (int, float)):
+        return False
+    try:
+        return abs(float(value) - float(held)) < 1e-9
+    except (TypeError, ValueError):
+        return False
+
+
 def plan_group_writes(
     group: map_model.PanelGroup,
     values: dict[str, Any],
     live: dict[str, dict[str, Any]] | None = None,
     *,
     map_version: str,
+    new_model: bool = True,
 ) -> list[tuple[int, list[int]]]:
     """Validate a group submission and return ``(address, words)`` writes.
 
@@ -353,10 +472,19 @@ def plan_group_writes(
     contiguous run; only isolated registers need their own frame.  ``live``
     holds the decoded device state so limits that depend on another register
     (safety SoC, hardware power capability) can be enforced before anything
-    is sent.
+    is sent.  New-model-only registers are skipped on an old unit: the
+    submission then simply has nothing to write for them.  Plan-table groups
+    only write the slots covered by the submitted count.
     """
     index = map_model.get_register_index(map_version)
-    registers = [index[code] for code in group.members if index[code].writable]
+    active = _active_members(group, values, index)
+    registers = [
+        index[code]
+        for code in group.members
+        if code in active
+        and index[code].writable
+        and map_model.register_available(index[code], new_model)
+    ]
     if not registers:
         raise ValueError(f"Group {group.id} has no writable registers")
     missing = [register.code for register in registers if register.code not in values]
@@ -376,8 +504,23 @@ def plan_group_writes(
     ops: list[tuple[int, list[int]]] = []
     for register in registers:
         value = values[register.code]
+        applies = _mode_allows(register, values, index)
+        if not applies:
+            # Do not change the field the slot's mode does not use: keep the
+            # value the device already holds so the whole schedule still goes
+            # out as one contiguous FC 0x10 frame.  Its value is not validated:
+            # the device may hold a stale 0 there.
+            held = ((live or {}).get(register.code) or {}).get("value")
+            if held is not None:
+                value = held
         bounds = map_model.numeric_bounds(register, live)
-        if bounds is not None and not register.values and not register.is_time:
+        if (
+            applies
+            and bounds is not None
+            and not register.values
+            and not register.is_time
+            and not _keeps_live_value(register, value, live)
+        ):
             try:
                 physical = float(value)
             except (TypeError, ValueError):
@@ -427,12 +570,16 @@ async def async_write_panel_group(
                 _read_blocks_direct, entry
             )
         except (ConowModbusError, OSError):
-            map_version, live = MAP_V1, {}
+            map_version = _stored_map_version(entry)
+            live = {}
 
     group = map_model.get_group(group_id, map_version)
     if group is None:
         raise LookupError(f"Unknown group {group_id}")
-    ops = plan_group_writes(group, values, live, map_version=map_version)
+    new_model = map_model.values_new_model(live)
+    ops = plan_group_writes(
+        group, values, live, map_version=map_version, new_model=new_model
+    )
 
     if loaded:
         await coordinator.async_write_panel_ops(ops)
@@ -486,17 +633,25 @@ async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[s
             # device that cannot be read right now.
             LOGGER.debug("Panel: fresh read failed for %s", entry.entry_id)
             decoded = {}
+        if read_ok:
+            _remember_map_version(hass, entry, map_version)
     else:
         try:
             map_version, firmware, decoded = await hass.async_add_executor_job(
                 _read_blocks_direct, entry
             )
             read_ok = bool(decoded)
+            if read_ok:
+                _remember_map_version(hass, entry, map_version)
         except (ConowModbusError, OSError):
             LOGGER.debug("Panel: direct read failed for %s", entry.entry_id)
-            map_version, firmware, decoded = MAP_V1, None, {}
+            map_version = _stored_map_version(entry)
+            firmware, decoded = None, {}
 
-    entities = _entity_code_map(hass, entry.entry_id, device_entry, map_version)
+    new_model = map_model.values_new_model(decoded)
+    entities = _entity_code_map(
+        hass, entry.entry_id, device_entry, map_version, new_model
+    )
     LOGGER.debug(
         "Panel: read %s codes for %s (map=%s, firmware=%s)",
         len(decoded),
@@ -530,8 +685,12 @@ async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[s
         "map": map_info,
         "groups": {
             group.id: _serialize_group(
-                group, decoded, entities, map_version=map_version
+                group,
+                decoded,
+                entities,
+                map_version=map_version,
+                new_model=new_model,
             )
-            for group in map_model.get_groups(map_version)
+            for group in map_model.get_groups_for_model(map_version, new_model)
         },
     }

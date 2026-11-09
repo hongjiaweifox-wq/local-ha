@@ -23,12 +23,14 @@ from ..client import (
     INTER_FRAME_DELAY_S,
     POST_WRITE_DELAY_S,
     VERIFY_CODE_START,
+    ConowConnectError,
     ConowExceptionResponseError,
     ConowModbusClient,
     ConowModbusError,
     encode_verify_code,
 )
 from ..const import (
+    CONF_LAST_MAP_VERSION,
     CONF_MODBUS_BAUDRATE,
     CONF_MODBUS_HOST,
     CONF_MODBUS_MODE,
@@ -253,6 +255,11 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         retries=2,
                     )
                 )
+            except ConowConnectError:
+                # The link itself cannot be opened: that says nothing about
+                # the map.  Fail the setup so it retries, instead of locking
+                # the entry onto v1 and pruning the v2 entities.
+                raise
             except ConowModbusError as err:
                 last_error = err
                 continue
@@ -274,6 +281,7 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.firmware_version = version
         self.map_version = select_map(probe_ok)
         self._apply_poll_interval()
+        self._remember_map_version()
         LOGGER.info(
             "Map: firmware=%s -> %s (%s), poll every %ss",
             format_version(version) or "unknown",
@@ -282,6 +290,23 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self.poll_interval_seconds,
         )
         return self.map_version
+
+    def _remember_map_version(self) -> None:
+        """Persist the selected map for the panel's offline fallback.
+
+        The map itself is still chosen by the firmware probe on every setup;
+        this only lets the panel keep showing the right groups (they differ
+        between v1 and v2) while the device cannot be read.
+        """
+        if self.entry.options.get(CONF_LAST_MAP_VERSION) == self.map_version:
+            return
+        self.hass.config_entries.async_update_entry(
+            self.entry,
+            options={
+                **self.entry.options,
+                CONF_LAST_MAP_VERSION: self.map_version,
+            },
+        )
 
     def _apply_poll_interval(self) -> None:
         """Use the panel-configured interval when set, else the map default."""
@@ -362,6 +387,15 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _entry(self, code: str) -> dict[str, Any]:
         return (self.data or {}).get(code) or {}
+
+    @property
+    def new_model(self) -> bool:
+        """Whether the device SN marks a new-model unit.
+
+        Old units (SN third character A–J) lack the registers flagged
+        ``new_model_only``; an unreadable SN is treated as the old model.
+        """
+        return map_model.values_new_model(self.data)
 
     def get_raw(self, code: str) -> int | str | None:
         """Return the raw register value of a code."""

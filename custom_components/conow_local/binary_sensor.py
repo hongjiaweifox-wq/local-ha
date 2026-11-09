@@ -54,5 +54,7 @@ async def async_setup_entry(
     coordinator: ConowLocalCoordinator = entry.runtime_data
     async_add_entities(
         ConowBinarySensor(coordinator, entry, spec)
-        for spec in specs_for_platform(coordinator.map_version, BINARY_SENSOR)
+        for spec in specs_for_platform(
+            coordinator.map_version, BINARY_SENSOR, coordinator.new_model
+        )
     )

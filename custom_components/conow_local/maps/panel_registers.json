@@ -1123,6 +1123,7 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "new_model_only": true,
       "unit": "%",
       "device_class": "battery",
       "state_class": "measurement",
@@ -1155,6 +1156,7 @@
       "dtype": "uint16",
       "length": 1,
       "writable": false,
+      "new_model_only": true,
       "values": {
         "0": "禁止电池馈网",
         "1": "允许电池馈网"
@@ -1206,12 +1208,13 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "hidden": true,
       "values": {
         "0": "disable",
         "1": "enable"
       },
       "boolean": true,
-      "note": "预留（暂无功能）；0=disable/1=enable，默认关；掉电保存"
+      "note": "预留（暂无功能）；0=disable/1=enable，默认关；掉电保存；功能未实现，暂不展示"
     },
     {
       "code": "modbus_timeout",
@@ -1238,6 +1241,7 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "new_model_only": true,
       "values": {
         "0": "disable",
         "1": "enable"
@@ -1255,6 +1259,7 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "new_model_only": true,
       "unit": "min",
       "format": "hhmm",
       "note": "预留（新品）；高字节时，低字节分；掉电保存"
@@ -1269,6 +1274,7 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "new_model_only": true,
       "unit": "min",
       "format": "hhmm",
       "note": "预留（新品）；高字节时，低字节分；掉电保存"
@@ -1283,6 +1289,7 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "new_model_only": true,
       "unit": "W",
       "device_class": "power",
       "state_class": "measurement",
@@ -1298,6 +1305,7 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "new_model_only": true,
       "unit": "%",
       "device_class": "battery",
       "state_class": "measurement",
@@ -1313,6 +1321,7 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "new_model_only": true,
       "unit": "%",
       "device_class": "battery",
       "state_class": "measurement",
@@ -1328,6 +1337,7 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "new_model_only": true,
       "values": {
         "0": "off",
         "1": "on"
@@ -1345,6 +1355,7 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "new_model_only": true,
       "values": {
         "0": "off",
         "1": "on"
@@ -1777,10 +1788,14 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "enabled_when": {
+        "code": "tou_slot1_mode",
+        "values": [0]
+      },
       "unit": "%",
       "device_class": "battery",
       "state_class": "measurement",
-      "note": "掉电保存"
+      "note": "仅工作模式=充电时生效；掉电保存"
     },
     {
       "code": "tou_slot1_power",
@@ -1792,10 +1807,14 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "enabled_when": {
+        "code": "tou_slot1_mode",
+        "values": [1]
+      },
       "unit": "W",
       "device_class": "power",
       "state_class": "measurement",
-      "note": "掉电保存"
+      "note": "仅工作模式=放电时生效；掉电保存"
     },
     {
       "code": "tou_slot2_start",
@@ -1849,10 +1868,14 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "enabled_when": {
+        "code": "tou_slot2_mode",
+        "values": [0]
+      },
       "unit": "%",
       "device_class": "battery",
       "state_class": "measurement",
-      "note": "掉电保存"
+      "note": "仅工作模式=充电时生效；掉电保存"
     },
     {
       "code": "tou_slot2_power",
@@ -1864,10 +1887,14 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "enabled_when": {
+        "code": "tou_slot2_mode",
+        "values": [1]
+      },
       "unit": "W",
       "device_class": "power",
       "state_class": "measurement",
-      "note": "掉电保存"
+      "note": "仅工作模式=放电时生效；掉电保存"
     },
     {
       "code": "tou_slot3_start",
@@ -1921,10 +1948,14 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "enabled_when": {
+        "code": "tou_slot3_mode",
+        "values": [0]
+      },
       "unit": "%",
       "device_class": "battery",
       "state_class": "measurement",
-      "note": "掉电保存"
+      "note": "仅工作模式=充电时生效；掉电保存"
     },
     {
       "code": "tou_slot3_power",
@@ -1936,10 +1967,14 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "enabled_when": {
+        "code": "tou_slot3_mode",
+        "values": [1]
+      },
       "unit": "W",
       "device_class": "power",
       "state_class": "measurement",
-      "note": "掉电保存"
+      "note": "仅工作模式=放电时生效；掉电保存"
     },
     {
       "code": "tou_slot4_start",
@@ -1993,10 +2028,14 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "enabled_when": {
+        "code": "tou_slot4_mode",
+        "values": [0]
+      },
       "unit": "%",
       "device_class": "battery",
       "state_class": "measurement",
-      "note": "掉电保存"
+      "note": "仅工作模式=充电时生效；掉电保存"
     },
     {
       "code": "tou_slot4_power",
@@ -2008,10 +2047,14 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "enabled_when": {
+        "code": "tou_slot4_mode",
+        "values": [1]
+      },
       "unit": "W",
       "device_class": "power",
       "state_class": "measurement",
-      "note": "掉电保存"
+      "note": "仅工作模式=放电时生效；掉电保存"
     },
     {
       "code": "tou_slot5_start",
@@ -2065,10 +2108,14 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "enabled_when": {
+        "code": "tou_slot5_mode",
+        "values": [0]
+      },
       "unit": "%",
       "device_class": "battery",
       "state_class": "measurement",
-      "note": "掉电保存"
+      "note": "仅工作模式=充电时生效；掉电保存"
     },
     {
       "code": "tou_slot5_power",
@@ -2080,10 +2127,14 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "enabled_when": {
+        "code": "tou_slot5_mode",
+        "values": [1]
+      },
       "unit": "W",
       "device_class": "power",
       "state_class": "measurement",
-      "note": "掉电保存"
+      "note": "仅工作模式=放电时生效；掉电保存"
     },
     {
       "code": "tou_slot6_start",
@@ -2137,10 +2188,14 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "enabled_when": {
+        "code": "tou_slot6_mode",
+        "values": [0]
+      },
       "unit": "%",
       "device_class": "battery",
       "state_class": "measurement",
-      "note": "掉电保存"
+      "note": "仅工作模式=充电时生效；掉电保存"
     },
     {
       "code": "tou_slot6_power",
@@ -2152,10 +2207,14 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "enabled_when": {
+        "code": "tou_slot6_mode",
+        "values": [1]
+      },
       "unit": "W",
       "device_class": "power",
       "state_class": "measurement",
-      "note": "掉电保存"
+      "note": "仅工作模式=放电时生效；掉电保存"
     },
     {
       "code": "tou_slot7_start",
@@ -2209,10 +2268,14 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "enabled_when": {
+        "code": "tou_slot7_mode",
+        "values": [0]
+      },
       "unit": "%",
       "device_class": "battery",
       "state_class": "measurement",
-      "note": "掉电保存"
+      "note": "仅工作模式=充电时生效；掉电保存"
     },
     {
       "code": "tou_slot7_power",
@@ -2224,10 +2287,14 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "enabled_when": {
+        "code": "tou_slot7_mode",
+        "values": [1]
+      },
       "unit": "W",
       "device_class": "power",
       "state_class": "measurement",
-      "note": "掉电保存"
+      "note": "仅工作模式=放电时生效；掉电保存"
     },
     {
       "code": "tou_slot8_start",
@@ -2281,10 +2348,14 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "enabled_when": {
+        "code": "tou_slot8_mode",
+        "values": [0]
+      },
       "unit": "%",
       "device_class": "battery",
       "state_class": "measurement",
-      "note": "掉电保存"
+      "note": "仅工作模式=充电时生效；掉电保存"
     },
     {
       "code": "tou_slot8_power",
@@ -2296,10 +2367,14 @@
       "dtype": "uint16",
       "length": 1,
       "writable": true,
+      "enabled_when": {
+        "code": "tou_slot8_mode",
+        "values": [1]
+      },
       "unit": "W",
       "device_class": "power",
       "state_class": "measurement",
-      "note": "掉电保存"
+      "note": "仅工作模式=放电时生效；掉电保存"
     }
   ],
   "groups": [
@@ -2481,7 +2556,7 @@
         "end": 10114,
         "registers": 8
       },
-      "note": "工作模式 1=自发自用/2=手动时段/3=idle；允许电池逆流与弃光为预留，写入会被拒绝"
+      "note": "工作模式 1=自发自用/2=手动时段/3=idle；允许电池逆流为预留，写入会被拒绝"
     },
     {
       "id": "generator_do",
@@ -2560,7 +2635,7 @@
         "end": 10148,
         "registers": 25
       },
-      "note": "25 个寄存器，单帧 FC 0x10 写入；时段数须与实际填写的时段数一致",
+      "note": "仅下发时段数以内的时段；时段数须与实际填写的时段数一致",
       "subgroups": [
         {
           "label": "时段 1",
@@ -2691,7 +2766,7 @@
         "end": 10189,
         "registers": 41
       },
-      "note": "41 个寄存器，单帧 FC 0x10 写入；策略数须与实际填写的策略数一致",
+      "note": "仅下发策略数以内的策略；策略数须与实际填写的策略数一致",
       "subgroups": [
         {
           "label": "策略 1",

@@ -59,5 +59,7 @@ async def async_setup_entry(
     coordinator: ConowLocalCoordinator = entry.runtime_data
     async_add_entities(
         ConowSwitch(coordinator, entry, spec)
-        for spec in specs_for_platform(coordinator.map_version, SWITCH)
+        for spec in specs_for_platform(
+            coordinator.map_version, SWITCH, coordinator.new_model
+        )
     )

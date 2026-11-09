@@ -26,7 +26,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from functools import lru_cache
 
-from .model import PanelBit, PanelRegister, get_registers
+from .model import PanelBit, PanelRegister, get_registers, register_available
 from .registry import MAP_V1
 
 SENSOR = "sensor"
@@ -71,11 +71,17 @@ def _register_platform(register: PanelRegister) -> str | None:
     return SENSOR
 
 
-@lru_cache(maxsize=2)
-def _raw_specs(map_version: str) -> tuple[EntitySpec, ...]:
-    """Return specs before unique-id disambiguation."""
+@lru_cache(maxsize=4)
+def _raw_specs(map_version: str, new_model: bool = True) -> tuple[EntitySpec, ...]:
+    """Return specs before unique-id disambiguation.
+
+    ``new_model=False`` (an old unit, or an unreadable SN) drops the registers
+    flagged ``new_model_only``: the hardware cannot answer them.
+    """
     specs: list[EntitySpec] = []
     for register in get_registers(map_version):
+        if not register_available(register, new_model):
+            continue
         if register.bits:
             # The bitmask register itself never becomes an entity; the panel
             # renders each bit as its own read-only row.
@@ -106,19 +112,23 @@ def _raw_specs(map_version: str) -> tuple[EntitySpec, ...]:
     return tuple(specs)
 
 
-@lru_cache(maxsize=2)
-def build_entity_specs(map_version: str) -> tuple[EntitySpec, ...]:
+@lru_cache(maxsize=4)
+def build_entity_specs(
+    map_version: str, new_model: bool = True
+) -> tuple[EntitySpec, ...]:
     """Return the entity specs of a map with final unique-id suffixes.
 
     Status bits keep the historical ``status_`` prefix.  On the v2 map a
     register whose ``(platform, code)`` also exists in the v1 map gets the
     ``panel_`` prefix so upgrading from v1 does not collide in the registry.
     """
-    specs = _raw_specs(map_version)
+    specs = _raw_specs(map_version, new_model)
     if map_version == MAP_V1:
         taken: set[tuple[str, str]] = set()
     else:
-        taken = {(spec.platform, spec.code) for spec in _raw_specs(MAP_V1)}
+        taken = {
+            (spec.platform, spec.code) for spec in _raw_specs(MAP_V1, new_model)
+        }
     result: list[EntitySpec] = []
     for spec in specs:
         if spec.bit is not None:
@@ -137,21 +147,32 @@ def build_entity_specs(map_version: str) -> tuple[EntitySpec, ...]:
     return tuple(result)
 
 
-def specs_for_platform(map_version: str, platform: str) -> tuple[EntitySpec, ...]:
-    """Return the entity specs of one platform."""
+def specs_for_platform(
+    map_version: str, platform: str, new_model: bool = True
+) -> tuple[EntitySpec, ...]:
+    """Return the entity specs of one platform for this hardware generation."""
     return tuple(
-        spec for spec in build_entity_specs(map_version) if spec.platform == platform
+        spec
+        for spec in build_entity_specs(map_version, new_model)
+        if spec.platform == platform
     )
 
 
-def entity_registry_keys(entry_id: str, map_version: str) -> dict[str, str]:
+def entity_registry_keys(
+    entry_id: str, map_version: str, new_model: bool = True
+) -> dict[str, str]:
     """Return ``{unique_id: platform}`` that the active map owns."""
     return {
         f"{entry_id}_{spec.unique_code}": spec.platform
-        for spec in build_entity_specs(map_version)
+        for spec in build_entity_specs(map_version, new_model)
     }
 
 
-def panel_code_map(map_version: str) -> dict[str, str]:
+def panel_code_map(
+    map_version: str, new_model: bool = True
+) -> dict[str, str]:
     """Return ``{register/bit code: unique_code}`` for panel entity links."""
-    return {spec.code: spec.unique_code for spec in build_entity_specs(map_version)}
+    return {
+        spec.code: spec.unique_code
+        for spec in build_entity_specs(map_version, new_model)
+    }

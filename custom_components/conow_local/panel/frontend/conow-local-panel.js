@@ -345,6 +345,8 @@ const PANEL_STYLE = `
     display: flex; align-items: center; justify-content: flex-end;
     gap: 8px; min-width: 0; flex: 0 0 auto;
   }
+  /* Field that does not apply to the current mode (TOU charge/discharge). */
+  .reg-control.inactive { opacity: 0.45; }
   .reg-control ha-input,
   .reg-control ha-select { flex: 0 1 160px; min-width: 96px; }
   .reg-control ha-slider { flex: 1 1 auto; min-width: 40px; }
@@ -790,11 +792,24 @@ class ConowLocalPanel extends HTMLElement {
     const slider = this._sliderEnabled(register, bounds) ? " has-slider" : "";
     const value = this._controlValue(group.id, register);
     const editable = Boolean(register.writable && this._state?.map_readable);
+    const enabled = this._dependencyEnabled(group.id, register);
+    const dependsOn = register.enabled_when
+      ? ` data-depends-on="${this._escape(register.enabled_when.code)}"`
+      : "";
     const entity = register.entity_id
       ? ` data-entity="${this._escape(register.entity_id)}"`
       : "";
     const control = editable
-      ? `<div class="reg-control${slider}" data-group="${group.id}" data-code="${register.code}" data-value="${this._escape(value)}" data-editable="1">${this._renderControl(register, group.id, bounds)}</div>`
+      ? `<div class="reg-control${slider}${
+          enabled ? "" : " inactive"
+        }" data-group="${group.id}" data-code="${
+          register.code
+        }" data-value="${this._escape(value)}" data-editable="1"${dependsOn}>${this._renderControl(
+          register,
+          group.id,
+          bounds,
+          enabled
+        )}</div>`
       : this._renderReadonlyValue(register);
     return `
       <div class="register-row${register.entity_id ? " linkable" : ""}${
@@ -874,6 +889,82 @@ class ConowLocalPanel extends HTMLElement {
   _syncAllSlotVisibility() {
     for (const groupId of Object.keys(this._state?.groups || {})) {
       this._syncSlotVisibility(groupId);
+    }
+  }
+
+  _slotIncluded(group, register) {
+    // Slots past the submitted count (时段数 / 策略数) are neither displayed
+    // nor written, so their leftover values must not block validation or
+    // show up as pending changes.
+    const limit = this._slotLimit(group);
+    if (limit === null) {
+      return true;
+    }
+    const index = (group.subgroups || []).findIndex((subgroup) =>
+      (subgroup.members || []).includes(register.code)
+    );
+    return index < 0 || index < limit;
+  }
+
+  _dependencyValue(groupId, register) {
+    // Mode-dependent settings follow the draft of their source register, so
+    // switching 工作模式 immediately enables the matching field.
+    const dependency = register?.enabled_when;
+    if (!dependency) {
+      return undefined;
+    }
+    const source = this._findRegister(groupId, dependency.code);
+    return source ? this._draftValue(groupId, source) : undefined;
+  }
+
+  _dependencyEnabled(groupId, register) {
+    const dependency = register?.enabled_when;
+    if (!dependency) {
+      return true;
+    }
+    const value = this._dependencyValue(groupId, register);
+    return (dependency.values || []).some(
+      (allowed) => String(allowed) === String(value)
+    );
+  }
+
+  _syncDependencyControls(groupId) {
+    // Toggle in place: a full re-render would lose the scroll position and
+    // the editor the user is working in.
+    if (this._pendingGroups.has(groupId)) {
+      return;
+    }
+    this._root
+      .querySelectorAll(
+        `.reg-control[data-group="${groupId}"][data-depends-on]`
+      )
+      .forEach((control) => {
+        const register = this._findRegister(groupId, control.dataset.code);
+        if (!register) {
+          return;
+        }
+        const enabled = this._dependencyEnabled(groupId, register);
+        control.classList.toggle("inactive", !enabled);
+        control
+          .querySelectorAll(
+            "ha-input, ha-select, ha-slider, ha-time-input, ha-switch"
+          )
+          .forEach((element) => {
+            // Set the property as well: these HA controls do not all reflect
+            // the attribute in both directions.
+            element.disabled = !enabled;
+            if (enabled) {
+              element.removeAttribute("disabled");
+            } else {
+              element.setAttribute("disabled", "");
+            }
+          });
+      });
+  }
+
+  _syncAllDependencyControls() {
+    for (const groupId of Object.keys(this._state?.groups || {})) {
+      this._syncDependencyControls(groupId);
     }
   }
 
@@ -1010,6 +1101,18 @@ class ConowLocalPanel extends HTMLElement {
 
   _currentValue(register) {
     return register.values ? register.raw : register.value;
+  }
+
+  _isLiveValue(register, value) {
+    // A value the device already holds is written back unchanged.  Dynamic
+    // limits may exclude it (an old schedule below today's SoC), which must
+    // not block editing another field of the same group.
+    const current = this._currentValue(register);
+    return (
+      current !== null &&
+      current !== undefined &&
+      String(value) === String(current)
+    );
   }
 
   _findMember(code) {
@@ -1164,7 +1267,14 @@ class ConowLocalPanel extends HTMLElement {
 
   _changedRegisters(group) {
     return (group.members || []).filter((register) => {
-      if (!register.writable) {
+      if (
+        !register.writable ||
+        !this._dependencyEnabled(group.id, register) ||
+        !this._slotIncluded(group, register)
+      ) {
+        // A field that does not apply to the current mode is never written,
+        // and neither is a slot past the count; their leftover drafts must
+        // not mark the group dirty.
         return false;
       }
       const draft = this._draftValue(group.id, register);
@@ -1298,6 +1408,7 @@ class ConowLocalPanel extends HTMLElement {
       .filter(
         (register) =>
           register.writable &&
+          this._slotIncluded(group, register) &&
           this._timeInvalid(register) &&
           this._draftValue(group.id, register) === ""
       )
@@ -1310,7 +1421,9 @@ class ConowLocalPanel extends HTMLElement {
         if (
           !register.writable ||
           register.control !== "number" ||
-          !Array.isArray(register.bounds)
+          !Array.isArray(register.bounds) ||
+          !this._dependencyEnabled(group.id, register) ||
+          !this._slotIncluded(group, register)
         ) {
           return false;
         }
@@ -1320,6 +1433,10 @@ class ConowLocalPanel extends HTMLElement {
         }
         const numeric = Number(value);
         if (!Number.isFinite(numeric)) {
+          return false;
+        }
+        if (this._isLiveValue(register, value)) {
+          // Unchanged device value written back as-is; not this group's edit.
           return false;
         }
         const bounds = this._effectiveBounds(group.id, register);
@@ -1396,6 +1513,14 @@ class ConowLocalPanel extends HTMLElement {
     return (group.members || [])
       .filter((register) => register.writable)
       .every((register) => {
+        // The field the current mode does not use is not written; its draft
+        // must not block the group.  The same goes for slots past the count.
+        if (
+          !this._dependencyEnabled(group.id, register) ||
+          !this._slotIncluded(group, register)
+        ) {
+          return true;
+        }
         const value = this._draftValue(group.id, register);
         if (value === "" || value === null || value === undefined) {
           return false;
@@ -1408,7 +1533,7 @@ class ConowLocalPanel extends HTMLElement {
           if (!Number.isFinite(numeric)) {
             return false;
           }
-          if (register.bounds) {
+          if (register.bounds && !this._isLiveValue(register, value)) {
             const bounds = this._effectiveBounds(group.id, register);
             const [min, max] = bounds || [];
             if (Number.isFinite(min) && Number.isFinite(max) && (numeric < min || numeric > max)) {
@@ -1426,21 +1551,22 @@ class ConowLocalPanel extends HTMLElement {
       });
   }
 
-  _renderControl(register, groupId, bounds = register.bounds) {
+  _renderControl(register, groupId, bounds = register.bounds, enabled = true) {
     const editable = Boolean(register.writable && this._state?.map_readable);
     const pending = this._pendingGroups.has(groupId);
+    // ``enabled`` is false for a setting that does not apply to the slot's
+    // current mode (TOU charge vs discharge); it stays visible but disabled.
+    const active = editable && enabled && !pending;
     const unit = register.unit
       ? `<span slot="end">${this._escape(register.unit)}</span>`
       : "";
     if (register.control === "enum") {
       // ha-select receives its options as a JS property in _syncControls.
-      return `<ha-select ${editable && !pending ? "" : "disabled"}></ha-select>`;
+      return `<ha-select ${active ? "" : "disabled"}></ha-select>`;
     }
     if (register.control === "switch") {
       // On/off registers use Home Assistant's native toggle.
-      return `<ha-switch ${
-        editable && !pending ? "" : "disabled"
-      }></ha-switch>`;
+      return `<ha-switch ${active ? "" : "disabled"}></ha-switch>`;
     }
     if (register.control === "time") {
       // ha-time-input is HA's native time selector (HH:MM fields).
@@ -1450,7 +1576,7 @@ class ConowLocalPanel extends HTMLElement {
           )}</span>`
         : "";
       return `<ha-time-input ${
-        editable && !pending ? "" : "disabled"
+        active ? "" : "disabled"
       }></ha-time-input>${warning}`;
     }
     const [min, max, step] = bounds || [];
@@ -1461,13 +1587,13 @@ class ConowLocalPanel extends HTMLElement {
     ]
       .filter(Boolean)
       .join(" ");
-    const state = editable ? (pending ? "disabled" : "") : "readonly";
+    const state = editable ? (active ? "" : "disabled") : "readonly";
     if (this._sliderEnabled(register, bounds)) {
       // Slider rows keep a compact read-only value next to the track: the
       // native tooltip only appears while dragging, and a second editable
       // number box for a percentage setting is redundant.
       return `<ha-slider labeled ${boundsAttributes} ${
-        editable ? (pending ? "disabled" : "") : "disabled"
+        active ? "" : "disabled"
       }></ha-slider><span class="reg-slider-value"></span>`;
     }
     const type = register.control === "number" ? 'type="number"' : "";
@@ -1688,6 +1814,13 @@ class ConowLocalPanel extends HTMLElement {
           if (code === this._state?.groups?.[groupId]?.count_register) {
             this._syncSlotVisibility(groupId);
           }
+          if (
+            (this._state?.groups?.[groupId]?.members || []).some(
+              (item) => item.enabled_when?.code === code
+            )
+          ) {
+            this._syncDependencyControls(groupId);
+          }
           this._refreshApply(groupId);
         };
         select?.addEventListener("selected", (event) =>
@@ -1726,6 +1859,7 @@ class ConowLocalPanel extends HTMLElement {
     });
 
     this._syncAllSlotVisibility();
+    this._syncAllDependencyControls();
     this._syncControls();
   }
 
