@@ -14,6 +14,7 @@
     "error": {
       "cannot_connect": "无法通过 Modbus 连接，请检查连接方式、是否开启「启用外部控制 / ModBus RTU」及从站地址。",
       "invalid_verify_code": "验证码必须是 8 位十六进制字符。",
+      "tcp_connect_failed": "无法建立 TCP 连接，请确认 IP 地址填写正确、TCP 端口已开放，且 Home Assistant 与设备处于同一网段。",
       "verification_failed": "设备校验未通过，请核对一体机上显示的 8 位验证码后重试。"
     },
     "step": {
@@ -74,6 +75,7 @@
     "error": {
       "cannot_connect": "无法通过 Modbus 连接，请检查连接方式、是否开启「启用外部控制 / ModBus RTU」及从站地址。",
       "invalid_verify_code": "验证码必须是 8 位十六进制字符。",
+      "tcp_connect_failed": "无法建立 TCP 连接，请确认 IP 地址填写正确、TCP 端口已开放，且 Home Assistant 与设备处于同一网段。",
       "verification_failed": "设备校验未通过，请核对一体机上显示的 8 位验证码后重试。"
     },
     "abort": {

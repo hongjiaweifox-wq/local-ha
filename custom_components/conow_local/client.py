@@ -104,6 +104,15 @@ class ConowModbusError(Exception):
     """Raised when Modbus communication fails."""
 
 
+class ConowConnectError(ConowModbusError):
+    """Raised when the transport link cannot be opened at all.
+
+    Kept apart from a failed request so the frontend can tell "the device is
+    not reachable" (wrong IP, closed port, other subnet) from "the device
+    answered and rejected what we sent".
+    """
+
+
 class ConowVerificationError(ConowModbusError):
     """Raised when the direct TCP verification code is rejected."""
 
@@ -182,10 +191,10 @@ class ConowModbusClient:
         """Open the connection."""
         if not self._client.connect():
             if self._mode == MODBUS_MODE_TCP:
-                raise ConowModbusError(
+                raise ConowConnectError(
                     f"Failed to connect to {self._host}:{self._tcp_port}"
                 )
-            raise ConowModbusError(f"Failed to open serial port {self._port}")
+            raise ConowConnectError(f"Failed to open serial port {self._port}")
         self._flush_input_buffer()
 
     def _flush_input_buffer(self) -> None:
@@ -200,10 +209,10 @@ class ConowModbusClient:
         time.sleep(RETRY_INTERVAL_S)
         if not self._client.connect():
             if self._mode == MODBUS_MODE_TCP:
-                raise ConowModbusError(
+                raise ConowConnectError(
                     f"Failed to reconnect to {self._host}:{self._tcp_port}"
                 )
-            raise ConowModbusError(f"Failed to reopen serial port {self._port}")
+            raise ConowConnectError(f"Failed to reopen serial port {self._port}")
         self._flush_input_buffer()
 
     def close(self) -> None:

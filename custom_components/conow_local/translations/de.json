@@ -14,6 +14,7 @@
     "error": {
       "cannot_connect": "Verbindung über Modbus nicht möglich. Prüfe Verbindung, „Externen Steuerung / ModBus RTU“ und Slave-Adresse.",
       "invalid_verify_code": "Der Bestätigungscode muss aus genau 8 Hexadezimalzeichen bestehen.",
+      "tcp_connect_failed": "Keine TCP-Verbindung möglich. Prüfe, ob die IP-Adresse korrekt ist, der TCP-Port offen ist und Home Assistant im selben Netzwerk wie das Gerät ist.",
       "verification_failed": "Das Gerät hat den Bestätigungscode abgelehnt. Prüfe den 8-stelligen Code am Gerät und versuche es erneut."
     },
     "step": {
@@ -74,6 +75,7 @@
     "error": {
       "cannot_connect": "Verbindung über Modbus nicht möglich. Prüfe Verbindung, „Externen Steuerung / ModBus RTU“ und Slave-Adresse.",
       "invalid_verify_code": "Der Bestätigungscode muss aus genau 8 Hexadezimalzeichen bestehen.",
+      "tcp_connect_failed": "Keine TCP-Verbindung möglich. Prüfe, ob die IP-Adresse korrekt ist, der TCP-Port offen ist und Home Assistant im selben Netzwerk wie das Gerät ist.",
       "verification_failed": "Das Gerät hat den Bestätigungscode abgelehnt. Prüfe den 8-stelligen Code am Gerät und versuche es erneut."
     },
     "abort": {

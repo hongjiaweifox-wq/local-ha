@@ -14,6 +14,7 @@
     "error": {
       "cannot_connect": "Unable to connect over Modbus. Check the connection, Enable External Control / ModBus RTU, and slave address.",
       "invalid_verify_code": "Verification code must be exactly 8 hexadecimal characters.",
+      "tcp_connect_failed": "Cannot open a TCP connection. Check that the IP address is correct, the TCP port is open, and Home Assistant is on the same network as the device.",
       "verification_failed": "The device rejected the verification code. Check the 8-character code shown on the machine and try again."
     },
     "step": {
@@ -74,6 +75,7 @@
     "error": {
       "cannot_connect": "Unable to connect over Modbus. Check the connection, Enable External Control / ModBus RTU, and slave address.",
       "invalid_verify_code": "Verification code must be exactly 8 hexadecimal characters.",
+      "tcp_connect_failed": "Cannot open a TCP connection. Check that the IP address is correct, the TCP port is open, and Home Assistant is on the same network as the device.",
       "verification_failed": "The device rejected the verification code. Check the 8-character code shown on the machine and try again."
     },
     "abort": {

@@ -24,6 +24,7 @@ from homeassistant.helpers.selector import (
 
 from .client import (
     VERIFY_CODE_LENGTH,
+    ConowConnectError,
     ConowModbusError,
     ConowVerificationError,
     probe_connection,
@@ -305,6 +306,8 @@ class ConowLocalConfigFlow(ConfigFlow, domain=DOMAIN):
                         )
                 except ConowVerificationError:
                     errors["base"] = "verification_failed"
+                except ConowConnectError:
+                    errors["base"] = "tcp_connect_failed"
                 except ConowModbusError:
                     errors["base"] = "cannot_connect"
                 else:
@@ -410,6 +413,8 @@ class ConowLocalOptionsFlow(OptionsFlow):
                         )
                 except ConowVerificationError:
                     errors["base"] = "verification_failed"
+                except ConowConnectError:
+                    errors["base"] = "tcp_connect_failed"
                 except ConowModbusError:
                     errors["base"] = (
                         "verification_failed" if loaded else "cannot_connect"
