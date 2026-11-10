@@ -1081,7 +1081,7 @@
       "device_class": "battery",
       "state_class": "measurement",
       "max": 100,
-      "note": "可写范围 [安全 SoC, 100%]；不支持单寄存器写；掉电不保存"
+      "note": "充电 [安全 SoC, 100%]；放电 [安全 SoC, 系统当前 SoC]；不支持单寄存器写；掉电不保存"
     },
     {
       "code": "charge_discharge_duration",

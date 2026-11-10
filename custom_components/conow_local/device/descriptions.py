@@ -175,6 +175,11 @@ def build_sensor_description(spec: EntitySpec) -> SensorEntityDescription:
             raise ValueError(
                 f"{spec.code}: unknown state_class {register.state_class!r}"
             ) from err
+    if not register.values and register.dtype != "string":
+        # Render the scale's decimals even when a value happens to be whole
+        # (52.00 must not collapse to "52"): the map's precision is part of
+        # the measurement, not an artefact of the current reading.
+        kwargs["suggested_display_precision"] = number_precision(register)
     if (category := _entity_category(spec)) is not None:
         kwargs["entity_category"] = category
     return SensorEntityDescription(**kwargs)

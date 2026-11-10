@@ -431,15 +431,10 @@ def _cutoff_direction(values: dict[str, dict[str, Any]]) -> int | None:
 def _cutoff_soc_min(values: dict[str, dict[str, Any]]) -> float | None:
     """Lower bound of the cutoff SoC while a forced run is active.
 
-    Charging starts at the current battery SoC, discharging may not go below
-    the backup reserve.
+    Both directions start at the safety SoC: charging must not stop below
+    it, and a forced discharge must not drain below it either.
     """
-    direction = _cutoff_direction(values)
-    if direction == 1:
-        return _battery_soc(values)
-    if direction == 2:
-        return _physical_value(values, "backup_soc")
-    return None
+    return _physical_value(values, "safety_soc")
 
 
 def _cutoff_soc_max(values: dict[str, dict[str, Any]]) -> float | None:
@@ -448,8 +443,7 @@ def _cutoff_soc_max(values: dict[str, dict[str, Any]]) -> float | None:
     Charging may go up to 100 %; a forced discharge stops at the cutoff, so
     it cannot be set above the current battery SoC.
     """
-    direction = _cutoff_direction(values)
-    if direction == 2:
+    if _cutoff_direction(values) == 2:
         return _battery_soc(values)
     return None
 

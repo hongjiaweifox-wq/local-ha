@@ -1140,7 +1140,12 @@ class ConowLocalPanel extends HTMLElement {
   }
 
   _liveNumber(code) {
-    const numeric = Number(this._findMember(code)?.value);
+    const value = this._findMember(code)?.value;
+    if (value === null || value === undefined || value === "") {
+      // Number(null) is 0, which would silently pin a bound to zero.
+      return null;
+    }
+    const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : null;
   }
 
@@ -1159,40 +1164,44 @@ class ConowLocalPanel extends HTMLElement {
   }
 
   _effectiveBounds(groupId, register) {
-    // The cutoff SoC range follows the forced direction: charging runs from
-    // the current battery SoC up to 100 %, discharging stops at the cutoff so
-    // it must stay between the backup reserve and the current battery SoC.
+    // The cutoff SoC range follows the forced direction: both directions
+    // start at the safety SoC, charging runs up to 100 %, discharging stops
+    // at the cutoff so it cannot be raised above the current battery SoC.
     if (!register || !String(register.code).endsWith("cutoff_soc")) {
       return register?.bounds || null;
     }
-    const bounds = Array.isArray(register.bounds) ? register.bounds : null;
-    const staticMin = bounds ? bounds[0] : 0;
-    const staticMax = bounds ? bounds[1] : 100;
-    const step = bounds ? bounds[2] : 1;
+    // ``bounds`` from the server already reflect the direction the device
+    // currently holds, so they cannot be widened again.  Rebase the drafted
+    // range on the map's static limits instead.
+    const base = Array.isArray(register.static_bounds)
+      ? register.static_bounds
+      : register.bounds;
+    const staticMin = Array.isArray(base) ? base[0] : 0;
+    const staticMax = Array.isArray(base) ? base[1] : 100;
+    const step = Array.isArray(base) ? base[2] : 1;
+    const liveBounds = Array.isArray(register.bounds) ? register.bounds : null;
     const drafted = this._drafts[groupId]?.["charge_discharge_direction"];
-    const direction = Number(
+    const selected =
       drafted !== undefined && drafted !== ""
         ? drafted
-        : this._findMember("charge_discharge_direction")?.raw
-    );
+        : this._findMember("charge_discharge_direction")?.raw;
+    const direction =
+      selected === null || selected === undefined || selected === ""
+        ? null
+        : Number(selected);
     if (direction !== 1 && direction !== 2) {
-      return bounds;
+      return liveBounds;
     }
-    const soc = this._socNumber("battery_soc", "system_soc");
-    if (soc === null) {
-      return bounds;
-    }
-    let min;
+    // A missing safety SoC still leaves the direction-dependent maximum
+    // (the current battery SoC) in force.
+    const safety = this._socNumber("safety_soc");
+    const min = safety === null ? staticMin : Math.max(staticMin, safety);
     let max = staticMax;
-    if (direction === 1) {
-      min = Math.max(staticMin, soc);
-    } else {
-      const backup = this._socNumber("backup_soc");
-      if (backup === null) {
-        return bounds;
+    if (direction === 2) {
+      const soc = this._socNumber("system_soc", "battery_soc");
+      if (soc !== null) {
+        max = Math.min(staticMax, soc);
       }
-      min = Math.max(staticMin, backup);
-      max = Math.min(staticMax, soc);
     }
     if (max < min) {
       max = min;
@@ -1217,10 +1226,9 @@ class ConowLocalPanel extends HTMLElement {
           continue;
         }
         const [min, max, step] = bounds;
-        for (const element of [
-          control.querySelector("ha-slider"),
-          control.querySelector("ha-input"),
-        ]) {
+        const slider = control.querySelector("ha-slider");
+        const input = control.querySelector("ha-input");
+        for (const element of [slider, input]) {
           if (!element) {
             continue;
           }
@@ -1228,6 +1236,17 @@ class ConowLocalPanel extends HTMLElement {
           element.setAttribute("max", max);
           if (step !== undefined) {
             element.setAttribute("step", step);
+          }
+          if (typeof element.requestUpdate === "function") {
+            // ha-slider/ha-input are Lit elements: the rendered track follows
+            // the reactive properties, which a late attribute change does not
+            // reliably refresh.  Set both and force the update.
+            element.min = Number(min);
+            element.max = Number(max);
+            if (step !== undefined) {
+              element.step = Number(step);
+            }
+            element.requestUpdate();
           }
         }
         const current = this._draftValue(group.id, register);

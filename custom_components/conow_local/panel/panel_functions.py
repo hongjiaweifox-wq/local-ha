@@ -212,6 +212,10 @@ def _serialize_group(
                     else None
                 ),
                 "bounds": map_model.numeric_bounds(register, decoded),
+                # Limits without live narrowing: the panel rebases dynamic
+                # ranges (cutoff SoC, TOU SoC) on these when the user drafts a
+                # different direction than the one the device currently holds.
+                "static_bounds": map_model.numeric_bounds(register),
                 "raw": value.get("raw"),
                 "value": value.get("value"),
                 "display": value.get("display", ""),
