@@ -46,7 +46,7 @@
       },
       "read_write_holding": {
         "start": 10100,
-        "length": 90,
+        "length": 91,
         "fc": [
           "0x03",
           "0x06",
@@ -148,7 +148,7 @@
       "unit": "W",
       "device_class": "power",
       "state_class": "measurement",
-      "note": "正=向电网馈电/电池放电，负=从电网取电/电池充电"
+      "note": "正=从电网取电/电池充电，负=向电网馈电/电池放电"
     },
     {
       "code": "pv_total_power",
@@ -1166,7 +1166,7 @@
     },
     {
       "code": "bypass_enable",
-      "name": "Bypass 开关",
+      "name": "Bypass长开开关",
       "address": 10111,
       "address_hex": "0x277F",
       "block": "control",
@@ -2387,6 +2387,20 @@
       "device_class": "power",
       "state_class": "measurement",
       "note": "仅工作模式=放电时生效；掉电保存"
+    },
+    {
+      "code": "device_clock",
+      "name": "设备时钟",
+      "address": 10190,
+      "address_hex": "0x27CE",
+      "block": "control",
+      "category": "时间校准",
+      "dtype": "uint16",
+      "length": 1,
+      "writable": true,
+      "unit": "时:分",
+      "format": "hhmm",
+      "note": "读取/校准设备当日时分；高字节=时（0–23），低字节=分（0–59）；单独成组下发"
     }
   ],
   "groups": [
@@ -2870,6 +2884,22 @@
         }
       ],
       "count_register": "tou_slot_count"
+    },
+    {
+      "id": "time_sync",
+      "label": "时间校准",
+      "icon": "mdi:clock-outline",
+      "order": 120,
+      "atomic": false,
+      "members": [
+        "device_clock"
+      ],
+      "span": {
+        "start": 10190,
+        "end": 10190,
+        "registers": 1
+      },
+      "note": "单独分组：读取/校准设备当日时分；单寄存器同样走 FC 0x10"
     }
   ]
 }

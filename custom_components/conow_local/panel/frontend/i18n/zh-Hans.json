@@ -75,7 +75,8 @@
     "generator_do": "柴发与 DO",
     "base_load": "基础负载",
     "base_load_schedule": "基础负载计划表",
-    "tou_schedule": "TOU 计划表"
+    "tou_schedule": "TOU 计划表",
+    "time_sync": "时间校准"
   },
   "subgroups": {
     "slot": "时段 {n}",
@@ -118,6 +119,7 @@
     "battery_cutoff_soc": "充放电截止 SOC",
     "device_status": "设备状态",
     "device_fault_code": "设备故障码",
+    "device_clock": "设备时钟",
     "system_soc": "系统当前 SoC",
     "meter_connection_state": "电表连接状态",
     "meter_total_power": "电表总功率",
@@ -180,7 +182,7 @@
     "work_mode": "工作模式",
     "allow_reverse_power": "允许逆流功率",
     "allow_battery_export": "允许电池逆流",
-    "bypass_enable": "Bypass 开关",
+    "bypass_enable": "Bypass长开开关",
     "modbus_timeout": "ModBus 超时时长",
     "generator_enable": "柴发开关",
     "generator_start_time": "开始时间",

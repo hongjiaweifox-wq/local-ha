@@ -75,6 +75,7 @@
     "base_load": "Basislast",
     "base_load_schedule": "Basislast-schema",
     "tou_schedule": "TOU-schema",
+    "time_sync": "Tijdkalibratie",
     "system": "Systeem"
   },
   "subgroups": {
@@ -84,6 +85,7 @@
   "registers": {
     "device_status": "Apparaatstatus",
     "device_fault_code": "Apparaatfoutcode",
+    "device_clock": "Apparaatklok",
     "system_soc": "Systeem-SoC",
     "meter_connection_state": "Meterverbindingsstatus",
     "meter_total_power": "Metertotaalvermogen",
@@ -153,7 +155,7 @@
     "backup_soc": "Reserve-SoC",
     "allow_reverse_power": "Toegestaan terugleververmogen",
     "allow_battery_export": "Accu-export toestaan",
-    "bypass_enable": "Bypass-schakelaar",
+    "bypass_enable": "Bypass长开开关",
     "off_grid_output_enable": "Off-grid-uitgangsschakelaar",
     "pv_curtailment_enable": "PV-beperking",
     "modbus_timeout": "Modbus-time-out",

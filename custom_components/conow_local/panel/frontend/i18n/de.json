@@ -75,6 +75,7 @@
     "base_load": "Grundlast",
     "base_load_schedule": "Grundlast-Zeitplan",
     "tou_schedule": "TOU-Zeitplan",
+    "time_sync": "Zeitkalibrierung",
     "system": "System"
   },
   "subgroups": {
@@ -84,6 +85,7 @@
   "registers": {
     "device_status": "Gerätestatus",
     "device_fault_code": "Gerätefehlercode",
+    "device_clock": "Geräteuhr",
     "system_soc": "System-SoC",
     "meter_connection_state": "Zählerverbindungsstatus",
     "meter_total_power": "Zählergesamtleistung",
@@ -153,7 +155,7 @@
     "backup_soc": "Reserve-SoC",
     "allow_reverse_power": "Zulässige Rückspeiseleistung",
     "allow_battery_export": "Batterieeinspeisung erlauben",
-    "bypass_enable": "Bypass-Schalter",
+    "bypass_enable": "Bypass长开开关",
     "off_grid_output_enable": "Off-Grid-Ausgangsschalter",
     "pv_curtailment_enable": "PV-Abregelung",
     "modbus_timeout": "Modbus-Timeout",

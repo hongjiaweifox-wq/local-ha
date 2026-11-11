@@ -171,6 +171,9 @@
       "design_capacity": {
         "name": "Design Capacity"
       },
+      "device_clock": {
+        "name": "Device Clock"
+      },
       "device_fault_code": {
         "name": "Device Fault Code"
       },
@@ -545,7 +548,7 @@
     },
     "switch": {
       "bypass_enable": {
-        "name": "Bypass Switch"
+        "name": "Bypass长开开关"
       },
       "do1_state": {
         "name": "DO1 Control"

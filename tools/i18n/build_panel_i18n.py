@@ -70,6 +70,7 @@ GROUPS = {
         "Basislast-schema",
     ),
     "tou_schedule": ("TOU Schedule", "TOU-Zeitplan", "TOU-schema"),
+    "time_sync": ("Time Calibration", "Zeitkalibrierung", "Tijdkalibratie"),
 }
 
 SUBGROUPS = {
@@ -84,6 +85,7 @@ SUBGROUPS = {
 REGISTERS = {
     "device_status": ("Device Status", "Gerätestatus", "Apparaatstatus"),
     "device_fault_code": ("Device Fault Code", "Gerätefehlercode", "Apparaatfoutcode"),
+    "device_clock": ("Device Clock", "Geräteuhr", "Apparaatklok"),
     "system_soc": ("System SoC", "System-SoC", "Systeem-SoC"),
     "meter_connection_state": (
         "Meter Connection State",
@@ -299,7 +301,7 @@ REGISTERS = {
         "Batterieeinspeisung erlauben",
         "Accu-export toestaan",
     ),
-    "bypass_enable": ("Bypass Switch", "Bypass-Schalter", "Bypass-schakelaar"),
+    "bypass_enable": ("Bypass长开开关", "Bypass长开开关", "Bypass长开开关"),
     "off_grid_output_enable": (
         "Off-Grid Output Switch",
         "Off-Grid-Ausgangsschalter",
