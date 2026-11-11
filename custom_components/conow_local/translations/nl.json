@@ -15,7 +15,9 @@
       "cannot_connect": "Kan geen Modbus-verbinding maken. Controleer de verbinding, Externe besturing / ModBus RTU en het slave-adres.",
       "invalid_verify_code": "De verificatiecode moet uit precies 8 hexadecimale tekens bestaan.",
       "tcp_connect_failed": "Kan geen TCP-verbinding openen. Controleer of het IP-adres klopt, de TCP-poort open is en Home Assistant in hetzelfde netwerk als het apparaat zit.",
-      "verification_failed": "Het apparaat heeft de verificatiecode geweigerd. Controleer de 8-tekens code op het apparaat en probeer opnieuw."
+      "verification_failed": "Het apparaat heeft de verificatiecode geweigerd. Controleer de 8-tekens code op het apparaat en probeer opnieuw.",
+      "device_busy": "Het apparaat is al verbonden met een andere client (MAC-adres gewijzigd). Sluit de andere verbinding (Conow-app, RS-485-adapter of een andere Home Assistant-instantie) en probeer opnieuw.",
+      "verification_required": "Het apparaat vraagt om handmatig te verversen: de verificatiecode is niet meer geldig. Lees de actuele 8-tekens code van het apparaat en werk deze bij via Configureren."
     },
     "step": {
       "user": {
@@ -79,7 +81,9 @@
       "cannot_connect": "Kan geen Modbus-verbinding maken. Controleer de verbinding, Externe besturing / ModBus RTU en het slave-adres.",
       "invalid_verify_code": "De verificatiecode moet uit precies 8 hexadecimale tekens bestaan.",
       "tcp_connect_failed": "Kan geen TCP-verbinding openen. Controleer of het IP-adres klopt, de TCP-poort open is en Home Assistant in hetzelfde netwerk als het apparaat zit.",
-      "verification_failed": "Het apparaat heeft de verificatiecode geweigerd. Controleer de 8-tekens code op het apparaat en probeer opnieuw."
+      "verification_failed": "Het apparaat heeft de verificatiecode geweigerd. Controleer de 8-tekens code op het apparaat en probeer opnieuw.",
+      "device_busy": "Het apparaat is al verbonden met een andere client (MAC-adres gewijzigd). Sluit de andere verbinding (Conow-app, RS-485-adapter of een andere Home Assistant-instantie) en probeer opnieuw.",
+      "verification_required": "Het apparaat vraagt om handmatig te verversen: de verificatiecode is niet meer geldig. Lees de actuele 8-tekens code van het apparaat en werk deze bij via Configureren."
     },
     "abort": {
       "no_options": "Verbindingsinstellingen zijn alleen te bewerken voor Modbus TCP-vermeldingen."

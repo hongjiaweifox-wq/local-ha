@@ -2010,15 +2010,19 @@ class ConowLocalPanel extends HTMLElement {
         text: this._t("noticeApplied", { group: groupLabel }),
       };
     } catch (err) {
+      // The backend tags two Conow-specific refusals: 4 = another client
+      // holds the device, 5 = the verification code needs refreshing.
+      const noticeKey = {
+        device_busy: "noticeDeviceBusy",
+        verification_required: "noticeVerificationRequired",
+        write_rejected: "noticeRejected",
+      }[err.code] || "noticeFailed";
       this._notice = {
         ok: false,
-        text: this._t(
-          err.code === "write_rejected" ? "noticeRejected" : "noticeFailed",
-          {
-            group: groupLabel,
-            error: err.message || String(err),
-          }
-        ),
+        text: this._t(noticeKey, {
+          group: groupLabel,
+          error: err.message || String(err),
+        }),
       };
     } finally {
       this._pendingGroups.delete(groupId);
@@ -2174,6 +2178,14 @@ class ConowLocalPanel extends HTMLElement {
 
   // Direct-TCP links also depend on the challenge code, so the hint names it.
   _mapUnreadableHint() {
+    if (this._state?.read_error === "device_busy") {
+      return `<div class="hint">${this._t("mapUnreadableDeviceBusy")}</div>`;
+    }
+    if (this._state?.read_error === "verification_required") {
+      return `<div class="hint">${this._t(
+        "mapUnreadableVerificationRequired"
+      )}</div>`;
+    }
     const key =
       this._state?.mode === "tcp_direct"
         ? "mapUnreadableTcpDirect"

@@ -15,7 +15,9 @@
       "cannot_connect": "Verbindung über Modbus nicht möglich. Prüfe Verbindung, „Externen Steuerung / ModBus RTU“ und Slave-Adresse.",
       "invalid_verify_code": "Der Bestätigungscode muss aus genau 8 Hexadezimalzeichen bestehen.",
       "tcp_connect_failed": "Keine TCP-Verbindung möglich. Prüfe, ob die IP-Adresse korrekt ist, der TCP-Port offen ist und Home Assistant im selben Netzwerk wie das Gerät ist.",
-      "verification_failed": "Das Gerät hat den Bestätigungscode abgelehnt. Prüfe den 8-stelligen Code am Gerät und versuche es erneut."
+      "verification_failed": "Das Gerät hat den Bestätigungscode abgelehnt. Prüfe den 8-stelligen Code am Gerät und versuche es erneut.",
+      "device_busy": "Das Gerät ist bereits mit einem anderen Client verbunden (MAC-Adresse geändert). Trenne die andere Verbindung (Conow-App, RS-485-Adapter oder eine andere Home-Assistant-Instanz) und versuche es erneut.",
+      "verification_required": "Das Gerät verlangt eine manuelle Aktualisierung: Der Bestätigungscode ist nicht mehr gültig. Lies den aktuellen 8-stelligen Code am Gerät ab und aktualisiere ihn unter Konfigurieren."
     },
     "step": {
       "user": {
@@ -79,7 +81,9 @@
       "cannot_connect": "Verbindung über Modbus nicht möglich. Prüfe Verbindung, „Externen Steuerung / ModBus RTU“ und Slave-Adresse.",
       "invalid_verify_code": "Der Bestätigungscode muss aus genau 8 Hexadezimalzeichen bestehen.",
       "tcp_connect_failed": "Keine TCP-Verbindung möglich. Prüfe, ob die IP-Adresse korrekt ist, der TCP-Port offen ist und Home Assistant im selben Netzwerk wie das Gerät ist.",
-      "verification_failed": "Das Gerät hat den Bestätigungscode abgelehnt. Prüfe den 8-stelligen Code am Gerät und versuche es erneut."
+      "verification_failed": "Das Gerät hat den Bestätigungscode abgelehnt. Prüfe den 8-stelligen Code am Gerät und versuche es erneut.",
+      "device_busy": "Das Gerät ist bereits mit einem anderen Client verbunden (MAC-Adresse geändert). Trenne die andere Verbindung (Conow-App, RS-485-Adapter oder eine andere Home-Assistant-Instanz) und versuche es erneut.",
+      "verification_required": "Das Gerät verlangt eine manuelle Aktualisierung: Der Bestätigungscode ist nicht mehr gültig. Lies den aktuellen 8-stelligen Code am Gerät ab und aktualisiere ihn unter Konfigurieren."
     },
     "abort": {
       "no_options": "Verbindungseinstellungen lassen sich nur für Modbus-TCP-Einträge bearbeiten."

@@ -23,8 +23,11 @@ from homeassistant.helpers.selector import (
 )
 
 from .client import (
+    CONOW_EXCEPTION_DEVICE_BUSY,
+    CONOW_EXCEPTION_VERIFICATION_REQUIRED,
     VERIFY_CODE_LENGTH,
     ConowConnectError,
+    ConowExceptionResponseError,
     ConowModbusError,
     ConowVerificationError,
     probe_connection,
@@ -84,6 +87,20 @@ def _serial_port_label(port: Any) -> str:
         )
     description = getattr(port, "description", None)
     return f"{description} ({port.device})" if description else port.device
+
+
+def _refusal_error(err: ConowExceptionResponseError, default: str) -> str:
+    """Map the machine's private exception codes to a UI error key.
+
+    The Conow firmware answers 4 when another client already holds the device
+    and 5 when it wants the verification code refreshed; both need their own
+    message instead of a generic "cannot connect".
+    """
+    if err.exception_code == CONOW_EXCEPTION_DEVICE_BUSY:
+        return "device_busy"
+    if err.exception_code == CONOW_EXCEPTION_VERIFICATION_REQUIRED:
+        return "verification_required"
+    return default
 
 
 class ConowLocalConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -312,6 +329,8 @@ class ConowLocalConfigFlow(ConfigFlow, domain=DOMAIN):
                     errors["base"] = "verification_failed"
                 except ConowConnectError:
                     errors["base"] = "tcp_connect_failed"
+                except ConowExceptionResponseError as err:
+                    errors["base"] = _refusal_error(err, "cannot_connect")
                 except ConowModbusError:
                     errors["base"] = "cannot_connect"
                 else:
@@ -490,6 +509,8 @@ class ConowLocalOptionsFlow(OptionsFlow):
                         errors["base"] = "verification_failed"
                     except ConowConnectError:
                         errors["base"] = "tcp_connect_failed"
+                    except ConowExceptionResponseError as err:
+                        errors["base"] = _refusal_error(err, "verification_failed")
                     except ConowModbusError:
                         errors["base"] = "verification_failed"
                     else:
@@ -548,6 +569,11 @@ class ConowLocalOptionsFlow(OptionsFlow):
                         errors["base"] = "verification_failed"
                     except ConowConnectError:
                         errors["base"] = "tcp_connect_failed"
+                    except ConowExceptionResponseError as err:
+                        errors["base"] = _refusal_error(
+                            err,
+                            "verification_failed" if direct else "cannot_connect",
+                        )
                     except ConowModbusError:
                         errors["base"] = (
                             "verification_failed" if direct else "cannot_connect"

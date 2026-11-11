@@ -17,7 +17,12 @@ from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import HomeAssistant, callback
 
 from ..maps import model as map_model
-from ..client import ConowExceptionResponseError, ConowModbusError
+from ..client import (
+    CONOW_EXCEPTION_DEVICE_BUSY,
+    CONOW_EXCEPTION_VERIFICATION_REQUIRED,
+    ConowExceptionResponseError,
+    ConowModbusError,
+)
 from ..const import (
     CONF_POLL_INTERVAL,
     DOMAIN,
@@ -37,6 +42,20 @@ from .panel_functions import (
 URL_BASE = "/conow_local_panel_static"
 PANEL_WEBCOMPONENT = "conow-local-panel"
 _FRONTEND_DIR = Path(__file__).parent / "frontend"
+
+
+def _refusal_code(err: ConowExceptionResponseError) -> str:
+    """Pick the panel error code that explains a refused write.
+
+    The machine's private codes 4 and 5 mean "another client is connected"
+    and "the verification code is stale"; the panel translates each of those
+    instead of showing a generic rejection.
+    """
+    if err.exception_code == CONOW_EXCEPTION_DEVICE_BUSY:
+        return "device_busy"
+    if err.exception_code == CONOW_EXCEPTION_VERIFICATION_REQUIRED:
+        return "verification_required"
+    return "write_rejected"
 
 
 def _static_version() -> str:
@@ -138,7 +157,7 @@ async def websocket_set_panel_group(
         return
     except ConowExceptionResponseError as err:
         # The device answered and refused the group; the link stays usable.
-        connection.send_error(msg["id"], "write_rejected", str(err))
+        connection.send_error(msg["id"], _refusal_code(err), str(err))
         return
     except (ConowModbusError, OSError) as err:
         connection.send_error(msg["id"], "write_failed", str(err))

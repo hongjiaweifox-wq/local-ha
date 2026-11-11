@@ -8,7 +8,7 @@ import time
 from typing import Any
 
 from pymodbus.client import ModbusSerialClient, ModbusTcpClient
-from pymodbus.exceptions import ModbusException
+from pymodbus.exceptions import ConnectionException, ModbusException
 
 from .const import DEFAULT_BAUDRATE, DEFAULT_SLAVE, DEFAULT_TCP_PORT, MODBUS_MODE_RTU, MODBUS_MODE_TCP
 from .maps.registry import CONNECTION_PROBE
@@ -120,6 +120,27 @@ EXCEPTION_NAMES = {
     11: "gateway target failed to respond",
 }
 
+# CONOW reuses two standard Modbus exception codes for its own meaning (see
+# the machine's fault-code table): 4 = "MAC address changed" — in practice
+# another client already holds the device — and 5 = "manual refresh", i.e.
+# the stored verification code is stale.  Neither depends on the request that
+# was sent, so both must stop the rest of a poll instead of being treated as
+# one unreadable block.
+CONOW_EXCEPTION_DEVICE_BUSY = 4
+CONOW_EXCEPTION_VERIFICATION_REQUIRED = 5
+CONOW_EXCEPTION_HINTS = {
+    CONOW_EXCEPTION_DEVICE_BUSY: (
+        "the device is already connected by another client (MAC address "
+        "changed); close the other connection (Conow app, RS-485 adapter or "
+        "another Home Assistant instance) and retry"
+    ),
+    CONOW_EXCEPTION_VERIFICATION_REQUIRED: (
+        "the device asks for a manual refresh: the verification code is no "
+        "longer valid; update it under Settings > Devices & services > "
+        "Conow Local > Configure"
+    ),
+}
+
 
 class ConowExceptionResponseError(ConowModbusError):
     """The device answered with a Modbus exception response.
@@ -134,10 +155,21 @@ class ConowExceptionResponseError(ConowModbusError):
         """Store the exception reply for callers and logs."""
         self.function_code = function_code
         self.exception_code = exception_code
-        super().__init__(
+        # Plain-language cause for the user; ``None`` for a refusal that only
+        # concerns this one request (bad address, bad value, ...).
+        self.hint = CONOW_EXCEPTION_HINTS.get(exception_code)
+        message = (
             f"Modbus exception 0x{function_code:02X}/0x{exception_code:02X} "
             f"({EXCEPTION_NAMES.get(exception_code, 'unknown exception')})"
         )
+        if self.hint:
+            message = f"{message}: {self.hint}"
+        super().__init__(message)
+
+    @property
+    def device_level(self) -> bool:
+        """Whether the code describes the link/client, not the request."""
+        return self.hint is not None
 
 
 def _raise_for_response(response: Any, function_code: int) -> None:
@@ -255,6 +287,11 @@ class ConowModbusClient:
         the failure is reported as a code problem instead of a generic refusal.
         """
         if self._verify_attempted or not self._verify_code:
+            return False
+        if error.device_level:
+            # 4 (another client holds the device) and 5 (the stored code is
+            # stale) cannot be fixed by rewriting the stored code; retrying
+            # would collide with the other client or repeat the same refusal.
             return False
         # Only one automatic attempt per link: a rejected code must not be
         # rewritten on every poll.
@@ -378,6 +415,14 @@ class ConowModbusClient:
                         address, count, retries=max(1, attempts - attempt)
                     )
                 raise
+            except ConnectionException as exc:
+                # The socket could not be opened (or died before a reply):
+                # no frame reached the device, so retrying the same link only
+                # repeats the 2 s timeout.  Report the dead link immediately.
+                _LOGGER.debug("Read connect failed addr=%s: %s", address, exc)
+                raise ConowConnectError(
+                    f"Failed to connect to {self._endpoint}: {exc}"
+                ) from exc
             except (ModbusException, ConowModbusError, OSError) as exc:
                 last_error = exc
                 _LOGGER.debug(
@@ -461,6 +506,12 @@ class ConowModbusClient:
                         address, values, retries=max(1, attempts - attempt)
                     )
                 raise
+            except ConnectionException as exc:
+                # No link: the request never left this host.
+                _LOGGER.debug("Write connect failed addr=%s: %s", address, exc)
+                raise ConowConnectError(
+                    f"Failed to connect to {self._endpoint}: {exc}"
+                ) from exc
             except (ModbusException, ConowModbusError, OSError) as exc:
                 last_error = exc
                 _LOGGER.debug(
@@ -547,6 +598,19 @@ def probe_direct_connection(
         raise
     try:
         client.write_registers(VERIFY_CODE_START, words, retries=1)
+    except ConowConnectError:
+        # No link: report the transport failure, not a rejected code.
+        client.close()
+        raise
+    except ConowExceptionResponseError as err:
+        client.close()
+        if err.device_level:
+            # 4/5 concern the link itself (another client, stale code); the
+            # config flow has a dedicated message for each.
+            raise
+        raise ConowVerificationError(
+            f"Verification code rejected: {err}"
+        ) from err
     except ConowModbusError as err:
         client.close()
         raise ConowVerificationError(

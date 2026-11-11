@@ -15,7 +15,9 @@
       "cannot_connect": "Unable to connect over Modbus. Check the connection, Enable External Control / ModBus RTU, and slave address.",
       "invalid_verify_code": "Verification code must be exactly 8 hexadecimal characters.",
       "tcp_connect_failed": "Cannot open a TCP connection. Check that the IP address is correct, the TCP port is open, and Home Assistant is on the same network as the device.",
-      "verification_failed": "The device rejected the verification code. Check the 8-character code shown on the machine and try again."
+      "verification_failed": "The device rejected the verification code. Check the 8-character code shown on the machine and try again.",
+      "device_busy": "The device is already connected by another client (MAC address changed). Close the other connection (Conow app, RS-485 adapter or another Home Assistant instance) and try again.",
+      "verification_required": "The device asks for a manual refresh: the verification code is no longer valid. Read the current 8-character code from the machine, then update it under Configure."
     },
     "step": {
       "user": {
@@ -76,7 +78,9 @@
       "cannot_connect": "Unable to connect over Modbus. Check the connection, Enable External Control / ModBus RTU, and slave address.",
       "invalid_verify_code": "Verification code must be exactly 8 hexadecimal characters.",
       "tcp_connect_failed": "Cannot open a TCP connection. Check that the IP address is correct, the TCP port is open, and Home Assistant is on the same network as the device.",
-      "verification_failed": "The device rejected the verification code. Check the 8-character code shown on the machine and try again."
+      "verification_failed": "The device rejected the verification code. Check the 8-character code shown on the machine and try again.",
+      "device_busy": "The device is already connected by another client (MAC address changed). Close the other connection (Conow app, RS-485 adapter or another Home Assistant instance) and try again.",
+      "verification_required": "The device asks for a manual refresh: the verification code is no longer valid. Read the current 8-character code from the machine, then update it under Configure."
     },
     "abort": {
       "no_options": "Only direct Modbus TCP entries use a verification code."

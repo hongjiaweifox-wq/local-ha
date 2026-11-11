@@ -90,6 +90,20 @@ def read_map_blocks(
             time.sleep(INTER_FRAME_DELAY_S)
         try:
             blocks[block] = client.read_holding_registers(start, count)
+        except ConowConnectError:
+            # No link at all: every later block would only repeat the same
+            # connect timeout, so stop the poll here.
+            raise
+        except ConowExceptionResponseError as exc:
+            if exc.device_level:
+                # Exception 4/5 describes the link (another client, stale
+                # verification code), not this block: the remaining reads
+                # would fail the same way.
+                raise
+            LOGGER.debug(
+                "Map %s: block %s refused: %s", map_version, block, exc
+            )
+            blocks[block] = None
         except ConowModbusError:
             LOGGER.debug("Map %s: block %s read failed", map_version, block)
             blocks[block] = None

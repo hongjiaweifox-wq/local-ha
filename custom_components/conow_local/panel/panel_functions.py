@@ -17,7 +17,13 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
 from ..maps import model as map_model
-from ..client import ConowModbusClient, ConowModbusError
+from ..client import (
+    CONOW_EXCEPTION_DEVICE_BUSY,
+    CONOW_EXCEPTION_VERIFICATION_REQUIRED,
+    ConowExceptionResponseError,
+    ConowModbusClient,
+    ConowModbusError,
+)
 from ..const import (
     CONF_LAST_MAP_VERSION,
     CONF_MODBUS_HOST,
@@ -689,6 +695,16 @@ def _read_blocks_direct(entry) -> tuple[str, tuple[int, ...] | None, dict[str, d
         return map_version, version, decode_required_blocks(blocks, map_version)
 
 
+def _read_error_code(err: Exception) -> str | None:
+    """Name the link-level cause of a failed panel read, if it has one."""
+    if isinstance(err, ConowExceptionResponseError):
+        if err.exception_code == CONOW_EXCEPTION_DEVICE_BUSY:
+            return "device_busy"
+        if err.exception_code == CONOW_EXCEPTION_VERIFICATION_REQUIRED:
+            return "verification_required"
+    return None
+
+
 async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[str, Any]:
     """Read the selected grouped map and serialize the grouped values."""
     device_registry = dr.async_get(hass)
@@ -702,17 +718,19 @@ async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[s
     coordinator: ConowLocalCoordinator | None = getattr(entry, "runtime_data", None)
     loaded = entry.state is ConfigEntryState.LOADED and coordinator is not None
     read_ok = False
+    read_error: str | None = None
     if loaded:
         map_version = coordinator.map_version
         firmware = coordinator.firmware_version
         try:
             decoded = await coordinator.async_read_snapshot()
             read_ok = bool(decoded)
-        except (ConowModbusError, OSError):
+        except (ConowModbusError, OSError) as err:
             # Never fall back to the previous poll: the panel shows "—" for a
             # device that cannot be read right now.
-            LOGGER.debug("Panel: fresh read failed for %s", entry.entry_id)
+            LOGGER.debug("Panel: fresh read failed for %s: %s", entry.entry_id, err)
             decoded = {}
+            read_error = _read_error_code(err)
         if read_ok:
             _remember_map_version(hass, entry, map_version)
     else:
@@ -723,10 +741,11 @@ async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[s
             read_ok = bool(decoded)
             if read_ok:
                 _remember_map_version(hass, entry, map_version)
-        except (ConowModbusError, OSError):
-            LOGGER.debug("Panel: direct read failed for %s", entry.entry_id)
+        except (ConowModbusError, OSError) as err:
+            LOGGER.debug("Panel: direct read failed for %s: %s", entry.entry_id, err)
             map_version = _stored_map_version(entry)
             firmware, decoded = None, {}
+            read_error = _read_error_code(err)
 
     new_model = map_model.values_new_model(decoded)
     entities = _entity_code_map(
@@ -755,6 +774,9 @@ async def async_build_panel_state(hass: HomeAssistant, device_id: str) -> dict[s
         # loaded entry whose device stopped answering must not look online.
         "online": read_ok,
         "map_readable": read_ok,
+        # Link-level refusal (4 = another client, 5 = stale verification
+        # code) so the panel can name the cause instead of a generic hint.
+        "read_error": read_error,
         "map_version": 2 if map_version != MAP_V1 else 1,
         "map_source": map_info["source"],
         "firmware_version": map_info["firmware_version"],
