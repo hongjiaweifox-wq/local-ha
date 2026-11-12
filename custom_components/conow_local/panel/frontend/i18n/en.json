@@ -155,7 +155,7 @@
     "backup_soc": "Backup SoC",
     "allow_reverse_power": "Allowed Reverse Power",
     "allow_battery_export": "Allow Battery Export",
-    "bypass_enable": "Bypass长开开关",
+    "bypass_enable": "Bypass Always-On Switch",
     "off_grid_output_enable": "Off-Grid Output Switch",
     "pv_curtailment_enable": "PV Curtailment",
     "modbus_timeout": "Modbus Timeout",
@@ -267,8 +267,8 @@
   "values": {
     "meter_connection_state": {
       "0": "Paired & connected",
-      "1": "Paired, not connected",
-      "2": "Unpaired, not connected"
+      "1": "Unpaired, not connected",
+      "2": "Paired, not connected"
     },
     "battery_work_state": {
       "0": "Idle",

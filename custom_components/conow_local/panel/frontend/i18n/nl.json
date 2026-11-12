@@ -155,7 +155,7 @@
     "backup_soc": "Reserve-SoC",
     "allow_reverse_power": "Toegestaan terugleververmogen",
     "allow_battery_export": "Accu-export toestaan",
-    "bypass_enable": "Bypass长开开关",
+    "bypass_enable": "Bypass-altijd-aan-schakelaar",
     "off_grid_output_enable": "Off-grid-uitgangsschakelaar",
     "pv_curtailment_enable": "PV-beperking",
     "modbus_timeout": "Modbus-time-out",
@@ -267,8 +267,8 @@
   "values": {
     "meter_connection_state": {
       "0": "Gekoppeld & verbonden",
-      "1": "Gekoppeld, niet verbonden",
-      "2": "Niet gekoppeld, niet verbonden"
+      "1": "Niet gekoppeld, niet verbonden",
+      "2": "Gekoppeld, niet verbonden"
     },
     "battery_work_state": {
       "0": "Inactief",

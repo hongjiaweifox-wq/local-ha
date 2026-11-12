@@ -1166,7 +1166,7 @@
     },
     {
       "code": "bypass_enable",
-      "name": "Bypass长开开关",
+      "name": "Bypass 常开开关",
       "address": 10111,
       "address_hex": "0x277F",
       "block": "control",

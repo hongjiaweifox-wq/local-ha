@@ -301,7 +301,11 @@ REGISTERS = {
         "Batterieeinspeisung erlauben",
         "Accu-export toestaan",
     ),
-    "bypass_enable": ("Bypass长开开关", "Bypass长开开关", "Bypass长开开关"),
+    "bypass_enable": (
+        "Bypass Always-On Switch",
+        "Bypass-immer-an-Schalter",
+        "Bypass-altijd-aan-schakelaar",
+    ),
     "off_grid_output_enable": (
         "Off-Grid Output Switch",
         "Off-Grid-Ausgangsschalter",
@@ -710,14 +714,14 @@ VALUES = {
     "meter_connection_state": {
         "0": ("Paired & connected", "Gekoppelt & verbunden", "Gekoppeld & verbonden"),
         "1": (
-            "Paired, not connected",
-            "Gekoppelt, nicht verbunden",
-            "Gekoppeld, niet verbonden",
-        ),
-        "2": (
             "Unpaired, not connected",
             "Nicht gekoppelt, nicht verbunden",
             "Niet gekoppeld, niet verbonden",
+        ),
+        "2": (
+            "Paired, not connected",
+            "Gekoppelt, nicht verbunden",
+            "Gekoppeld, niet verbonden",
         ),
     },
     "battery_work_state": {

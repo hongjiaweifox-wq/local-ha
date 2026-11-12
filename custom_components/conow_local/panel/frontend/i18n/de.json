@@ -155,7 +155,7 @@
     "backup_soc": "Reserve-SoC",
     "allow_reverse_power": "Zulässige Rückspeiseleistung",
     "allow_battery_export": "Batterieeinspeisung erlauben",
-    "bypass_enable": "Bypass长开开关",
+    "bypass_enable": "Bypass-immer-an-Schalter",
     "off_grid_output_enable": "Off-Grid-Ausgangsschalter",
     "pv_curtailment_enable": "PV-Abregelung",
     "modbus_timeout": "Modbus-Timeout",
@@ -267,8 +267,8 @@
   "values": {
     "meter_connection_state": {
       "0": "Gekoppelt & verbunden",
-      "1": "Gekoppelt, nicht verbunden",
-      "2": "Nicht gekoppelt, nicht verbunden"
+      "1": "Nicht gekoppelt, nicht verbunden",
+      "2": "Gekoppelt, nicht verbunden"
     },
     "battery_work_state": {
       "0": "Leerlauf",

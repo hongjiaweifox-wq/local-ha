@@ -182,7 +182,7 @@
     "work_mode": "工作模式",
     "allow_reverse_power": "允许逆流功率",
     "allow_battery_export": "允许电池逆流",
-    "bypass_enable": "Bypass长开开关",
+    "bypass_enable": "Bypass 常开开关",
     "modbus_timeout": "ModBus 超时时长",
     "generator_enable": "柴发开关",
     "generator_start_time": "开始时间",
@@ -281,8 +281,8 @@
     },
     "meter_connection_state": {
       "0": "已配对已连接",
-      "1": "已配对未连接",
-      "2": "未配对未连接"
+      "1": "未配对未连接",
+      "2": "已配对未连接"
     },
     "battery_work_state": {
       "0": "空闲",

@@ -551,7 +551,7 @@
     },
     "switch": {
       "bypass_enable": {
-        "name": "Bypass长开开关"
+        "name": "Bypass 常开开关"
       },
       "do1_state": {
         "name": "DO1 控制"
