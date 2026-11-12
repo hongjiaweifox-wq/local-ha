@@ -172,6 +172,12 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self.baudrate = entry.data[CONF_MODBUS_BAUDRATE]
         self._lock = threading.Lock()
         self._client: ConowModbusClient | None = None
+        # A device-level refusal (4 = another client holds the machine, 5 = the
+        # verification code is stale) means this client can no longer read or
+        # write anything: every later frame would be refused the same way.  The
+        # refusal is kept and replayed without touching the device until a new
+        # code is accepted or the entry is reloaded.
+        self._blocked: ConowExceptionResponseError | None = None
         # Direct TCP entries carry the challenge code that guards the machine.
         self.verify_code: str | None = (
             entry.data.get(CONF_TCP_VERIFY_CODE)
@@ -262,14 +268,38 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._client.close()
             self._client = None
 
+    def _raise_if_blocked(self) -> None:
+        """Replay a device-level refusal without touching the device.
+
+        Once the machine answers 4 (another client holds it) or 5 (the stored
+        verification code is stale), no further request from this client can
+        succeed.  Re-raising the stored refusal keeps the cause visible in the
+        log and in the panel while sending nothing.
+        """
+        if self._blocked is not None:
+            raise self._blocked
+
     def _run_locked(self, operation: Callable[[ConowModbusClient], _T]) -> _T:
         """Run a Modbus operation with exclusive port access."""
         with self._lock:
             try:
                 return operation(self._connect())
-            except ConowExceptionResponseError:
+            except ConowExceptionResponseError as err:
                 # The device answered and refused the request; the link is
                 # fine, so keep it open instead of reconnecting on every poll.
+                if err.device_level:
+                    # Another client holds the machine, or the code needs a
+                    # manual refresh: this link cannot carry a read or a write
+                    # anymore.  Drop it and stay silent until the user fixes
+                    # the connection and reloads or writes a new code.
+                    self._blocked = err
+                    self._reset_client()
+                    LOGGER.warning(
+                        "Device refused the link (exception %s); stopping all "
+                        "Modbus I/O until a new verification code is accepted "
+                        "or the entry is reloaded",
+                        err.exception_code,
+                    )
                 raise
             except ConowModbusError:
                 self._reset_client()
@@ -378,6 +408,7 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         Raises ``ConowModbusError`` when the key block is unreadable so the
         coordinator marks the device unavailable instead of half-updating it.
         """
+        self._raise_if_blocked()
         return self._run_locked(
             lambda client: decode_required_blocks(
                 read_map_blocks(client, self.map_version), self.map_version
@@ -408,7 +439,9 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Send a new challenge code over the existing TCP connection.
 
         Reuses the coordinator's link so a device that accepts only one TCP
-        client is not asked for a second one while the entry is loaded.
+        client is not asked for a second one while the entry is loaded.  This
+        is the one operation that runs while a device-level refusal is held:
+        an accepted code lifts the stop.
         """
         await self.hass.async_add_executor_job(
             self._run_locked,
@@ -418,9 +451,15 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 retries=1,
             ),
         )
+        if self._blocked is not None:
+            LOGGER.info(
+                "Device accepted the new verification code; resuming Modbus I/O"
+            )
+            self._blocked = None
 
     def _write_panel_ops(self, ops: list[tuple[int, list[int]]]) -> None:
         """Write grouping-panel registers under the shared Modbus lock."""
+        self._raise_if_blocked()
         self._run_locked(lambda client: write_register_ops(client, ops))
 
     async def async_write_panel_ops(self, ops: list[tuple[int, list[int]]]) -> None:
