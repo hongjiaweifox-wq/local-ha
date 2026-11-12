@@ -212,27 +212,18 @@ class ConowModbusClient:
         slave: int = DEFAULT_SLAVE,
         baudrate: int = DEFAULT_BAUDRATE,
         timeout: float = DEFAULT_TIMEOUT_S,
-        verify_code: str | None = None,
     ) -> None:
         """Initialize client: TCP when host is given, RTU serial otherwise.
 
         Serial defaults to 38400 8N1; TCP targets an RS-485↔Ethernet adapter
-        or the device's own Ethernet port.  ``verify_code`` is the direct-TCP
-        challenge; when set, it is written lazily — after the machine refuses
-        a request — instead of before every link is used.
+        or the device's own Ethernet port.  The direct-TCP challenge code is
+        not handled here: the config flow writes it, and a refusal never
+        triggers a write of its own.
         """
         self._slave = slave
         self._mode = MODBUS_MODE_TCP if host is not None else MODBUS_MODE_RTU
         self._port = port
         self._host = host
-        self._verify_code = (
-            str(verify_code).strip()
-            if verify_code and self._mode == MODBUS_MODE_TCP
-            else None
-        )
-        # True once the code is known to be active or its verification has
-        # already been attempted on this link; no second automatic write.
-        self._verify_attempted = self._verify_code is None
         if self._mode == MODBUS_MODE_TCP:
             self._tcp_port = tcp_port
             # Log label mirrors what the adapter sees on the RS-485 side.
@@ -268,63 +259,6 @@ class ConowModbusClient:
     def connected(self) -> bool:
         """Whether the underlying socket/serial port is still open."""
         return bool(getattr(self._client, "connected", False))
-
-    def mark_verified(self) -> None:
-        """Record that the challenge code is already active on this link."""
-        self._verify_attempted = True
-
-    def _verify_after_refusal(self, error: ConowExceptionResponseError) -> bool:
-        """Write the challenge code after an unverified link refuses a request.
-
-        A direct-TCP machine reports the refusal itself: it answers the first
-        request on a fresh, unverified link with a Modbus exception response.
-        Reacting to that reply keeps the code out of the traffic entirely for a
-        machine that does not need it, while a machine that does need it still
-        gets exactly one write per link.  The caller retries its request once
-        when this returns ``True``.
-
-        Raises ``ConowVerificationError`` when the machine rejects the code, so
-        the failure is reported as a code problem instead of a generic refusal.
-        """
-        if self._verify_attempted or not self._verify_code:
-            return False
-        if error.device_level:
-            # 4 (another client holds the device) and 5 (the stored code is
-            # stale) cannot be fixed by rewriting the stored code; retrying
-            # would collide with the other client or repeat the same refusal.
-            return False
-        # Only one automatic attempt per link: a rejected code must not be
-        # rewritten on every poll.
-        self._verify_attempted = True
-        _LOGGER.info(
-            "Device refused %s before verification; sending the stored "
-            "verification code and retrying",
-            error,
-        )
-        try:
-            response = self._client.write_registers(
-                VERIFY_CODE_START,
-                encode_verify_code(self._verify_code),
-                device_id=self._slave,
-            )
-            _raise_for_response(response, 0x10)
-        except ConowExceptionResponseError as exc:
-            message = (
-                f"Verification code rejected ({exc}); update it under "
-                "Settings > Devices & services > Conow Local > Configure"
-            )
-            _LOGGER.warning(message)
-            raise ConowVerificationError(message) from exc
-        except (ModbusException, ConowModbusError, OSError) as exc:
-            message = f"Verification code write failed: {exc}"
-            _LOGGER.warning(message)
-            raise ConowVerificationError(message) from exc
-        _LOGGER.info(
-            "Modbus write OK: slave=%s addr=%s values=[verification code]",
-            self._slave,
-            VERIFY_CODE_START,
-        )
-        return True
 
     def connect(self) -> None:
         """Open the connection."""
@@ -408,12 +342,10 @@ class ConowModbusClient:
                 _LOGGER.warning(
                     "Modbus read refused addr=%s count=%s: %s", address, count, exc
                 )
-                if self._verify_after_refusal(exc):
-                    # The refusal was the machine's way of asking for the
-                    # challenge code; the link is verified now.
-                    return self.read_holding_registers(
-                        address, count, retries=max(1, attempts - attempt)
-                    )
+                # A refusal never writes the challenge code on its own: the
+                # code is only sent from the config flow.  The request is
+                # reported as failed and the next poll simply tries again,
+                # because the machine may answer normally at any time.
                 raise
             except ConnectionException as exc:
                 # The socket could not be opened (or died before a reply):
@@ -499,12 +431,9 @@ class ConowModbusClient:
                     values,
                     exc,
                 )
-                if self._verify_after_refusal(exc):
-                    # The refusal was the machine's way of asking for the
-                    # challenge code; the link is verified now.
-                    return self.write_registers(
-                        address, values, retries=max(1, attempts - attempt)
-                    )
+                # The refusal is reported to the caller; it never triggers a
+                # verification-code write, and the caller decides whether to
+                # retry (the polling loop does, every interval).
                 raise
             except ConnectionException as exc:
                 # No link: the request never left this host.

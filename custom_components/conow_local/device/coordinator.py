@@ -228,39 +228,10 @@ class ConowLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 tcp_port=self.tcp_port if self.host is not None else DEFAULT_TCP_PORT,
                 slave=self.slave,
                 baudrate=self.baudrate or DEFAULT_BAUDRATE,
-                # Direct-TCP entries carry the challenge code, but it is only
-                # written when the machine refuses a request — not before
-                # every new link.  A machine that accepts the request needs
-                # no verification frame at all.
-                verify_code=(
-                    self.verify_code
-                    if self.mode == MODBUS_MODE_TCP_DIRECT
-                    else None
-                ),
             )
             client.connect()
             self._client = client
         return self._client
-
-    def _send_verify_code(self, client: ConowModbusClient) -> None:
-        """Re-verify a direct TCP link with the stored challenge code.
-
-        The machine expects the code on every fresh connection.  A stale code
-        is not fatal here: the reads that follow report the real failure, and
-        the options flow is where a rotated code is replaced.
-        """
-        try:
-            client.write_registers(
-                VERIFY_CODE_START,
-                encode_verify_code(self.verify_code),
-                retries=1,
-            )
-        except ConowModbusError as err:
-            LOGGER.warning(
-                "TCP direct: verification code rejected (%s); update it under "
-                "Settings > Devices & services > Conow Local > Configure",
-                err,
-            )
 
     def _reset_client(self) -> None:
         """Close the client after an I/O error."""

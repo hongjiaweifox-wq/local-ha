@@ -30,11 +30,9 @@ from ..const import (
     CONF_MODBUS_MODE,
     CONF_MODBUS_SLAVE,
     CONF_MODBUS_TCP_PORT,
-    CONF_TCP_VERIFY_CODE,
     DEFAULT_TCP_PORT,
     DOMAIN,
     LOGGER,
-    MODBUS_MODE_TCP_DIRECT,
     MODBUS_TCP_MODES,
 )
 from ..device.coordinator import (
@@ -612,19 +610,12 @@ def plan_group_writes(
 def _short_lived_client(entry) -> ConowModbusClient:
     """Build a TCP client for an entry the coordinator does not own.
 
-    Direct-connected machines get the stored challenge code, which the client
-    writes only if the machine refuses the first request.
+    The challenge code is never written here: only the config flow sends it.
     """
-    verify_code = (
-        entry.data.get(CONF_TCP_VERIFY_CODE)
-        if entry.data.get(CONF_MODBUS_MODE) == MODBUS_MODE_TCP_DIRECT
-        else None
-    )
     return ConowModbusClient(
         host=entry.data[CONF_MODBUS_HOST],
         tcp_port=entry.data.get(CONF_MODBUS_TCP_PORT, DEFAULT_TCP_PORT),
         slave=entry.data[CONF_MODBUS_SLAVE],
-        verify_code=verify_code,
     )
 
 
